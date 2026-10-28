@@ -27,3 +27,12 @@ Done 2026-10-28 on `owner-runs/20261001-r9` (not pushed).
   - Own-script conversation (`own_dialogue.txt`, verbatim): 19 of 19 lines identical (speaker and words), nothing added;
     storyboard approved, 4 inserts with library pictures; 157 s at 1920x1080 in `D:\Videos\Planning a team lunch`.
 - Full pytest: 2239 passed.
+
+## Second install (2026-10-28)
+
+- Built from `8263eb5` into `dist/2.0-phase85b-20261028` (ZIP 138,745,913 bytes, SHA256
+  `5e77d9cdfad5d76fe4f3b2bea1660a67fa7b086401642a1c259eee0c66e728e7`); installed, backup
+  `data/backups/desktop-20261028-190959-869`; data counts unchanged.
+- "Presenter why v2" re-made automatically: finished by itself in 441 s, one welcome (first line) and one goodbye (last
+  line), editor rewrite kept, fact check passed, 5 of 8 segments with pictures (3 drawn by Qwen, 2 library), 154.8 s at
+  1920x1080. Everything in Phase 85 is installed.

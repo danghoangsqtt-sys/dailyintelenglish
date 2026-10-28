@@ -3,13 +3,14 @@
     "status": "implemented_verified",
     "plan": ".viepilot/phases/85-pictures-in-16x9/PLAN.md",
     "test_set": "D:\\Videos\\Kiểm tra 16 9 2026-10-28; presenter how 7/11 pictures, list 5/9, VOX 3-4; own script 19/19 identical",
-    "installed_from_commit": "3059a99",
-    "installed_backup": "data/backups/desktop-20261028-175019-081",
-    "not_installed_yet": [
-      "2cf5be4 two-episodes script check + fact check facts only"
-    ],
+    "installed_from_commit": "8263eb5",
+    "installed_backup": "data/backups/desktop-20261028-190959-869",
+    "not_installed_yet": [],
     "full_pytest": "2239 passed",
-    "pushed": false
+    "pushed": false,
+    "package_directory": "dist/2.0-phase85b-20261028",
+    "full_zip_sha256": "5e77d9cdfad5d76fe4f3b2bea1660a67fa7b086401642a1c259eee0c66e728e7",
+    "presenter_why_v2": "finished by itself; one welcome (line 1), one goodbye (last line); 5 of 8 segments with pictures; 154.8 s 1920x1080"
   },
   "phase84_automatic_quality": {
     "status": "implemented_verified",
