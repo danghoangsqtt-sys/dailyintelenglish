@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 81 — Slow English podcast & Vocabulary flashcard Shorts (2026-10-28)
+
+Status: planned (from the 2026-10-28 brainstorm). Two new Short templates drawn from their script lines: `slowpod` (slow English voice, Vietnamese shown) and `flashcards` (word read twice; part of speech, IPA, meaning). Tasks 81.1 backend, 81.2 renderer, 81.3 UI, 81.4 verify. [Plan](phases/81-slow-podcast-flashcards/PLAN.md).
+
 ## Phase 80 — Shorts batch rework (2026-10-26/27)
 
 Status: implemented_verified. Short brand (no intro, 2 s end card, logo), real Short content (line split, card points, visible scene), conversation / Solo presenter / Vox as batch Shorts, one main save folder with automatic Topic/Series/Episode project folders, 'Make videos now' with results panel, guided Shorts batch page. Solo plan with an unoffered activity is repaired. Full pytest 2194 passed. Full 2.0.0 installed 2026-10-27 (backup `data/backups/desktop-20261027-153256-221`); not pushed. [Plan](phases/80-shorts-batch-rework/PLAN.md), [state](phases/80-shorts-batch-rework/PHASE-STATE.md).
