@@ -250,6 +250,25 @@ async def delete_project(project_id: str, db: aiosqlite.Connection = Depends(get
     return ok(None, started_at=started_at)
 
 
+@router.get("/{project_id}/script/editor-review")
+async def get_editor_review(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 84: the editor pass of this script (None when it has not run)."""
+    from backend.content import script_editor
+
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+        return ok(await script_editor.get_review(db, project_id))
+
+
+@router.post("/{project_id}/script/editor-review")
+async def run_editor_review(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 84 (owner 2026-10-28): score the script; one rewrite when a score is under 4, kept only if it passes every check."""
+    from backend.content import script_editor
+
+    started_at = time.perf_counter()
+    return ok(await script_editor.review(db, project_id), started_at=started_at)
+
+
 @router.get("/{project_id}/script")
 async def get_script(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Fetch the current script for a project (empty list if not generated yet)."""

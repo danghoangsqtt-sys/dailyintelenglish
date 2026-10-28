@@ -254,6 +254,12 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .ai-job-status:has(#ai-job-retry-btn) { border-color: var(--danger); background: var(--danger-bg); }
 .generate-panel { margin-bottom: 24px; padding: 40px; text-align: center; }
 .generate-panel p { margin: 0 0 20px; color: var(--muted); }
+/* Phase 84: the editor pass of the script */
+.editor-review { margin-bottom: 16px; padding: 14px 16px; }
+.editor-review-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.editor-review-outcome, .editor-review-notes, .editor-review-status { margin: 8px 0 0; color: var(--muted); }
+.editor-review-notes { white-space: pre-line; }
+.editor-review-scores { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 /* Task 14.7 -- Ollama-missing guidance, injected into #generate-panel by
    step2_script.js / step3_learning.js when /api/ai/health reports the local
    model unreachable or not pulled (local-only mode, Amendment D). */

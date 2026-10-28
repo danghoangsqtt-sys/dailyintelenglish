@@ -142,6 +142,9 @@ const Api = (() => {
     renderShort: (id, clipId, options) => request(`/api/projects/${id}/shorts/${clipId}/render`, json("POST", options)),
     renderVertical: (id, options) => request(`/api/projects/${id}/video/vertical`, json("POST", options)),
     getScript: (projectId) => request(`/api/projects/${projectId}/script`),
+    // Phase 84: the editor pass (scores, one rewrite kept only when it passes every check)
+    getEditorReview: (projectId) => request(`/api/projects/${projectId}/script/editor-review`),
+    runEditorReview: (projectId) => request(`/api/projects/${projectId}/script/editor-review`, { method: "POST" }),
     generateScript: (projectId) =>
       request(`/api/projects/${projectId}/script/generate`, { method: "POST" }),
     regenerateLine: (projectId, lineId) =>

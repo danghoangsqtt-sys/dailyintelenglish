@@ -152,7 +152,7 @@ async def test_a_conversation_is_made_in_order_up_to_the_youtube_package():
     assert project == "p1"
     assert steps == ["script", "learning", "audio", "visual_plan", "video", "thumbnail", "youtube"]
     writes = [path for method, path, _ in fake.calls if method != "GET"]
-    assert writes == ["/ai-jobs", "/ai-jobs", "/tts/preview", "/tts/preview", "/audio/generate", "/storyboard/propose",
+    assert writes == ["/ai-jobs", "/script/editor-review", "/ai-jobs", "/tts/preview", "/tts/preview", "/audio/generate", "/storyboard/propose",  # Phase 84: + editor
                       "/video/generate", "/thumbnails/generate", "/thumbnails/t1/favorite", "/youtube/generate"]
     # a second pass finds everything made and does nothing
     fake.calls.clear()

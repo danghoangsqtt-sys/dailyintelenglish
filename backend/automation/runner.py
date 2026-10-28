@@ -127,10 +127,13 @@ class Producer:
             for attempt in range(AI_ATTEMPTS):
                 try:
                     await self.wait_job(project_id, await call("POST", f"{base}/ai-jobs", {"operation": step}))
-                    return
                 except StepError:
                     if attempt == AI_ATTEMPTS - 1:
                         raise
+                    continue
+                if step == "script":
+                    await self.edit_script(project_id, style)
+                return
         elif step == "audio":
             for line in await call("GET", f"{base}/script"):
                 await call("POST", f"{base}/tts/preview", {"line_id": line["id"], "reuse_cached": True})
@@ -145,6 +148,18 @@ class Producer:
             await call("POST", f"{base}/youtube/generate")
         else:
             raise StepError(f"Unknown step {step}")
+
+    async def edit_script(self, project_id: str, style: str | None) -> None:
+        """Phase 84 (owner 2026-10-28): the editor pass -- scores the new script and rewrites it once when it falls short.
+        An editor that cannot work leaves the script as written: the episode goes on."""
+        from backend.content.script_editor import SKIPPED_STYLES
+
+        if style in SKIPPED_STYLES:
+            return
+        try:
+            await self.client.call("POST", f"/api/projects/{project_id}/script/editor-review")
+        except StepError as exc:
+            logger.warning("automation_editor_skipped project_id=%s reason=%s", project_id, exc)
 
     async def approve_solo(self, project_id: str, style: str | None = None, fresh: bool = False) -> None:
         """Propose a plan when there is none (or it went stale), then approve it -- only with no issue and no fact to check,

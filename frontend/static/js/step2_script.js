@@ -101,6 +101,7 @@
         state.lines = await Api.getScript(state.projectId);
         renderJobStatus(null);
         renderScript();
+        loadEditorReview();
       })
       .catch((err) => {
         console.error("Script generation job did not complete:", err);
@@ -338,6 +339,53 @@
     state.selectedLineId = lineId;
     state.previewReadyLineId = null;
     renderScript();
+  }
+
+  // Phase 84 (owner 2026-10-28): the editor pass -- scores, outcome and notes; it can also be run by hand
+  const EDITOR_CRITERIA = [["hook", "Hook"], ["message", "One clear message"], ["examples", "Examples"],
+    ["natural", "Natural English"], ["level", "Fits the level"], ["ending", "Ending"]];
+  const EDITOR_OUTCOMES = { passed: "The script passed the editor.", rewritten: "The editor rewrote the script once.",
+    kept_original: "The editor's rewrite failed a check, so the original script was kept." };
+
+  function renderEditorReview(review, busy = false, message = "") {
+    const panel = document.getElementById("editor-review");
+    const skipped = ["flashcards", "slowpod"].includes(state.project?.explainer_style);
+    panel.hidden = skipped || !state.lines.length;
+    if (panel.hidden) return;
+    const scores = review?.scores || {};
+    panel.innerHTML = `
+      <div class="editor-review-head"><strong>Editor review</strong>
+        <button type="button" class="btn btn-ghost btn-sm" data-action="editor-review" ${busy || state.isGenerating ? "disabled" : ""}>
+          ${busy ? '<span class="spinner spinner-dark"></span> Reviewing…' : review ? "Review again" : "Review the script"}</button></div>
+      ${review ? `<p class="editor-review-outcome">${escapeHtml(EDITOR_OUTCOMES[review.outcome] || "")}</p>
+      <div class="editor-review-scores">${EDITOR_CRITERIA.map(([key, label]) =>
+        `<span class="badge${scores[key] < 4 ? " badge-status-draft" : " badge-status-complete"}"><span>${escapeHtml(label)}</span> <span translate="no">${scores[key] ?? "–"}/5</span></span>`).join("")}</div>
+      ${review.notes ? `<p class="editor-review-notes" translate="no">${escapeHtml(review.notes)}</p>` : ""}`
+        : '<p class="editor-review-outcome">Automatic videos are reviewed by the AI editor; you can review this script too.</p>'}
+      ${message ? `<p class="editor-review-status" role="status">${escapeHtml(message)}</p>` : ""}`;
+  }
+
+  async function loadEditorReview() {
+    try {
+      state.editorReview = await Api.getEditorReview(state.projectId);
+    } catch (err) {
+      state.editorReview = null;
+    }
+    renderEditorReview(state.editorReview);
+  }
+
+  async function handleEditorReview() {
+    renderEditorReview(state.editorReview, true);
+    try {
+      state.editorReview = await Api.runEditorReview(state.projectId);
+      if (state.editorReview.rewritten) {
+        state.lines = await Api.getScript(state.projectId);
+        renderScript();
+      }
+      renderEditorReview(state.editorReview);
+    } catch (err) {
+      renderEditorReview(state.editorReview, false, err.message || "The editor could not review the script.");
+    }
   }
 
   function renderScript() {
@@ -723,6 +771,10 @@
     }
     await resumeActiveScriptJob();
     renderScript();
+    document.getElementById("editor-review").addEventListener("click", (event) => {
+      if (event.target.closest("[data-action='editor-review']")) handleEditorReview();
+    });
+    loadEditorReview();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
