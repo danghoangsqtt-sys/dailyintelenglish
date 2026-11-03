@@ -46,6 +46,38 @@ export const rootsCardSchema = z.object({
   pictureUrl: z.string().optional(),
 });
 
+/** Phase 88: a colour-coded chip of a grammar formula (role: s, v, o, be, ing, v3, modal, have, adj, plain). */
+export const grammarChipSchema = z.object({ text: z.string(), role: z.string().optional().default("plain") });
+
+/** Phase 88: one card of an easy-grammar Short (backend/content/grammar_lesson.py); the fields depend on its kind. */
+export const grammarItemSchema = z.object({
+  kind: z.string(),
+  text: z.string().optional(),
+  items: z.array(z.string()).optional(),
+  chips: z.array(grammarChipSchema).optional(),
+  result: grammarChipSchema.optional(),
+  left_en: z.string().optional(),
+  left_vi: z.string().optional(),
+  right_en: z.string().optional(),
+  right_vi: z.string().optional(),
+  columns: z.array(z.string()).optional(),
+  rows: z.array(z.array(z.string())).optional(),
+  en: z.string().optional(),
+  vi: z.string().optional(),
+  marks: z.array(grammarChipSchema).optional(),
+  options: z.array(z.string()).optional(),
+});
+
+/** Phase 88: a line's beat -- its scene header and every card shown so far in that scene. */
+export const grammarCardSchema = z.object({
+  beat: z.string(),
+  scene: z.number().optional().default(0),
+  label: z.string().optional().default(""),
+  title: z.string().optional().default(""),
+  subtitle: z.string().optional(),
+  cards: z.array(grammarItemSchema).optional().default([]),
+});
+
 export const episodeLineSchema = z.object({
   startSec: z.number(),
   endSec: z.number(),
@@ -63,6 +95,8 @@ export const episodeLineSchema = z.object({
   translation: z.string().optional(),
   /** Phase 87: the beat card of a word-roots Short. */
   roots: rootsCardSchema.optional(),
+  /** Phase 88: the beat of an easy-grammar Short. */
+  grammar: grammarCardSchema.optional(),
 });
 
 /**
@@ -237,12 +271,15 @@ export const episodeInputPropsSchema = z.object({
   hook: z.string().optional(),
   hookAtSec: z.number().optional(),
   /** Phase 65 (ENH-047): a two-character conversation Short drawn from its lines -- "chat" or "wyr" (would you rather). */
-  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards", "roots"]).optional(),
+  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards", "roots", "grammar"]).optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
 export type RootsCard = z.infer<typeof rootsCardSchema>;
 export type RootsPart = z.infer<typeof rootsPartSchema>;
+export type GrammarCard = z.infer<typeof grammarCardSchema>;
+export type GrammarItem = z.infer<typeof grammarItemSchema>;
+export type GrammarChip = z.infer<typeof grammarChipSchema>;
 export type EpisodeLine = z.infer<typeof episodeLineSchema>;
 export type EpisodeSpeaker = z.infer<typeof episodeSpeakerSchema>;
 export type VocabItem = z.infer<typeof vocabItemSchema>;

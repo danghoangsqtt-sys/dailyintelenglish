@@ -8,7 +8,8 @@ import type { EpisodeInputProps, EpisodeLine } from "./types";
 import type { SoloPayload, Visual } from "./soloTypes";
 
 export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards"
-  | "roots";
+  | "roots"
+  | "grammar";
 export type SampleIdea = { title: string; brief?: string };
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
 const WORD_SEC = 0.34, LINE_GAP = 0.3, SEGMENT_GAP = 0.2, FPS = 30, GAP = 0.015;
@@ -24,7 +25,7 @@ export function quoted(text: string): string | null {
 const sentence = (text: string) => { const clean = text.trim().replace(/\s+/g, " "); return /[.!?]$/.test(clean) ? clean : `${clean}.`; };
 
 /** The sample segments of a voice-only template (the visuals the AI plan would use). */
-export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots">, idea: SampleIdea): Part[] {
+export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar">, idea: SampleIdea): Part[] {
   const title = idea.title.trim() || "Your Short", brief = (idea.brief || "").trim() || "The AI writes this part from your idea.";
   const card = (cardTitle: string, bullets: string[] = [], emphasis = ""): Visual => ({ kind: "text_card", title: cardTitle, bullets, emphasis }) as Visual;
   const follow = (text: string): Part => ({ visual: card("Daily Beyond English", [], text), lines: [`${text}!`] });
@@ -159,7 +160,38 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
     return { ...common, presentationMode: "classic", shortStyle: "roots", visualMode: "podcast_black",
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
-  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots">, idea);
+  if (template === "grammar") {  // Phase 88: a grammar lesson's beats, drawn from their lines (the AI writes the real lesson)
+    const chip = (text: string, role: string) => ({ text, role });
+    const hook = { beat: "hook", scene: 0, label: "HOOK • ĐẬP TAN HỌC VẸT", title: "CÂU BỊ ĐỘNG" };
+    const formulas = { kind: "formulas", items: ["S + am/is/are + V3", "S + was/were + V3", "S + has/have + been + V3", "S + will be + V3"] };
+    const one = { beat: "scene", scene: 1, label: "BẢN CHẤT CỐT LÕI", title: "Câu bị động = câu miêu tả trạng thái!", subtitle: "So sánh hai câu" };
+    const compare = { kind: "compare", left_en: "She is beautiful.", left_vi: "Cô ấy đẹp.", right_en: "The room is cleaned.", right_vi: "Căn phòng được dọn." };
+    const formula = { kind: "formula", chips: [chip("S", "s"), chip("BE", "be"), chip("V3", "v3")], text: "giống hệt S + BE + Adj" };
+    const two = { beat: "scene", scene: 2, label: "BẺ KHOÁ V3", title: "Chiếc nhãn dán kết quả!" };
+    const sticker = { kind: "sticker", text: "CLEANED" };
+    const lego = { kind: "lego", chips: [chip("BE", "be"), chip("-ING", "ing")], result: chip("BEING", "be") };
+    const summary = { beat: "summary", scene: 3, label: "TỔNG KẾT BẢN CHẤT", title: "CÂU BỊ ĐỘNG" };
+    const table = { kind: "table", columns: ["Thì", "TO BE gánh thì", "Nhãn"] };
+    const rows = [["Đơn", "is", "cleaned"], ["Tiếp diễn", "is being", "cleaned"], ["Hoàn thành", "has been", "cleaned"]];
+    const quiz = { kind: "quiz", text: "The letter ___ yesterday.", options: ["was sent", "is sent"] };
+    const say: [string, Record<string, unknown>][] = [
+      ["Bạn đang phải học thuộc cả chục công thức câu bị động?", { ...hook, cards: [formulas] }],
+      ["Quên hết đi!", { ...hook, cards: [formulas, { kind: "stamp", text: "QUÊN HẾT ĐI" }] }],
+      ["Hiểu đúng bản chất câu bị động trong một phút!", { ...hook, cards: [{ kind: "promise", text: "Hiểu đúng bản chất câu bị động trong 1 phút!" }] }],
+      ["Nhìn hai câu này: She is beautiful và The room is cleaned.", { ...one, cards: [compare] }],
+      ["Giống hệt nhau: chủ ngữ, to be, rồi một từ miêu tả.", { ...one, cards: [compare, formula] }],
+      ["V3 giống như một chiếc nhãn dán kết quả.", { ...two, cards: [sticker] }],
+      ["Muốn tiếp diễn, ghép to be với ing thành being.", { ...two, cards: [sticker, lego] }],
+      ["Tổng kết lại tất cả trong một bảng nhé.", { ...summary, cards: [{ ...table, rows: rows.slice(0, 1) }] }],
+      ["Hoàn thành: has been cộng cleaned.", { ...summary, cards: [{ ...table, rows }] }],
+      ["Câu hỏi nhanh: The letter ___ yesterday.", { beat: "quiz", scene: 4, label: "CÂU HỎI NHANH", title: "CÂU BỊ ĐỘNG", cards: [quiz] }],
+      ["Comment đáp án và theo dõi Daily Beyond English nhé!", { beat: "follow", scene: 4, label: "CÂU HỎI NHANH", title: "CÂU BỊ ĐỘNG", cards: [quiz] }]];
+    const lines = timed(say.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.3)
+      .map((line, at) => ({ ...line, grammar: say[at][1] }));
+    return { ...common, presentationMode: "classic", shortStyle: "grammar", visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
+  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar">, idea);
   const lines: EpisodeLine[] = [], timeline: SoloPayload["timeline"] = [], segments: unknown[] = [];
   let time = 0.3;
   parts.forEach((part, index) => {
