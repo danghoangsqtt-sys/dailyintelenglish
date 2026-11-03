@@ -1,4 +1,5 @@
-/* Daily Beyond English — shared light-first design system.
+/* Daily Beyond English — shared light-first design system. Phase 93: the palette, type and base components follow
+   direction E (tokens.css adds its fonts and the e- components).
    Phase 27: the owner's brand (the avatar logo): green -> lime, yellow, white, a red call to action and
    navy titles; deep-green surfaces in dark mode; Montserrat (bundled, SIL OFL: /static/fonts/OFL.txt) for
    headings and the brand, bundled Inter (SIL OFL: /static/fonts/Inter-OFL.txt) for body text. Text and button colours are checked for AA contrast in
@@ -22,83 +23,83 @@
 
 :root {
   color-scheme: light;
-  --bg: #ffffff;
-  --bg-canvas: #f1f3f7;
+  --bg: #f6f7f2;
+  --bg-canvas: #f6f7f2;
   --bg-elevated: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f7f8fb;
-  --surface-3: #edf0f5;
-  --surface-border: #d7dce3;
-  --surface-border-hover: #b9c0cc;
-  --border: #d7dce3;
-  --border-strong: #b9c0cc;
-  --text: #12151c;
-  --text-2: #2c3242;
-  --text-muted: #495164;
-  --muted: #495164;
-  --accent: #1f7a2e;
-  --accent-hover: #17601f;
-  --accent-soft: #e8f6e6;
+  --surface-2: #f3f5ef;
+  --surface-3: #eaeee5;
+  --surface-border: #dfe5da;
+  --surface-border-hover: #c5cfc0;
+  --border: #dfe5da;
+  --border-strong: #c5cfc0;
+  --text: #17231b;
+  --text-2: #33423a;
+  --text-muted: #55625a;
+  --muted: #55625a;
+  --accent: #18733e;
+  --accent-hover: #156a39;
+  --accent-soft: #e6f4ea;
   --brand-green: #3a9d3f;
   --brand-lime: #9bd13c;
   --brand-yellow: #ffd60a;
   --brand-navy: #151a5c;
   --brand-gradient: linear-gradient(135deg, #3a9d3f 0%, #9bd13c 100%);
   --brand-gradient-soft: linear-gradient(135deg, rgba(58, 157, 63, .10), rgba(155, 209, 60, .12));
-  --btn-gradient: linear-gradient(135deg, #17601f 0%, #1f7a2e 100%);
+  --btn-gradient: linear-gradient(135deg, #1b7d44 0%, #156a39 100%);
   --cta: #c92a25;
-  --focus-ring: 0 0 0 3px rgba(58, 157, 63, .40);
+  --focus-ring: 0 0 0 3px rgba(27, 125, 68, .40);
   --accent-ink: #ffffff;
-  --success: #146c2e;
-  --success-bg: #dcf5e2;
-  --warning: #8a5b00;
-  --warning-bg: #fdf0d5;
-  --danger: #b3261e;
-  --danger-bg: #fbe2e0;
-  --info: #0757b8;
-  --info-bg: #e2eefc;
+  --success: #18733e;
+  --success-bg: #e3f2e8;
+  --warning: #8a5a00;
+  --warning-bg: #fff1cc;
+  --danger: #c4362c;
+  --danger-bg: #fde6e3;
+  --info: #2161b0;
+  --info-bg: #e3eefb;
   --speaker-a: #9a4a00;
   --speaker-b: #0757a8;
-  --radius: 10px;
+  --radius: 12px;
   --r-sm: 6px;
   --r-md: 10px;
-  --r-lg: 14px;
-  --shadow: 0 10px 28px rgba(20, 24, 38, 0.08);
-  --font: "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Montserrat", "Inter", "Segoe UI", system-ui, sans-serif;
+  --r-lg: 16px;
+  --shadow: 0 1px 2px rgba(23, 35, 27, .06), 0 10px 28px rgba(23, 35, 27, .06);
+  --font: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Baloo 2", "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
 }
 
 /* The former palette remains available through Theme's existing data-theme contract. */
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0c1a12;
-  --bg-canvas: #0c1a12;
-  --bg-elevated: #11241a;
-  --surface: rgba(255, 255, 255, 0.04);
-  --surface-2: #14291d;
-  --surface-3: #1b3626;
-  --surface-border: rgba(155, 209, 60, 0.25);
-  --surface-border-hover: rgba(155, 209, 60, 0.5);
-  --border: rgba(155, 209, 60, 0.25);
-  --border-strong: rgba(155, 209, 60, 0.5);
-  --text: #e6edf3;
-  --text-2: #c9d1d9;
-  --text-muted: #9fb3a6;
-  --muted: #9fb3a6;
-  --accent: #9bd13c;
-  --accent-hover: #b6e060;
-  --accent-soft: rgba(155, 209, 60, 0.18);
-  --btn-gradient: linear-gradient(135deg, #17601f 0%, #1f7a2e 100%);
+  --bg: #111613;
+  --bg-canvas: #111613;
+  --bg-elevated: #181f1b;
+  --surface: #181f1b;
+  --surface-2: #1f2823;
+  --surface-3: #26302a;
+  --surface-border: #2b3630;
+  --surface-border-hover: #3d4b43;
+  --border: #2b3630;
+  --border-strong: #3d4b43;
+  --text: #e9f0eb;
+  --text-2: #c9d3cc;
+  --text-muted: #a3b0a7;
+  --muted: #a3b0a7;
+  --accent: #5cc98a;
+  --accent-hover: #79d6a0;
+  --accent-soft: rgba(92, 201, 138, 0.16);
+  --btn-gradient: linear-gradient(135deg, #1b7d44 0%, #156a39 100%);
   --cta: #e5322d;
   --accent-ink: #ffffff;
-  --success: #3fb950;
-  --success-bg: rgba(63, 185, 80, 0.14);
-  --warning: #d29922;
-  --warning-bg: rgba(210, 153, 34, 0.14);
-  --danger: #f85149;
-  --danger-bg: rgba(248, 81, 73, 0.14);
-  --info: #58a6ff;
-  --info-bg: rgba(88, 166, 255, 0.14);
+  --success: #5cc98a;
+  --success-bg: rgba(92, 201, 138, 0.14);
+  --warning: #f2b84b;
+  --warning-bg: rgba(242, 184, 75, 0.14);
+  --danger: #ff8a7f;
+  --danger-bg: rgba(255, 138, 127, 0.14);
+  --info: #8cc3ff;
+  --info-bg: rgba(140, 195, 255, 0.14);
   --speaker-a: #f59e0b;
   --speaker-b: #58a6ff;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
@@ -115,32 +116,34 @@ html, body { min-height: 100%; }
    flagged-but-unfixed gap on step6_thumbnail.js's retry-save-btn (see TRACKER.md Known
    Issues) — !important guarantees this always wins regardless of selector order. */
 [hidden] { display: none !important; }
-body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); transition: background .2s ease, color .2s ease; }
+body { margin: 0; font-family: var(--font); font-size: 16px; line-height: 1.5; background: var(--bg); color: var(--text); transition: background .2s ease, color .2s ease; }
 a { color: inherit; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 14px; background: var(--surface-2); color: var(--text-2); font-size: 14px; font-weight: 650; text-decoration: none; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 16px; background: var(--bg-elevated); color: var(--text); font-size: 15px; font-weight: 600; text-decoration: none; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
 .btn:active { transform: scale(.97); }
-.btn-primary { background: var(--btn-gradient); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(31, 122, 46, .28); }
-.btn-primary:hover { filter: brightness(1.1); box-shadow: 0 8px 26px rgba(31, 122, 46, .38); }
-.btn-cta { background: var(--cta); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(201, 42, 37, .25); }
+/* Phase 93: one chunky primary (a solid bottom edge, Duolingo-like) */
+.btn-primary { background: var(--btn-gradient); border-color: transparent; color: #fff; font-weight: 700; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .2); }
+.btn-primary:hover { filter: brightness(1.07); }
+.btn-primary:active { box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .2); transform: translateY(1px); }
+.btn-cta { background: var(--cta); border-color: transparent; color: #fff; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .2); }
 .btn-cta:hover { filter: brightness(1.08); }
 .btn:focus-visible, .icon-toggle:focus-visible, .app-nav a:focus-visible, input:focus-visible, select:focus-visible,
 textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .btn-ghost { background: transparent; }
 .btn-ghost:hover { background: var(--surface-3); border-color: var(--surface-border-hover); }
 .btn-danger { color: var(--danger); background: var(--danger-bg); }
-.btn-sm { min-height: 30px; padding: 5px 10px; font-size: 12px; }
-.btn-xs { min-height: 24px; padding: 3px 7px; font-size: 11px; }
-.btn.large { min-height: 42px; padding-inline: 18px; }
+.btn-sm { min-height: 36px; padding: 6px 13px; font-size: 14px; }
+.btn-xs { min-height: 28px; padding: 3px 9px; font-size: 13px; }
+.btn.large { min-height: 46px; padding-inline: 20px; font-size: 16px; }
 .btn[disabled], .btn[aria-disabled="true"] { cursor: not-allowed; opacity: .58; pointer-events: none; }
 
 .icon-toggle, .icon-btn { width: 34px; height: 34px; display: inline-grid; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--muted); transition: border-color .15s ease, transform .15s ease; }
 .icon-toggle:hover { border-color: var(--accent); transform: rotate(15deg); }
 
-.badge, .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .02em; }
+.badge, .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 0; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; }
 .badge-status-draft { color: var(--muted); background: var(--surface-3); }
 .badge-status-script_generated { color: var(--info); background: var(--info-bg); }
 .badge-status-audio_generated, .badge-status-video_generated { color: var(--warning); background: var(--warning-bg); }
@@ -150,7 +153,7 @@ textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .pill.warning { color: var(--warning); background: var(--warning-bg); }
 .pill.running { color: var(--info); background: var(--info-bg); }
 
-.card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: 0 1px 0 rgba(20, 24, 38, .02); }
+.card { border: 1px solid var(--border); border-radius: 16px; background: var(--bg-elevated); }
 
 /* The original StepNav stays horizontal except in the approved Script workspace. */
 .step-nav-pills { display: flex; align-items: center; gap: 10px; overflow-x: auto; padding: 14px 40px; border-bottom: 1px solid var(--border); background: var(--bg-elevated); }
@@ -202,7 +205,7 @@ body.sidebar-collapsed .side-link[aria-current="page"]::before { left: -10px; }
 
 /* Shared CapCut-style workspace shell. */
 .topbar { position: relative; height: 58px; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--bg-elevated); }
-.topbar::after { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--brand-gradient); opacity: .55; content: ""; }
+.topbar::after { display: none; content: none; background: var(--brand-gradient); }
 .brand, .logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-family: var(--font-display); font-weight: 800; letter-spacing: -.02em; text-decoration: none; }
 .brand-logo { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 50%; box-shadow: 0 2px 10px rgba(21, 26, 92, .22); object-fit: cover; }
 .brand-word { display: flex; flex-direction: column; line-height: 1.02; }
@@ -216,7 +219,7 @@ body.sidebar-collapsed .side-link[aria-current="page"]::before { left: -10px; }
 .app-nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
 .topbar .actions, .topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .app-nav + .actions, .app-nav + .topbar-actions { margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--border); }
-h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); letter-spacing: -.01em; }
+h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); font-weight: 800; letter-spacing: -.01em; line-height: 1.15; text-wrap: balance; }
 .save-indicator, .save-status { min-height: 16px; color: var(--muted); font-size: 12px; font-weight: 650; }
 .save-indicator[data-status="failed"] { color: var(--danger); }
 

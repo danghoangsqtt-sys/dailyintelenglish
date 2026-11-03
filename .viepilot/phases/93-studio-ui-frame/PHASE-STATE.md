@@ -4,8 +4,8 @@ Status: in_progress (2026-11-04). Owner: "Chạy Phase 93" with the defaults D13
 
 | Task | Scope | Status |
 |---|---|---|
-| 93.1 | Tokens and fonts | in_progress |
-| 93.2 | One rail | planned |
+| 93.1 | Tokens and fonts | done — tokens.css, Baloo 2 + Be Vietnam Pro bundled, palette and base components in style.css, AA contrast kept |
+| 93.2 | One rail | in_progress |
 | 93.3 | Hôm nay | planned |
 | 93.4 | Tạo video | planned |
 | 93.5 | Kênh | planned |
