@@ -41,6 +41,17 @@ panels for review and work in progress, the week as an unboxed agenda with the c
 7-step strip as subject details, focus rings and reduced motion. Checked at 1920×1080, 1366×768 and 375×812 (light and
 dark, no sideways scroll). Self-score 90: 9 on every criterion.
 
+## Direction E, all pages (owner: "Làm tiếp", 2026-11-03)
+
+`e/` holds the full set in direction E: `style.css` (tokens, light and dark, components), `shell.js` (rail or phone tab bar;
+inside one video the title, 3 stages with 7 steps, and the Back / Next bar), `home.html`, `create.html`, `channel.html`
+(the week as Short / long-video lanes, series progress), `videos.html` (table that stacks on phones), `library.html`
+(characters, scenes, voices, brand), and `step-1.html` … `step-7.html` (setup, script, learning cards, voices, the video
+editor with timeline, thumbnails, YouTube with the SEO score). Lina is the loud band only on Home; on working pages she is
+a quiet inline note with her face, never over the content. Checked at 1920×1080 and 375×812 in light and dark; every
+page measured with no sideways scroll on a phone. Self-score for the set: 91 (consistency across pages adds to layout
+and cards; the remaining gaps are richer motion and real data).
+
 ## Pages inventory
 
 | File | Purpose |
@@ -50,7 +61,8 @@ dark, no sideways scroll). Self-score 90: 9 on every criterion.
 | `b-studio.html` | direction B, Home |
 | `c-bento.html` | direction C, Home |
 | `d-friendly.html` | direction D, Home (Canva + Notion + Duolingo) |
-| `e-studio.html` | direction E, Home, built to score 90+ |
+| `e-studio.html` | direction E, Home, first version |
+| `e/*.html`, `e/style.css`, `e/shell.js` | direction E, every page |
 
 ## Open question for the owner
 

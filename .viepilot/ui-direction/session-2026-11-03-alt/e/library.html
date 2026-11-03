@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thư viện · Daily Beyond English</title><link rel="stylesheet" href="style.css">
+<style>
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 18px; }
+.person { display: grid; gap: 8px; }
+.person .pic { aspect-ratio: 4 / 5; border-radius: var(--r-panel); background: var(--sunk); overflow: hidden; display: flex; justify-content: center; align-items: flex-start; }
+.person .pic img { width: 135%; max-width: none; margin-top: 4%; }
+.person b { font-size: 16.5px; } .person span { color: var(--ink-3); font-size: 14.5px; margin-top: -6px; }
+.person.add .pic { border: 2px dashed var(--line); background: transparent; align-items: center; color: var(--link); font: 800 40px var(--display); }
+.scenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+.scene img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; }
+.scene b { display: block; margin-top: 8px; font-size: 15.5px; text-transform: capitalize; }
+.voice { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 18px; }
+.voice + .voice { border-top: 1px solid var(--line); }
+.play { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; color: var(--link); cursor: pointer; }
+</style></head>
+<body data-page="library">
+<main>
+  <div class="head"><h1>Thư viện</h1><span class="end"><a class="btn" href="#"><svg class="i" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#upload"/></svg>Tải lên</a><a class="btn primary" href="#">Nhân vật mới</a></span></div>
+  <nav class="full tabs" aria-label="Loại"><a href="#" aria-current="page">Tất cả</a><a href="#">Nhân vật <small class="num">5</small></a><a href="#">Cảnh <small class="num">56</small></a><a href="#">Hình minh họa <small class="num">188</small></a><a href="#">Giọng đọc <small class="num">12</small></a><a href="#">Nhạc <small class="num">9</small></a><a href="#">Thương hiệu</a></nav>
+
+  <section class="full"><div class="sh"><h2>Nhân vật</h2><span class="muted">dùng trong video hội thoại, người dẫn, và làm trợ lý</span></div><div class="people" id="people"></div></section>
+  <section class="full"><div class="sh"><h2>Cảnh</h2><a class="more" href="#">Tất cả 56</a></div><div class="scenes" id="scenes"></div></section>
+  <section class="main8"><div class="sh"><h2>Giọng đọc</h2><a class="more" href="#">Tất cả 12</a></div>
+    <div class="panel">
+      <div class="voice"><button class="play" type="button" aria-label="Nghe thử Ngọc Huyền"><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button><div><b>Ngọc Huyền</b><div class="muted" style="font-size:14.5px">Tiếng Việt · VieNeu · giọng cô giáo</div></div><span class="state ok">Mặc định</span></div>
+      <div class="voice"><button class="play" type="button" aria-label="Nghe thử Aria"><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button><div><b>Aria</b><div class="muted" style="font-size:14.5px">Tiếng Anh Mỹ · Edge · câu ví dụ</div></div><span></span></div>
+      <div class="voice"><button class="play" type="button" aria-label="Nghe thử Guy"><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button><div><b>Guy</b><div class="muted" style="font-size:14.5px">Tiếng Anh Mỹ · Edge · nhân vật nam</div></div><span></span></div>
+    </div></section>
+  <section class="side4"><div class="sh"><h2>Thương hiệu</h2></div>
+    <div class="panel pad" style="display:grid;gap:14px"><div style="display:flex;gap:14px;align-items:center"><img src="../../../../frontend/static/brand/logo-64.png" alt="" style="width:52px;height:52px;border-radius:50%"><div><b>Daily Beyond English</b><div class="muted" style="font-size:14.5px">Logo, màu, phông chữ, đoạn kết</div></div></div>
+      <div style="display:flex;gap:8px"><span style="width:40px;height:40px;border-radius:10px;background:#1f8a4c"></span><span style="width:40px;height:40px;border-radius:10px;background:#13603a"></span><span style="width:40px;height:40px;border-radius:10px;background:#ffd60a"></span><span style="width:40px;height:40px;border-radius:10px;background:#f6f7f2;border:1px solid var(--line)"></span></div></div></section>
+</main>
+<script>
+const P = [["e961d07c-da89-4395-beec-7741df69142d", "Lina", "Trợ lý · 29 dáng · nhìn thẳng và nghiêng"], ["0383161f-b197-41af-b1fd-f912253ed42e", "Alex", "Nhân vật nam · 29 dáng"],
+  ["70f28645-bb84-413d-be64-eab96b206357", "Jack", "Nhân vật nam"], ["eba10f99-494c-47d6-ae8a-d52a3832f162", "Kim", "Nhân vật nữ"], ["f78e2236-7f4e-4e30-ab5e-afec3f554c07", "Hoàng", "Nhân vật nam"]];
+document.getElementById("people").innerHTML = P.map(([id, n, d]) => `<a class="person" href="#"><div class="pic"><img src="../../../../data/library/sprites/${id}/calm__closed.png" alt=""></div><b>${n}</b><span>${d}</span></a>`).join("")
+  + `<a class="person add" href="#"><div class="pic">+</div><b>Nhân vật mới</b><span>từ một tấm ảnh</span></a>`;
+document.getElementById("scenes").innerHTML = ["cafe", "classroom", "airport", "bookshop", "campus"].map((s) => `<a class="scene" href="#"><img src="../../../../data/library/scenes/builtin-${s}/preview.png" alt=""><b>${s}</b></a>`).join("");
+</script>
+<script src="shell.js"></script></body></html>

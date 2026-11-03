@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bước 5 Video · Daily Beyond English</title><link rel="stylesheet" href="style.css"></head>
+<body data-page="videos" data-step="5">
+<main>
+  <div class="full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div class="seg" role="group" aria-label="Chế độ"><button aria-pressed="true">Sửa trên video</button><button>Nhân vật và cảnh</button><button>Short và TikTok</button></div>
+    <span class="grow" style="flex:1"></span><span class="muted num">Bản dựng gần nhất 02:14 · 0:58 · 1080×1920</span>
+    <button class="btn" type="button">Tải video</button><button class="btn primary" type="button">Dựng lại · khoảng 50 giây</button>
+  </div>
+  <div class="full editor">
+    <aside><div class="ph">Các thẻ <span class="muted num" style="margin-left:auto;font:600 15px var(--body)">8</span></div><nav id="beats"></nav></aside>
+    <div style="display:flex;flex-direction:column;min-width:0">
+      <div class="stagev" style="flex:1"><div class="phone"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt="Khung hình video ở giây 14"><div class="sel"></div></div></div>
+      <div class="transport"><button class="btn sm ghost" type="button" aria-label="Hoàn tác"><svg class="i sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#undo"/></svg></button>
+        <span style="flex:1"></span><button class="playbtn" type="button" aria-label="Phát"><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button><span class="num">0:14 / 0:58</span><span style="flex:1"></span></div>
+    </div>
+    <aside class="r"><div class="ph">Thẻ 2 · Bảng so sánh <span class="state wait" style="margin-left:auto">Đã sửa</span></div>
+      <div class="pad form" style="gap:14px">
+        <div class="field"><label for="ttl">Tiêu đề thẻ</label><input id="ttl" value="Tính chất ↔ Trạng thái"></div>
+        <div class="two"><div class="field"><label for="l1">Cột trái</label><input id="l1" value="She is beautiful."></div><div class="field"><label for="r1">Cột phải</label><input id="r1" value="The room is cleaned."></div></div>
+        <div class="field"><span class="lbl">Hiện trong <small class="num">câu 2 → 4</small></span><div class="seg" role="group" aria-label="Phạm vi"><button aria-pressed="true">Cả cảnh</button><button>Chỉ câu này</button></div></div>
+        <div class="field"><label for="v3">Lời đọc câu 3</label><textarea id="v3" rows="3">Khi người làm không quan trọng, ta đưa vật bị tác động lên đầu câu.</textarea></div>
+        <button class="btn" type="button">Đọc lại câu 3 · 2 giây</button>
+      </div></aside>
+    <div class="timeline" id="tl"></div>
+  </div>
+  <div class="full tip"><span class="face"><img src="../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp" alt=""></span><p>Bấm vào chữ trên video để sửa. Sửa xong chỉ cần <b>dựng lại</b>, khoảng 50 giây.</p></div>
+</main>
+<script>
+const B = [["Mở đầu", "Câu 1", 7], ["Bảng so sánh", "Câu 2–4", 18], ["Công thức", "Câu 5–6", 12], ["Câu ví dụ", "Câu 7", 10], ["Thêm by", "Câu 8", 8], ["Lỗi hay gặp", "Câu 9–11", 16], ["Tóm tắt", "Câu 12–13", 15], ["Kết", "Câu 14", 9]];
+document.getElementById("beats").innerHTML = B.map(([t, s], i) => `<a class="beat" href="#"${i === 1 ? ' aria-current="true"' : ""}><div class="thumb"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""></div><div><b>${i + 1}. ${t}</b>${s}</div></a>`).join("");
+let x = 0; const cards = B.map(([t], i) => { const h = `<span class="clip c${i === 1 ? " on" : ""}" style="left:${x}%;width:${B[i][2] - .5}%">${t}</span>`; x += B[i][2]; return h; }).join("");
+x = 0; const V = [5, 9, 13, 8, 7, 6, 8, 7, 9, 8, 6, 7, 5, 2]; const voice = V.map((w, i) => { const h = `<span class="clip v" style="left:${x}%;width:${w - .5}%">${i + 1}</span>`; x += w; return h; }).join("");
+document.getElementById("tl").innerHTML = `<div class="track"><span>Thẻ</span><div><span class="playhead" style="left:24%"></span>${cards}</div></div>
+  <div class="track"><span>Giọng</span><div>${voice}</div></div><div class="track"><span>Nhạc</span><div><span class="clip m" style="left:0;width:100%">Morning Study · 12%</span></div></div>`;
+</script>
+<script src="shell.js"></script></body></html>

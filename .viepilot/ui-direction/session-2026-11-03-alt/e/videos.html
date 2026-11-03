@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Video · Daily Beyond English</title><link rel="stylesheet" href="style.css">
+<style>
+.bar-tools { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.search { display: flex; align-items: center; gap: 10px; height: 46px; min-width: 320px; padding: 0 14px; border-radius: var(--r-ctl); border: 1px solid var(--line); background: var(--surface); color: var(--ink-3); }
+.search input { border: 0; outline: 0; background: transparent; flex: 1; min-width: 0; font-size: 16px; }
+.vid { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: center; }
+.vid .thumb { width: 40px; }
+.seo { font: 800 18px var(--display); }
+.seo.hi { color: var(--link); } .seo.mid { color: var(--wait); }
+@media (max-width: 860px) { .search { min-width: 0; width: 100%; }
+  .vtable { min-width: 0 !important; } .vtable thead, .vtable td.opt { display: none; } .vtable tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .vtable td { display: block; padding: 0; border: 0; } .vtable td:first-child { grid-column: 1 / -1; } }
+</style></head>
+<body data-page="videos">
+<main>
+  <div class="head"><h1>Video</h1><span class="end"><div class="seg" role="group" aria-label="Cách xem"><button aria-pressed="true">Danh sách</button><button>Theo bước</button></div></span></div>
+  <nav class="full tabs" aria-label="Trạng thái"><a href="#" aria-current="page">Tất cả <small class="num">48</small></a><a href="#">Chờ bạn <small class="num">3</small></a><a href="#">Đang làm <small class="num">2</small></a><a href="#">Đã lên lịch <small class="num">5</small></a><a href="#">Đã đăng <small class="num">38</small></a></nav>
+  <div class="full bar-tools">
+    <label class="search" for="q"><svg class="i" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#search"/></svg><input id="q" placeholder="Tìm theo tên, chủ đề, series"></label>
+    <div class="chips"><button class="chip">Loại</button><button class="chip">Series</button><button class="chip">Trình độ</button><button class="chip">Khổ</button></div>
+  </div>
+  <section class="full panel scroll-x">
+    <table class="vtable" style="min-width:760px"><thead><tr><th>Video</th><th>Trạng thái</th><th class="opt">Bước</th><th>SEO</th><th class="opt">Lịch hoặc lượt xem</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+  </section>
+</main>
+<script>
+const S = (img) => `../../../../frontend/static/samples/${img}.jpg`;
+const V = [
+  ["grammar-vi", "Câu bị động: hiểu bản chất", "Ngữ pháp · B1 · Short 0:58", "wait", "Chờ duyệt", 7, 86, "Thứ Tư 19:00", "step-7.html"],
+  ["roots-vi", "Hậu tố -MENT", "Gốc từ · B2 · Short 1:45", "err", "Thiếu hình", 5, 0, "—", "step-5.html"],
+  ["news-vi", "Cities plant more trees", "Tin tức · A2 · Short 0:57", "wait", "Chờ duyệt", 7, 81, "—", "step-2.html"],
+  ["mistakes-vi", "Lỗi \"I very like\"", "Đừng nói / Hãy nói · A2 · Short", "run", "Đang dựng", 5, 0, "—", "step-5.html"],
+  ["roots-vi", "Gốc SPECT", "Gốc từ · B2 · Short 1:38", "ok", "Đã lên lịch", 7, 92, "Hôm nay 19:00", "step-7.html"],
+  ["chat-vi", "Planning a picnic", "Chat · A2 · Short 0:52", "ok", "Đã lên lịch", 7, 88, "Thứ Năm 19:00", "step-7.html"],
+  ["conversation_short", "The Office · tập 5", "Hội thoại · B1 · video dài 6:12", "", "Đã đăng", 7, 90, "1.240 lượt xem", "step-7.html"],
+  ["flashcards-vi", "10 từ về nhà bếp", "Flashcard · A2 · Short 0:44", "", "Đã đăng", 7, 84, "860 lượt xem", "step-7.html"],
+];
+const dots = (n) => `<div class="steps" aria-label="Bước ${n} trên 7" style="margin:0">${[1, 2, 3, 4, 5, 6, 7].map((k) => `<i class="${k < n || n === 7 ? "d" : k === n ? "n" : ""}"></i>`).join("")}</div>`;
+document.getElementById("rows").innerHTML = V.map(([img, t, m, st, sl, step, seo, when, href]) => `<tr>
+  <td><div class="vid"><div class="thumb"><img src="${S(img)}" alt=""></div><div><div style="font-weight:700;font-size:16.5px">${t}</div><div class="muted" style="font-size:14px">${m}</div></div></div></td>
+  <td><span class="state ${st}">${sl}</span></td><td class="opt">${dots(step)}</td>
+  <td>${seo ? `<span class="seo num ${seo >= 85 ? "hi" : "mid"}">${seo}</span>` : '<span class="muted">—</span>'}</td>
+  <td class="opt muted num" style="font-size:15px">${when}</td><td style="text-align:right"><a class="btn sm" href="${href}">Mở</a></td></tr>`).join("");
+</script>
+<script src="shell.js"></script></body></html>

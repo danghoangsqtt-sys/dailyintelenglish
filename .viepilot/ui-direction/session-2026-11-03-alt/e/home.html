@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Beyond English Studio</title><link rel="stylesheet" href="style.css">
+<style>
+.day { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.day:first-of-type { border-top: 0; padding-top: 0; }
+.day .d { font: 700 14px var(--body); color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+.day .d b { display: block; font: 800 26px/1 var(--display); color: var(--ink); letter-spacing: 0; text-transform: none; margin-top: 2px; }
+.day.today .d, .day.today .d b { color: var(--link); }
+.ev { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 15px; }
+.ev + .ev { margin-top: 8px; }
+.ev .thumb { width: 26px; border-radius: 5px; }
+.ev .w { font-weight: 600; }
+.ev time { color: var(--ink-3); font-size: 14px; }
+.ev.plan { color: var(--ink-3); } .ev.plan .thumb { opacity: .45; }
+.slot { padding: 3px 10px; border-radius: 8px; background: var(--sunk); font-weight: 600; font-size: 14px; color: var(--ink-2); }
+</style></head>
+<body data-page="home">
+<main>
+  <div class="head"><h1>Hôm nay</h1><span class="sub">Thứ Ba, 3 tháng 11</span>
+    <span class="end"><span class="slot">Short mỗi ngày 19:00</span><span class="slot">Video dài Thứ Tư · Thứ Bảy</span></span></div>
+
+  <div class="main8">
+    <section class="band" aria-label="Lina, trợ lý">
+      <div class="talk">
+        <span class="who">Lina · trợ lý của bạn</span>
+        <p class="line">Đêm qua mình làm xong <b>3 video</b>. Duyệt xong là chúng tự lên lịch tuần này.</p>
+        <div class="acts"><a class="btn primary sun" href="#review">Duyệt 3 video</a><a class="btn ghost" href="channel.html">Xem đêm qua làm gì</a></div>
+        <label class="topic" for="topic"><svg class="i" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#spark"/></svg>
+          <input id="topic" placeholder="Video tiếp theo nói về gì? Ví dụ: câu điều kiện loại 2"><button class="btn sm primary" type="button">Tạo</button></label>
+      </div>
+      <div class="lina"><img id="lina" src="../../session-2026-11-03-ia/mascot/lina/front/gesture-wave.webp" alt="Lina vẫy tay chào"></div>
+    </section>
+
+    <section id="review">
+      <div class="sh"><h2>Chờ bạn duyệt</h2><span class="state wait num">3</span><a class="more" href="videos.html">Tất cả video</a></div>
+      <div class="panel" id="rv"></div>
+    </section>
+
+    <section>
+      <div class="sh"><h2>Đang làm</h2></div>
+      <div class="panel">
+        <div class="row"><div class="thumb"><img src="../../../../frontend/static/samples/mistakes-vi.jpg" alt=""></div>
+          <div><div class="t">Lỗi "I very like"</div><div class="steps" aria-label="Bước 5 trên 7"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="n"></i><i></i><i></i></div>
+            <div class="m">Bước 5 · Dựng video, cảnh 5/6</div></div>
+          <span class="state run num">còn 40 giây</span><span></span></div>
+        <div class="row"><div class="thumb"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""></div>
+          <div><div class="t">Thì hiện tại hoàn thành</div><div class="steps" aria-label="Bước 4 trên 7"><i class="d"></i><i class="d"></i><i class="d"></i><i></i><i></i><i></i><i></i></div>
+            <div class="m">Bước 4 · Giọng đọc, chạy lúc 23:00</div></div>
+          <span class="state">Đêm nay</span><span></span></div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="side4">
+    <section><div class="sh"><h2>Tuần này</h2><a class="more" href="channel.html">Mở lịch</a></div><div id="week"></div></section>
+  </aside>
+</main>
+<script>
+const S = (img) => `../../../../frontend/static/samples/${img}.jpg`;
+document.getElementById("rv").innerHTML = [
+  ["grammar-vi", "Câu bị động: hiểu bản chất", "Ngữ pháp", "B1", "0:58", "làm xong 02:14", "wait", "Chờ duyệt", [["Xem", "step-5.html"], ["Duyệt", "step-7.html", 1]]],
+  ["roots-vi", "Hậu tố -MENT", "Gốc từ", "B2", "1:45", "3 từ chưa có hình", "err", "Thiếu hình", [["Vẽ lại 3 hình", "step-5.html", 1]]],
+  ["news-vi", "Cities plant more trees", "Tin tức", "A2", "0:57", "Lina đã sửa câu 4", "wait", "Chờ duyệt", [["Xem câu 4", "step-2.html"], ["Duyệt", "step-7.html", 1]]],
+].map(([img, t, kind, lv, dur, note, st, sl, acts]) => `<div class="row"><div class="thumb"><img src="${S(img)}" alt=""></div>
+  <div><div class="t">${t}</div><div class="m">${kind} <span class="cefr">${lv}</span> Short <span class="num">${dur}</span> · ${note}</div></div>
+  <span class="state ${st}">${sl}</span><div class="acts2">${acts.map(([a, h, p]) => `<a class="btn sm${p ? " primary" : ""}" href="${h}">${a}</a>`).join("")}</div></div>`).join("");
+const W = [["T3", 3, 1, [["roots-vi", "Gốc SPECT", "19:00"]]], ["T4", 4, 0, [["grammar-vi", "Câu bị động", "19:00", "wait"], ["conversation", "The Office · tập 6", "20:00"]]],
+  ["T5", 5, 0, [["chat-vi", "Planning a picnic", "19:00"]]], ["T6", 6, 0, [["roots-vi", "Tiền tố RE-", "19:00", "plan"]]],
+  ["T7", 7, 0, [["wordday-vi", "Word of the day: cozy", "09:00"], ["conversation", "The Office · tập 7", "20:00", "plan"]]], ["CN", 8, 0, []]];
+document.getElementById("week").innerHTML = W.map(([d, n, today, evs]) => `<div class="day${today ? " today" : ""}"><div class="d">${d}<b class="num">${n}</b></div><div>${
+  evs.length ? evs.map(([img, t, time, k]) => `<div class="ev${k === "plan" ? " plan" : ""}"><div class="thumb"><img src="${S(img)}" alt=""></div><span class="w">${t}${k === "wait" ? ' <span class="state wait" style="height:22px;font-size:12.5px;padding:0 8px">chờ duyệt</span>' : ""}</span><time class="num">${time}</time></div>`).join("")
+  : '<span class="muted">Chưa có video. Lina có thể làm một Short tối nay.</span>'}</div></div>`).join("");
+const lina = document.getElementById("lina"), F = "../../session-2026-11-03-ia/mascot/lina/front/";
+["calm__closed", "blink"].forEach((n) => { new Image().src = F + n + ".webp"; });
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  setTimeout(() => { lina.src = F + "calm__closed.webp"; lina.alt = "Lina"; }, 2200);
+  (function blink() { setTimeout(() => { if (lina.src.includes("calm__closed")) { lina.src = F + "blink.webp"; setTimeout(() => { lina.src = F + "calm__closed.webp"; }, 120); } blink(); }, 2600 + Math.random() * 3200); })();
+}
+</script>
+<script src="shell.js"></script></body></html>

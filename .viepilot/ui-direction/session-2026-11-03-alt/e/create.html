@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tạo video · Daily Beyond English</title><link rel="stylesheet" href="style.css">
+<style>
+.modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.mode { display: flex; gap: 16px; align-items: center; padding: 18px 20px; border-radius: var(--r-panel); border: 2px solid var(--line); background: var(--surface); }
+.mode[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-tint); }
+.mode .ic { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--link); border: 1px solid var(--line); flex: none; }
+.mode h3 { font-size: 21px; }
+.mode p { color: var(--ink-2); font-size: 15px; }
+.filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.filters .seg { margin-left: auto; }
+.group + .group { margin-top: 34px; }
+@media (max-width: 860px) { .modes { grid-template-columns: minmax(0, 1fr); } .filters .seg { margin-left: 0; } .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style></head>
+<body data-page="create">
+<main>
+  <div class="head"><h1>Tạo video</h1><span class="sub">Chọn cách làm, rồi chọn một mẫu</span></div>
+
+  <div class="full modes">
+    <a class="mode" href="step-1.html" aria-pressed="true"><span class="ic"><svg class="i" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#film"/></svg></span>
+      <span><h3>Một video</h3><p>Một Short hoặc một video dài. Đi qua 7 bước: nội dung, sản xuất, đăng.</p></span></a>
+    <a class="mode" href="#"><span class="ic"><svg class="i" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#layers"/></svg></span>
+      <span><h3>Nhiều Short cùng lúc</h3><p>Lina đề xuất 5–10 ý tưởng cùng một mẫu. Bạn duyệt danh sách rồi làm một lần.</p></span></a>
+  </div>
+
+  <div class="full tip"><span class="face"><img src="../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp" alt=""></span>
+    <p>Mới làm lần đầu? Thử <b>Ngữ pháp dễ hiểu</b>: bạn chỉ nhập một chủ đề, phần còn lại để mình lo. Rê chuột lên mẫu để xem video ví dụ.</p></div>
+
+  <div class="full filters">
+    <div class="chips" role="group" aria-label="Nhóm mẫu"><button class="chip" aria-pressed="true">Tất cả</button><button class="chip">Học thuật</button><button class="chip">Nhân vật</button><button class="chip">Mẫu chữ nhanh</button><button class="chip">Tương tác</button></div>
+    <div class="seg" role="group" aria-label="Khổ video"><button aria-pressed="true">Short 9:16</button><button>Video dài 16:9</button></div>
+  </div>
+
+  <div class="full" id="groups"></div>
+</main>
+<script>
+const S = (img) => `../../../../frontend/static/samples/${img}.jpg`;
+const G = [
+  ["Học thuật", "giảng bằng tiếng Việt · 1–3 phút", [["grammar-vi", "Ngữ pháp dễ hiểu", "Một điểm ngữ pháp, giảng theo bản chất", "Mới"], ["roots-vi", "Gốc từ, tiền tố, hậu tố", "Một gốc và cả họ từ", "Mới"], ["slowpod-vi", "Podcast nói chậm", "Có bản dịch tiếng Việt"], ["listen-vi", "Nghe và chọn", "Luyện nghe với 3 lựa chọn"]]],
+  ["Nhân vật", "nhân vật trong thư viện", [["conversation_short", "Hội thoại", "Hai nhân vật nói chuyện"], ["presenter_short", "Người dẫn", "Giải thích một ý trước máy quay"], ["vox_short", "VOX", "Giọng kể trên nền hình ảnh"], ["chat-vi", "Chat", "Tin nhắn giữa hai người"]]],
+  ["Mẫu chữ nhanh", "dưới 1 phút", [["wordday-vi", "Từ của ngày", "Nghĩa, cách đọc, ví dụ"], ["mistakes-vi", "Đừng nói / Hãy nói", "Một lỗi hay gặp"], ["news-vi", "Tin tức", "Một tin bằng tiếng Anh dễ hiểu"], ["flashcards-vi", "Flashcard", "8–10 từ một chủ đề"], ["top5-vi", "Top 5", "Năm cách nói một ý"], ["blur-vi", "Đoán từ", "Hình mờ dần rõ"]]],
+  ["Tương tác", "người xem trả lời trong bình luận", [["quiz-vi", "Quiz đếm ngược", "Người xem comment đáp án"], ["wyr-vi", "Bạn chọn gì?", "Hai lựa chọn để bình chọn"]]],
+];
+document.getElementById("groups").innerHTML = G.map(([h, sub, xs]) => `<section class="group"><div class="sh"><h2>${h}</h2><span class="muted">${sub}</span></div>
+  <div class="gallery">${xs.map(([img, n, d, tag]) => `<a class="tpl" href="step-1.html"><div class="thumb"><img src="${S(img)}" alt="">${tag ? `<span class="tag">${tag}</span>` : ""}</div><b>${n}</b><span>${d}</span></a>`).join("")}</div></section>`).join("");
+</script>
+<script src="shell.js"></script></body></html>

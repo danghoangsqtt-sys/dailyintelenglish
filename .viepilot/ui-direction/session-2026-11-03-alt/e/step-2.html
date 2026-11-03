@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bước 2 Kịch bản · Daily Beyond English</title><link rel="stylesheet" href="style.css"></head>
+<body data-page="videos" data-step="2">
+<main>
+  <div class="main8">
+    <div class="tip"><span class="face"><img src="../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp" alt=""></span><p>Mình đã soát lại và <b>sửa câu 9</b> cho đúng chủ đề. Bạn xem lại câu đó nhé.</p><a class="btn sm primary" href="#l9">Xem câu 9</a></div>
+    <section class="panel" id="script" style="overflow:hidden"></section>
+  </div>
+  <aside class="side4">
+    <section class="panel pad"><div class="sh" style="margin-bottom:6px"><h2 style="font-size:20px">Dàn ý</h2><span class="more muted num" style="color:var(--ink-3)">14 câu · 52 giây</span></div>
+      <nav class="outline"><a href="#" aria-current="true">1. Câu bị động là gì<small class="num">0:00</small></a><a href="#">2. Cách tạo câu bị động<small class="num">0:18</small></a><a href="#">3. Lỗi hay gặp<small class="num">0:39</small></a></nav></section>
+    <section class="panel pad"><div class="sh" style="margin-bottom:6px"><h2 style="font-size:20px">Câu 3 đang chọn</h2></div>
+      <div class="field"><label for="c3" class="muted" style="font-weight:600">Lời đọc</label><textarea id="c3" rows="4">Khi người làm không quan trọng, ta đưa vật bị tác động lên đầu câu: "The bridge was built in 1990."</textarea></div>
+      <div class="acts2" style="margin-top:12px"><button class="btn sm" type="button">Ngắn hơn</button><button class="btn sm" type="button">Dễ hiểu hơn</button><button class="btn sm" type="button">Thêm ví dụ</button></div></section>
+  </aside>
+</main>
+<script>
+const L = "../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp";
+const line = (n, txt, tr, sel) => `<div class="line${sel ? " sel" : ""}" id="l${n}"><span class="no num">${n}</span><span class="who"><img src="${L}" alt="">Cô giáo</span>
+  <div class="txt">${txt}${tr ? `<small>${tr}</small>` : ""}</div><button class="btn sm ghost tools" type="button" aria-label="Viết lại câu ${n}"><svg class="i sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#refresh"/></svg></button></div>`;
+document.getElementById("script").innerHTML = `<div class="scene-h">Cảnh 1 · Câu bị động là gì <span class="state" style="margin-left:auto;height:24px">Thẻ: bảng so sánh</span></div>`
+  + line(1, "Hôm nay mình hiểu câu bị động trong một phút nhé.") + line(2, "Câu chủ động nói ai làm việc gì: \"Workers built the bridge.\"", "Công nhân đã xây cây cầu.")
+  + line(3, "Khi người làm không quan trọng, ta đưa vật bị tác động lên đầu câu: \"The bridge was built in 1990.\"", "Cây cầu được xây năm 1990.", 1)
+  + `<div class="scene-h">Cảnh 2 · Cách tạo câu bị động <span class="state" style="margin-left:auto;height:24px">Thẻ: công thức</span></div>`
+  + line(5, "Công thức rất gọn: be + quá khứ phân từ.") + line(6, "\"The room is cleaned every day.\"", "Căn phòng được dọn mỗi ngày.")
+  + `<div class="scene-h">Cảnh 3 · Lỗi hay gặp <span class="state wait" style="margin-left:auto;height:24px">Lina vừa sửa câu 9</span></div>`
+  + line(9, "Đừng nói \"I am agree\". \"Agree\" đã là động từ, nên chỉ cần \"I agree\".", "Tôi đồng ý.");
+</script>
+<script src="shell.js"></script></body></html>

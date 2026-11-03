@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bước 4 Giọng đọc · Daily Beyond English</title><link rel="stylesheet" href="style.css">
+<style>
+.voices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.v { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--surface); }
+.v img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; object-position: 50% 14%; background: var(--sunk); }
+.ln { display: grid; grid-template-columns: 24px 38px minmax(0, 1fr) 220px 48px; gap: 14px; align-items: center; padding: 12px 18px; }
+.ln + .ln { border-top: 1px solid var(--line); }
+@media (max-width: 860px) { .voices { grid-template-columns: minmax(0, 1fr); } .ln { grid-template-columns: 24px 38px minmax(0, 1fr); } .ln > :nth-child(4), .ln > :nth-child(5) { grid-column: 3; } }
+</style></head>
+<body data-page="videos" data-step="4">
+<main>
+  <div class="main8">
+    <section><div class="sh"><h2>Giọng của từng người nói</h2></div>
+      <div class="voices">
+        <div class="v"><img src="../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp" alt=""><div><b>Cô giáo · tiếng Việt</b><div class="muted" style="font-size:14.5px">Ngọc Huyền · VieNeu</div></div><button class="playbtn" type="button" aria-label="Nghe thử"><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button><button class="btn sm" type="button">Đổi</button></div>
+        <div class="v"><img src="../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp" alt=""><div><b>Cô giáo · câu tiếng Anh</b><div class="muted" style="font-size:14.5px">Aria · Edge · Mỹ</div></div><button class="playbtn" type="button" aria-label="Nghe thử"><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button><button class="btn sm" type="button">Đổi</button></div>
+      </div></section>
+    <section><div class="sh"><h2>Nghe thử từng câu</h2><span class="more"><button class="btn sm" type="button">Đọc lại 2 câu đã sửa</button></span></div><div class="panel" id="lines"></div></section>
+  </div>
+  <aside class="side4">
+    <div class="tip"><span class="face"><img src="../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp" alt=""></span><p>Câu 3 và câu 9 vừa sửa nên cần đọc lại, mất khoảng <b>2 giây</b>. Các câu khác giữ giọng cũ.</p></div>
+    <section class="panel pad" style="display:grid;gap:14px"><h2 style="font-size:20px">Tạo cả bài</h2>
+      <div style="display:flex;justify-content:space-between"><span>Đã có giọng</span><b class="num">12/14 câu</b></div>
+      <div class="steps" style="margin:0" aria-hidden="true"><i class="d" style="flex:12"></i><i style="flex:2"></i></div>
+      <button class="btn primary" type="button">Tạo giọng · khoảng 9 giây</button></section>
+    <section class="panel pad" style="display:grid;gap:12px"><h2 style="font-size:20px">Nhạc nền</h2>
+      <div style="display:flex;gap:12px;align-items:center"><button class="playbtn" type="button" aria-label="Nghe nhạc nền"><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button><div style="flex:1"><b>Morning Study</b><div class="muted" style="font-size:14.5px">Piano nhẹ · âm lượng 12%</div></div><button class="btn sm" type="button">Đổi</button></div></section>
+  </aside>
+</main>
+<script>
+const L = [["Hôm nay mình hiểu câu bị động trong một phút nhé.", "0:03", 1], ["Câu chủ động nói ai làm việc gì: \"Workers built the bridge.\"", "0:05", 1],
+  ["Khi người làm không quan trọng, ta đưa vật bị tác động lên đầu câu.", "", 0], ["Vậy câu bị động trả lời: chuyện gì đã xảy ra với vật đó?", "0:04", 1], ["Công thức rất gọn: be + quá khứ phân từ.", "0:03", 1]];
+const wave = '<div class="wave">' + Array.from({ length: 32 }, (_, i) => `<i style="height:${28 + Math.round(64 * Math.abs(Math.sin(i * 1.7)))}%"></i>`).join("") + "</div>";
+document.getElementById("lines").innerHTML = L.map(([t, d, ok], i) => `<div class="ln"><span class="muted num">${i + 1}</span><button class="playbtn" type="button" aria-label="Nghe câu ${i + 1}" ${ok ? "" : "disabled"}><svg class="i fill sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#play"/></svg></button>
+  <span>${t}</span>${ok ? wave : '<span class="state wait">Đã sửa, chưa đọc lại</span>'}<span class="muted num" style="text-align:right">${d || "—"}</span></div>`).join("");
+</script>
+<script src="shell.js"></script></body></html>
