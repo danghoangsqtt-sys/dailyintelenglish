@@ -21,6 +21,27 @@ The one-video workflow keeps the app's seven steps (Config, Script, Learning, Au
 groups them in three stages: Nội dung (1–3), Sản xuất (4–5), Đăng (6–7). Each step page has the same frame: title
 with autosave, the stage bar, the work in the middle, a helper panel on the right, and one "next" button at the bottom.
 
+## Mascot and less repeated data (v5, owner 2026-11-03)
+
+Owner: the mascot (3D-cartoon young woman, brown wavy hair, round black glasses, heart sticker on the cheek, beige
+shirt, jeans, black sneakers) should stand in a screen corner, move softly and talk; "the interface is clean but
+still has many problems and much extra data".
+
+- `mascot/stand-900.png` and `mascot/face.png` are cut out of the owner's sheets (plain studio grey removed by
+  colour). In the corner she breathes and sways (CSS), hops once when she starts talking, types her line into a
+  bubble and reads it aloud when the computer has a Vietnamese voice; one or two buttons act on what she says.
+  "Thu nhỏ" folds her into a round face with a dot; a click brings her back. Reduced-motion turns the motion off.
+- Each page gives her one short, useful line about that page (what waits for you, what changed, the next step).
+  She replaces the welcome banner, the bell and the footer hints.
+- In the real app: blinking and mouth movement need extra frames (eyes closed, mouth open, a wave), made with the
+  same character-sprite pipeline the talking characters already use; the voice would be the app's own VieNeu voice,
+  and the mouth would follow its loudness. Her lines come from the app's state (jobs, reviews, schedule).
+- Removed repeats: Home's welcome banner and KPI row (same numbers as the lists below), the sidebar's series list,
+  automation box, bell and avatar (all repeated Kênh or Hôm nay), the series line under a video's title, the video
+  title in the breadcrumbs, the footer hints, the "Bước 7/7" column, page subtitles that restated the tab counts,
+  per-section counts, the "đang bật" tab label, the Series and Tự động panels under the calendar (they have tabs),
+  Step 1's second copy of the example clip, and Step 5's "instant preview" note.
+
 ## Why (checked in the app)
 
 - The schedule is shown three times (Dashboard "next two weeks", Automation "14 days", Channel plan episode dates).
@@ -48,7 +69,8 @@ with autosave, the stage bar, the work in the middle, a helper panel on the righ
 | File | Area | Replaces / gathers |
 |---|---|---|
 | `index.html` | hub | — |
-| `style.css`, `icons.svg`, `shell.js` | shared look (v4), line icons, sidebar + top bar + stage bar | — |
+| `style.css`, `icons.svg`, `shell.js` | shared look (v4), line icons, sidebar + top bar + stage bar + mascot | — |
+| `mascot/stand-900.png`, `mascot/face.png` | the mascot, cut out | owner's character sheets |
 | `pages/home.html` | Hôm nay | Dashboard top, Automation review |
 | `pages/create.html` | Tạo video | Step 1 type cards, Shorts batch |
 | `pages/channel.html` | Kênh | Channel plan, Automation, Dashboard schedule |
@@ -63,6 +85,8 @@ with autosave, the stage bar, the work in the middle, a helper panel on the righ
 | `pages/flow-7-youtube.html` | One video · 7 YouTube | Step 7 YouTube package, SEO score |
 
 ## Open questions for the owner
+
+- The mascot's name, and whether she reads her lines aloud by default or only when asked.
 
 - Keep "Tự động" as its own item in the sidebar (some owners like a big on/off), or only inside Kênh as proposed?
 - "Video của tôi": v4 shows a table (with a grid toggle); keep the table as default?

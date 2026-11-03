@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kênh — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
-<body data-page="channel" data-crumbs="Kênh|Lịch">
+<body data-page="channel" data-crumbs="Kênh|Lịch" data-say="Thứ Năm và Thứ Sáu chưa có video sẵn sàng. Đêm nay Tự động sẽ làm 2 video cho hai ngày đó." data-acts="Xem Tự động=#">
 <main class="page">
   <div class="page-head"><div class="grow"><h1>Kênh</h1><p>Đăng Thứ Tư và Thứ Bảy, Short mỗi ngày · 14 video đã lên lịch trong tháng 11</p></div>
     <a class="btn" href="#"><svg class="i"><use href="../icons.svg#wand"/></svg>Lên kế hoạch bằng AI</a><a class="btn primary" href="#"><svg class="i"><use href="../icons.svg#plus"/></svg>Series mới</a></div>
-  <div class="tabs"><a href="#" aria-current="page">Lịch</a><a href="#">Series <small>6</small></a><a href="#">Tự động <small>đang bật</small></a></div>
+  <div class="tabs"><a href="#" aria-current="page">Lịch</a><a href="#">Series <small>6</small></a><a href="#">Tự động</a></div>
 
   <div class="row" style="margin-bottom:12px">
     <a class="btn sm" href="#">Hôm nay</a><a class="btn sm ghost" href="#"><svg class="i sm"><use href="../icons.svg#back"/></svg></a><a class="btn sm ghost" href="#"><svg class="i sm"><use href="../icons.svg#arrow"/></svg></a>
@@ -15,27 +15,6 @@
     <div class="seg" style="margin-left:8px"><button>Tuần</button><button aria-pressed="true">Tháng</button></div>
   </div>
   <div class="cal" id="cal"></div>
-
-  <div class="split section">
-    <section class="card">
-      <div class="card-head"><h2>Series đang chạy</h2><div class="end"><a class="link" href="#">Tất cả 6<svg class="i sm"><use href="../icons.svg#chev"/></svg></a></div></div>
-      <div class="list">
-        <div class="li"><span style="width:10px;height:10px;border-radius:3px;background:#17803d"></span><div class="grow"><div class="t">Ngữ pháp bản chất</div><div class="s">Ngữ pháp · Short · mỗi 2 ngày</div></div><div style="width:180px"><div class="row" style="font-size:12px;justify-content:space-between"><span class="muted">3/10 tập</span><span class="muted">30%</span></div><div class="bar" style="margin-top:4px"><i style="width:30%"></i></div></div><a class="btn sm ghost" href="#">Mở</a></div>
-        <div class="li"><span style="width:10px;height:10px;border-radius:3px;background:#0f766e"></span><div class="grow"><div class="t">Một gốc – cả họ từ</div><div class="s">Gốc từ · Short · mỗi ngày</div></div><div style="width:180px"><div class="row" style="font-size:12px;justify-content:space-between"><span class="muted">6/20 tập</span><span class="muted">30%</span></div><div class="bar" style="margin-top:4px"><i style="width:30%"></i></div></div><a class="btn sm ghost" href="#">Mở</a></div>
-        <div class="li"><span style="width:10px;height:10px;border-radius:3px;background:#d97706"></span><div class="grow"><div class="t">The Office Startup</div><div class="s">Hội thoại · 16:9 · Thứ Tư và Thứ Bảy</div></div><div style="width:180px"><div class="row" style="font-size:12px;justify-content:space-between"><span class="muted">5/12 tập</span><span class="muted">42%</span></div><div class="bar" style="margin-top:4px"><i style="width:42%"></i></div></div><a class="btn sm ghost" href="#">Mở</a></div>
-      </div>
-    </section>
-    <aside class="card">
-      <div class="card-head"><h2>Tự động</h2><span class="badge green">Đang bật</span></div>
-      <div class="card-body" style="display:grid;gap:12px">
-        <div class="row"><svg class="i" style="color:var(--text-3)"><use href="../icons.svg#clock"/></svg><div class="grow">Bắt đầu mỗi đêm</div><b class="mono">23:00</b></div>
-        <div class="row"><svg class="i" style="color:var(--text-3)"><use href="../icons.svg#film"/></svg><div class="grow">Tối đa mỗi đêm</div><b class="mono">4 video</b></div>
-        <hr class="sep">
-        <div class="row"><svg class="i" style="color:var(--brand)"><use href="../icons.svg#moon"/></svg><div class="grow"><b style="font-weight:600">Đêm nay</b><div class="muted" style="font-size:12.5px">Hiện tại hoàn thành · Tiền tố RE-</div></div></div>
-        <div class="row"><svg class="i" style="color:var(--brand)"><use href="../icons.svg#check"/></svg><div class="grow"><b style="font-weight:600">Đêm qua</b><div class="muted" style="font-size:12.5px">3 xong · 1 cần vẽ lại hình</div></div><a class="btn sm ghost" href="#">Báo cáo</a></div>
-      </div>
-    </aside>
-  </div>
 </main>
 <script>
 // prototype only: a month view starting Monday 26 October

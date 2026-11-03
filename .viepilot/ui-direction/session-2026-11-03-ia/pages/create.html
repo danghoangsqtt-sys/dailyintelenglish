@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tạo video — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
-<body data-page="create" data-crumbs="Tạo video">
+<body data-page="create" data-crumbs="Tạo video" data-say="Mới làm lần đầu? Thử mẫu Ngữ pháp dễ hiểu: bạn chỉ nhập một chủ đề, phần còn lại để mình lo." data-acts="Dùng mẫu này=flow-1-setup.html">
 <main class="page">
   <div class="page-head"><div class="grow"><h1>Tạo video</h1><p>Chọn cách làm, rồi chọn một mẫu. Rê chuột lên mẫu để xem video ví dụ.</p></div></div>
 
@@ -13,7 +13,7 @@
   </div>
 
   <div class="row" style="margin-bottom:18px">
-    <div class="chips grow"><span class="chip" aria-pressed="true">Tất cả <span class="muted">16</span></span><span class="chip">Học thuật</span><span class="chip">Nhân vật và người dẫn</span><span class="chip">Mẫu chữ nhanh</span><span class="chip">Tương tác</span></div>
+    <div class="chips grow"><span class="chip" aria-pressed="true">Tất cả</span><span class="chip">Học thuật</span><span class="chip">Nhân vật và người dẫn</span><span class="chip">Mẫu chữ nhanh</span><span class="chip">Tương tác</span></div>
     <div class="seg"><button aria-pressed="true">Short 9:16</button><button>Video dài 16:9</button></div>
   </div>
 
@@ -29,7 +29,7 @@ const G = [
 ];
 const play = '<span class="play"><svg class="i fill sm"><use href="../icons.svg#play"/></svg></span>';
 document.getElementById("groups").innerHTML = G.map(([h, sub, xs], i) => `
-  <section class="${i ? "section" : ""}"><div class="sec-head"><h2>${h}</h2><span class="muted">${sub}</span><span class="end muted" style="font-size:13px">${xs.length} mẫu</span></div>
+  <section class="${i ? "section" : ""}"><div class="sec-head"><h2>${h}</h2><span class="muted">${sub}</span></div>
   <div class="gallery">${xs.map(([img, name, d, tag]) => `<a class="tpl" href="flow-1-setup.html"><div class="thumb"><img src="../../../../frontend/static/samples/${img}.jpg" alt="">${tag ? `<span class="tag"><span class="badge plain">${tag}</span></span>` : ""}${play}</div><b>${name}</b><span>${d}</span></a>`).join("")}</div></section>`).join("");
 </script>
 <script src="../shell.js"></script></body></html>

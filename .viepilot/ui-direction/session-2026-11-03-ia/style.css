@@ -312,3 +312,37 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .yt b { font-size: 13.5px; line-height: 1.35; display: block; }
 .yt span { font-size: 12px; color: var(--text-3); }
 @media (max-width: 1180px) { .split, .editor { grid-template-columns: 1fr; } .kpis { grid-template-columns: 1fr 1fr; } .modes { grid-template-columns: 1fr; } }
+
+/* ---------- mascot (owner 2026-11-03): stands in the corner, breathes and sways, talks in a bubble ---------- */
+.mascot { position: fixed; right: 18px; bottom: 0; z-index: 40; display: flex; align-items: flex-end; gap: 4px; pointer-events: none; }
+body.has-flowfoot .mascot { bottom: 61px; }
+.mascot > * { pointer-events: auto; }
+.mascot .body { position: relative; width: 82px; height: 290px; cursor: pointer; transform-origin: 50% 100%; animation: m-sway 6s ease-in-out infinite; }
+.mascot .body img { position: absolute; left: 50%; bottom: 0; height: 100%; transform: translateX(-50%); transform-origin: 50% 100%;
+  animation: m-breathe 3.6s ease-in-out infinite; filter: drop-shadow(0 8px 14px rgba(16, 24, 20, .18)); }
+.mascot .body::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -3px; height: 8px; border-radius: 50%; background: rgba(16, 24, 20, .14); filter: blur(3px); z-index: -1; }
+.mascot.talking .body img { animation: m-breathe 3.6s ease-in-out infinite, m-talk .32s ease-in-out infinite; }
+.mascot.wave .body { animation: m-hop .7s ease-out 1, m-sway 6s ease-in-out .7s infinite; }
+@keyframes m-breathe { 0%, 100% { transform: translateX(-50%) scale(1, 1); } 50% { transform: translateX(-50%) scale(1.006, 1.014); } }
+@keyframes m-sway { 0%, 100% { transform: rotate(-.7deg); } 50% { transform: rotate(.7deg); } }
+@keyframes m-talk { 0%, 100% { translate: 0 0; } 50% { translate: 0 -1.5px; } }
+@keyframes m-hop { 0% { transform: translateY(0); } 35% { transform: translateY(-10px); } 70% { transform: translateY(0); } 85% { transform: translateY(-3px); } }
+.bubble { position: relative; width: 300px; margin-bottom: 190px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px 14px 4px 14px;
+  box-shadow: var(--sh-2); padding: 12px 14px; font-size: 13.5px; line-height: 1.5; transform-origin: 100% 100%; animation: m-pop .25s ease-out; }
+.bubble::after { content: ""; position: absolute; right: -7px; bottom: 12px; width: 12px; height: 12px; background: var(--surface); border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); transform: rotate(-45deg); }
+.bubble .who { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; color: var(--brand-600); margin-bottom: 4px; }
+.bubble .who .x { margin-left: auto; display: flex; gap: 2px; }
+.bubble .who .x a { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 6px; color: var(--text-3); cursor: pointer; }
+.bubble .who .x a:hover { background: var(--hover); color: var(--text); }
+.bubble .acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.bubble .caret { display: inline-block; width: 2px; height: 1em; background: var(--brand); vertical-align: -2px; margin-left: 1px; animation: m-caret .8s steps(1) infinite; }
+@keyframes m-caret { 50% { opacity: 0; } }
+@keyframes m-pop { from { opacity: 0; transform: scale(.92) translateY(6px); } }
+.mascot.mini .body, .mascot.mini .bubble { display: none; }
+.mascot .mini-face { display: none; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; margin: 0 0 16px; background: var(--brand-50); border: 2px solid #fff;
+  box-shadow: var(--sh-2); cursor: pointer; position: relative; }
+.mascot .mini-face img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.mascot .mini-face b { position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; border-radius: 50%; background: var(--yellow); border: 2px solid #fff; }
+.mascot.mini .mini-face { display: block; }
+@media (prefers-reduced-motion: reduce) { .mascot .body, .mascot .body img, .bubble { animation: none !important; } }
