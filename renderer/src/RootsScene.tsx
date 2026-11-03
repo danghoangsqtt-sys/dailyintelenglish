@@ -164,7 +164,7 @@ export function RootsScene(props: EpisodeInputProps) {
   const index = lineAt(props.lines, time);
   return <AbsoluteFill data-short-style="roots" style={{ overflow: "hidden" }}>
     <Paper />
-    {!props.soundtrackPath ? <Audio src={resolvedMedia(props.audioPath)} /> : null}
+    {!props.soundtrackPath && props.audioPath ? <Audio src={resolvedMedia(props.audioPath)} /> : null}
     {index >= 0 ? <Beat props={props} index={index} time={time} unit={unit} /> : null}
   </AbsoluteFill>;
 }

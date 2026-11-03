@@ -85,3 +85,21 @@ async def ensure_pictures(db: aiosqlite.Connection, project_id: str, cards: list
 async def line_cards(db: aiosqlite.Connection, project_id: str) -> list[dict]:
     cursor = await db.execute("SELECT language_notes FROM script_lines WHERE project_id = ? ORDER BY line_index", (project_id,))
     return [(json.loads(row[0] or "{}") or {}).get("roots") or {} for row in await cursor.fetchall()]
+
+
+async def redraw(db: aiosqlite.Connection, project_id: str, word: str, picture: str) -> Path | None:
+    """Phase 90: one word's picture drawn again from its edited description (the old one is replaced). None when the
+    image model is not available or the drawing failed."""
+    from backend.core.exceptions import ValidationError
+
+    path = roots_folder(project_id) / f"{picture_key(word)}.png"
+    old = path.with_suffix(".old.png")
+    if path.is_file():
+        await asyncio.to_thread(path.replace, old)
+    drawn = await ensure_pictures(db, project_id, [{"word": word, "picture": picture}])
+    if path.is_file():
+        await asyncio.to_thread(old.unlink, missing_ok=True)
+        return drawn.get(picture_key(word))
+    if old.is_file():  # the model could not draw: the previous picture stays
+        await asyncio.to_thread(old.replace, path)
+    raise ValidationError("The picture could not be drawn now (the local image model is not available or out of memory)")

@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.api import (
-    ai_jobs, audio, channel, explainer, learning, music, profiles, projects, shorts, settings as settings_api, storyboard,
+    ai_jobs, audio, beats, channel, explainer, learning, music, profiles, projects, shorts, settings as settings_api, storyboard,
     thumbnail, tts, video, visuals, youtube,
 )
 from backend.core.config import settings
@@ -261,6 +261,7 @@ app.include_router(visuals.router)
 app.include_router(visuals.project_router)
 app.include_router(storyboard.router)
 app.include_router(explainer.router)
+app.include_router(beats.router)  # Phase 90
 app.include_router(explainer.asset_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
