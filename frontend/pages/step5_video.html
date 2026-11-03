@@ -245,7 +245,7 @@
               <h2 class="section-title">3. Render the video</h2>
               <p class="section-hint" id="renderer-status" role="status" hidden></p>
               <div class="card render-card">
-              <span class="render-label">Pictures</span>
+              <span class="render-label" id="visual-mode-label">Pictures</span>
               <div class="aspect-ratio-row" role="group" aria-label="Video pictures" id="visual-mode-group">
                 <button class="chip" type="button" data-visual-mode="podcast_sprites" aria-pressed="true">Podcast: talking characters</button>
                 <button class="chip" type="button" data-visual-mode="podcast_still" aria-pressed="false">Podcast: one still scene</button>
@@ -256,7 +256,7 @@
                 <label for="still-scene">Scene picture</label>
                 <select id="still-scene" class="settings-input"></select>
               </div>
-              <span class="render-label">Captions</span>
+              <span class="render-label" id="caption-style-label">Captions</span>
               <div class="aspect-ratio-row" role="group" aria-label="Caption style" id="caption-style-group">
                 <button class="chip" type="button" data-caption-style="outline" aria-pressed="true">Captions: film style (outline)</button>
                 <button class="chip" type="button" data-caption-style="box" aria-pressed="false">Caption box</button>

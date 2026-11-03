@@ -72,3 +72,21 @@ async def test_the_shorts_batch_offers_easy_grammar(browser_instance: Browser, l
         page.locator("#template-grid .template-card", has_text="Ngữ pháp dễ hiểu"))
     await card.first.wait_for()
     await page.close()
+
+
+async def test_step5_shows_only_the_render_button_for_a_grammar_short(browser_instance: Browser, live_server_url: str):
+    """Owner 2026-11-03: a remembered "one still scene" showed an empty "Scene picture" list on a grammar Short."""
+    page = await browser_instance.new_page()
+    response = await page.request.post(f"{live_server_url}/api/projects", data={
+        "name": "Câu bị động", "topic": "Câu bị động", "cefr_level": "B1", "duration_minutes": 2.0, "num_speakers": 1,
+        "genre": "informational", "accent": "american", "presentation_mode": "solo_explainer", "explainer_style": "grammar",
+        "speakers": [{"name": "Huyền", "gender": "female", "accent": "american"}]})
+    project = (await response.json())["data"]
+    await page.goto(f"{live_server_url}/step5?project_id={project['id']}")
+    await page.evaluate("localStorage.setItem('die-visual-mode', 'podcast_still')")
+    await page.reload()
+    await page.locator("#generate-btn").wait_for()
+    await page.locator("#loading-panel").wait_for(state="hidden")
+    assert await page.locator("#still-scene-row").is_hidden()
+    assert await page.locator(".render-card").is_hidden()
+    await page.close()

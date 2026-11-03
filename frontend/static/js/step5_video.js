@@ -631,7 +631,8 @@
     });
     group.title = VISUAL_MODE_ENABLED_TOOLTIP;
     const row = byId("still-scene-row");
-    if (row) row.hidden = !STILL_SCENE_MODES.includes(state.visualMode);
+    // 2026-11-03 (owner): a remembered "one still scene" showed an empty scene picture on a Short that has no pictures
+    if (row) row.hidden = group.hidden || !STILL_SCENE_MODES.includes(state.visualMode);
     const select = byId("still-scene");
     if (select) select.disabled = state.isGenerating;
   }
@@ -893,6 +894,10 @@
     } else {
       byId("visual-mode-group").hidden = true;
       byId("visual-mode-hint").hidden = true;
+      byId("visual-mode-label").hidden = true;
+      if (["roots", "grammar"].includes(state.project.explainer_style)) {  // they draw their own karaoke caption
+        document.querySelector(".render-card").hidden = true;  // nothing left to choose: only the render button
+      }
     }
     renderRenderOptions();
     applyLocks();
