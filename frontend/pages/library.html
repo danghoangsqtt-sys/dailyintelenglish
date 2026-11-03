@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
+  <title>Library — Daily Beyond English</title>
+  <link rel="stylesheet" href="/static/css/tokens.css" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/studio.css" />
+  <script src="/static/js/i18n_vi.js"></script>
+  <script src="/static/js/i18n.js"></script>
+</head>
+<body class="library-page">
+  <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation"></aside>
+  <script src="/static/js/app_sidebar.js"></script>
+  <header class="topbar"><div class="actions"><button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button></div></header>
+
+  <!-- Phase 93 (Task 93.7, D138): the Library area. Characters, scenes and pictures, and music keep their pages (tabs);
+       this page lists the voices every video can use and the channel's brand. -->
+  <main class="e-page" id="library">
+    <div class="e-head"><h1>Library</h1><span class="e-sub">Everything your videos reuse</span></div>
+    <section class="e-main" aria-labelledby="voices-title">
+      <div class="e-sh"><h2 id="voices-title">Voices</h2><span class="e-muted" id="voices-count"></span></div>
+      <div class="e-chips" role="group" aria-label="Voice language" id="voice-filter"></div>
+      <div class="e-panel" id="voice-list" style="margin-top:14px"><p class="e-empty">Loading…</p></div>
+    </section>
+    <aside class="e-side" aria-labelledby="brand-title">
+      <div class="e-sh"><h2 id="brand-title">Brand</h2><a class="e-more" href="/settings">Change in Settings</a></div>
+      <div class="e-panel e-pad library-brand">
+        <div class="library-brand-head"><img src="/static/brand/logo-64.png" alt="" width="52" height="52" /><div><b>Daily Beyond English</b><div class="e-muted">Logo, colours, fonts and the ending of every video</div></div></div>
+        <div class="library-swatches" aria-label="Brand colours"><span style="background:#1b7d44"></span><span style="background:#13603a"></span><span style="background:#ffd60a"></span><span style="background:#f6f7f2"></span></div>
+        <div class="e-muted">Headings Baloo 2 · text Be Vietnam Pro</div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/static/js/area_tabs.js"></script>
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/library_voices.js"></script>
+</body>
+</html>

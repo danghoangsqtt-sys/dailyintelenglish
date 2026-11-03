@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
+  <title>Create video — Daily Beyond English</title>
+  <link rel="stylesheet" href="/static/css/tokens.css" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/studio.css" />
+  <script src="/static/js/i18n_vi.js"></script>
+  <script src="/static/js/i18n.js"></script>
+</head>
+<body class="create-page">
+  <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation"></aside>
+  <script src="/static/js/app_sidebar.js"></script>
+  <header class="topbar"><div class="actions"><button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button></div></header>
+
+  <!-- Phase 93 (Task 93.4, D138): one way in to make videos -- one video (Step 1 with the kind chosen) or many Shorts at
+       once (the Shorts batch page); the gallery shows every kind with its Phase 92 example clip. -->
+  <main class="e-page" id="create">
+    <div class="e-head"><h1>Create video</h1><span class="e-sub">Choose how, then choose a template</span></div>
+
+    <div class="e-full create-modes">
+      <a class="create-mode" href="/step1" aria-current="true"><span class="create-mode-ic" aria-hidden="true">▶</span>
+        <span><b>One video</b><span>A Short or a 16:9 video, in 7 steps: content, production, publishing.</span></span></a>
+      <a class="create-mode" href="/shorts-batch"><span class="create-mode-ic" aria-hidden="true">≡</span>
+        <span><b>Many Shorts at once</b><span>Lina suggests 5–10 ideas for one template; you approve the list and make them together.</span></span></a>
+    </div>
+
+    <div class="e-full e-tip"><span class="e-face"><img src="/api/assistant/frames/calm__closed.webp" alt="" onerror="this.parentElement.hidden=true" /></span>
+      <p>New here? Try <b>Easy grammar</b>: you only type a topic, I do the rest. Hover a template to see its example clip.</p></div>
+
+    <div class="e-full create-filters">
+      <div class="e-chips" role="group" aria-label="Template groups" id="create-groups"></div>
+      <div class="e-seg" role="group" aria-label="Format"><button type="button" data-aspect="9:16" aria-pressed="true">Short 9:16</button><button type="button" data-aspect="16:9" aria-pressed="false">16:9 video</button></div>
+    </div>
+    <div class="e-full" id="create-gallery"></div>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/area_tabs.js"></script>
+  <script src="/static/js/create.js"></script>
+</body>
+</html>

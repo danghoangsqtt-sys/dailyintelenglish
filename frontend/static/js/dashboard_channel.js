@@ -136,16 +136,19 @@
   async function load() {
     try {
       const data = await Api.getChannelDashboard();
-      if (data.start) renderStart(data.start);
-      renderStats(data.stats);
-      renderNext(data.next_publish);
-      renderActions(data.actions);
-      renderRoadmap(data.roadmap);
-      renderBoard(data.board);
-      renderCalendar(data.calendar, data.today);
+      // Phase 93: Home and Videos each show their own part; a part renders only where its element is on the page
+      if (data.start && $("start-cards")) renderStart(data.start);
+      if ($("cockpit-stats")) renderStats(data.stats);
+      if ($("cockpit-next")) renderNext(data.next_publish);
+      if ($("cockpit-actions")) renderActions(data.actions);
+      if ($("roadmap-steps")) renderRoadmap(data.roadmap);
+      if ($("production-board")) renderBoard(data.board);
+      if ($("cockpit-calendar")) renderCalendar(data.calendar, data.today);
     } catch (error) {
-      $("cockpit-actions").replaceChildren(el("li", { className: "cockpit-empty", textContent: error.message || "The channel overview could not load." }));
-      $("start-cards").replaceChildren(startCard("new", "＋ New video", ["Your own topic"], "/step1", "Start a new video"));
+      const message = error.message || "The channel overview could not load.";
+      if ($("cockpit-actions")) $("cockpit-actions").replaceChildren(el("li", { className: "cockpit-empty", textContent: message }));
+      if ($("production-board")) $("production-board").replaceChildren(el("p", { className: "e-empty", textContent: message }));
+      if ($("start-cards")) $("start-cards").replaceChildren(startCard("new", "＋ New video", ["Your own topic"], "/step1", "Start a new video"));
     }
   }
 

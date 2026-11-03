@@ -33,6 +33,7 @@ from backend.api import shorts_batch as shorts_batch_api
 from backend.api import library_package as library_package_api
 from backend.api import capabilities as capabilities_api
 from backend.api import audience as audience_api
+from backend.api import assistant as assistant_api
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -254,6 +255,7 @@ app.include_router(shorts_batch_api.news_router)
 app.include_router(library_package_api.router)  # Phase 70
 app.include_router(capabilities_api.router)  # Phase 71
 app.include_router(audience_api.router)  # Phase 72
+app.include_router(assistant_api.router)  # Phase 93
 app.include_router(shorts.router)
 app.include_router(export_api.router)  # Phase 41
 app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed
@@ -302,7 +304,25 @@ app.add_middleware(RevalidateUi)
 
 @app.get("/")
 async def root() -> FileResponse:
-    """Serve the dashboard as the app's landing page."""
+    """Phase 93 (D141): Home -- what waits for the owner, what is being made, this week."""
+    return FileResponse(FRONTEND_DIR / "pages" / "home.html")
+
+
+@app.get("/create")
+async def create_page() -> FileResponse:
+    """Phase 93 (Task 93.4): one way in to make videos -- one video or many Shorts, with the template gallery."""
+    return FileResponse(FRONTEND_DIR / "pages" / "create.html")
+
+
+@app.get("/library")
+async def library_page() -> FileResponse:
+    """Phase 93 (Task 93.7): the Library area -- voices and brand; characters, scenes and music are its other tabs."""
+    return FileResponse(FRONTEND_DIR / "pages" / "library.html")
+
+
+@app.get("/videos")
+async def videos_page() -> FileResponse:
+    """Phase 93 (D142): every video -- the former dashboard's project list and production board."""
     return FileResponse(FRONTEND_DIR / "pages" / "dashboard.html")
 
 

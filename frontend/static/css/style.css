@@ -162,45 +162,47 @@ textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .step-nav-pill:hover { border-color: var(--border-strong); color: var(--text); }
 .step-nav-pill.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
-/* App sidebar (Task 27.2, Phase 27): fixed on the left, an icon rail when collapsed, a drawer on narrow screens.
-   The page structure is untouched: the body just reserves the sidebar's width. */
-body { --sidebar-w: 232px; padding-left: var(--sidebar-w); transition: padding-left .18s ease; }
-body.sidebar-collapsed { --sidebar-w: 64px; }
-.app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; display: flex; flex-direction: column; gap: 6px; width: var(--sidebar-w); padding: 14px 10px; overflow: hidden; background: #0f2a1a; border-right: 1px solid rgba(155, 209, 60, .18); color: #cfe3d2; transition: width .18s ease; }
-/* Resolve the initial saved/default rail width before enabling user-triggered transitions. */
-body:not(.sidebar-ready), body:not(.sidebar-ready) .app-sidebar,
-body:not(.sidebar-ready) .side-toggle .side-icon { transition: none; }
-.app-sidebar .brand { padding: 2px 4px 14px; color: #fff; }
-.app-sidebar .brand-word b { color: #fff; }
-.app-sidebar .brand-word small { color: var(--brand-lime); }
-.side-nav { display: flex; flex-direction: column; gap: 4px; }
-.side-link, .side-toggle { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 42px; padding: 9px 12px; border: 0; border-radius: 10px; background: transparent; color: #cfe3d2; font: 600 14px/1.2 var(--font); text-align: left; text-decoration: none; white-space: nowrap; cursor: pointer; }
-.side-link:hover, .side-toggle:hover { background: rgba(255, 255, 255, .08); color: #fff; }
-.side-link[aria-current="page"] { background: rgba(155, 209, 60, .18); color: #fff; }
-.side-link[aria-current="page"]::before { position: absolute; left: -10px; top: 9px; bottom: 9px; width: 4px; border-radius: 0 4px 4px 0; background: var(--brand-lime); content: ""; }
-.side-link:focus-visible, .side-toggle:focus-visible { outline: 2px solid var(--brand-lime); outline-offset: 1px; }
+/* App sidebar (Task 27.2; Phase 93, D140): a light labelled rail drawn by app_sidebar.js -- the brand, "Create video",
+   the five areas, Settings; it collapses to icons (remembered) and under 780 px becomes a tab bar at the bottom. */
+body { --sidebar-w: 248px; padding-left: var(--sidebar-w); transition: padding-left .18s ease; }
+body.sidebar-collapsed { --sidebar-w: 72px; }
+.app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; display: flex; flex-direction: column; gap: 4px; width: var(--sidebar-w); padding: 18px 12px; overflow: hidden;
+  background: var(--bg-elevated); border-right: 1px solid var(--border); color: var(--text-2); transition: width .18s ease; }
+body:not(.sidebar-ready), body:not(.sidebar-ready) .app-sidebar, body:not(.sidebar-ready) .side-toggle .side-icon { transition: none; }
+.app-sidebar .brand { padding: 0 6px 16px; color: var(--text); }
+.app-sidebar .brand-word b { color: var(--text); font-size: 16px; }
+.app-sidebar .brand-word small { color: var(--accent); }
+.app-sidebar .side-create { justify-content: flex-start; gap: 10px; min-height: 46px; margin-bottom: 12px; padding: 0 14px; white-space: nowrap; text-decoration: none; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; }
+.side-bottom { margin-top: auto; }
+.side-link, .side-toggle { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 0 12px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--text-2); font: 600 15.5px/1.2 var(--font); text-align: left; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.side-link:hover, .side-toggle:hover { background: var(--surface-3); color: var(--text); }
+.side-link[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.side-link:focus-visible, .side-toggle:focus-visible, .side-create:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
 .side-icon { flex: 0 0 22px; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.side-toggle { margin-top: auto; }
+.side-count { margin-left: auto; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; background: var(--warning-bg); color: var(--warning); font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+.side-toggle { margin-top: 4px; color: var(--text-muted); }
 .side-toggle .side-icon { transition: transform .18s ease; }
 body.sidebar-collapsed .side-toggle .side-icon { transform: rotate(180deg); }
 body.sidebar-collapsed .side-label, body.sidebar-collapsed .app-sidebar .brand-word { display: none; }
-body.sidebar-collapsed .side-link, body.sidebar-collapsed .side-toggle { justify-content: center; padding-left: 0; padding-right: 0; }
+body.sidebar-collapsed .side-link, body.sidebar-collapsed .side-toggle, body.sidebar-collapsed .side-create { justify-content: center; padding-left: 0; padding-right: 0; }
 body.sidebar-collapsed .app-sidebar .brand { justify-content: center; padding-left: 0; padding-right: 0; }
-body.sidebar-collapsed .side-link[aria-current="page"]::before { left: -10px; }
-.sidebar-backdrop, .sidebar-opener { display: none; }
-.sidebar-opener { align-items: center; justify-content: center; width: 38px; height: 38px; padding: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text); cursor: pointer; }
-/* Desktop pages keep their 1024 px minimum; below 780 px the drawer and a fluid page take over (Phase 27). */
+body.sidebar-collapsed .side-count { position: absolute; top: 2px; right: 4px; min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; }
+.sidebar-backdrop, .sidebar-opener { display: none !important; }
+/* Desktop pages keep their 1024 px minimum; below 780 px the rail is a tab bar and the page is fluid. */
 @media (min-width: 780px) { body { min-width: 1024px; } }
 @media (prefers-reduced-motion: reduce) { body, .app-sidebar, .side-toggle .side-icon { transition: none; } }
 @media (max-width: 779px) {
-  body, body.sidebar-collapsed { --sidebar-w: 0px; padding-left: 0; }
-  .app-sidebar { width: 264px; visibility: hidden; transform: translateX(-100%); transition: transform .2s ease, visibility 0s linear .2s; }
-  body.sidebar-open .app-sidebar { visibility: visible; transform: none; transition: transform .2s ease; }
-  body.sidebar-open .sidebar-backdrop { position: fixed; inset: 0; z-index: 39; display: block; background: rgba(0, 0, 0, .5); }
-  .sidebar-opener { display: inline-flex; }
-  body.sidebar-collapsed .side-label, body.sidebar-collapsed .app-sidebar .brand-word { display: revert; }
-  body.sidebar-collapsed .side-link, body.sidebar-collapsed .side-toggle, body.sidebar-collapsed .app-sidebar .brand { justify-content: flex-start; padding-left: 12px; }
-  .side-toggle { display: none; }
+  body, body.sidebar-collapsed { --sidebar-w: 0px; padding-left: 0; padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+  .app-sidebar { inset: auto 0 0 0; width: auto; height: auto; flex-direction: row; align-items: stretch; gap: 0; border-right: 0; border-top: 1px solid var(--border);
+    padding: 4px max(6px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)); }
+  .app-sidebar .brand, .app-sidebar .side-create, .side-toggle { display: none; }
+  .side-nav, .side-bottom { flex-direction: row; flex: 4 1 0; margin: 0; gap: 0; }
+  .side-bottom { flex: 1 1 0; }
+  .side-link, body.sidebar-collapsed .side-link { flex: 1 1 0; flex-direction: column; justify-content: center; gap: 2px; min-height: 56px; padding: 4px 2px; font-size: 12px; }
+  body.sidebar-collapsed .side-label { display: inline; }
+  .side-count, body.sidebar-collapsed .side-count { position: absolute; top: 2px; right: calc(50% - 22px); min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; margin: 0; }
 }
 
 /* Shared CapCut-style workspace shell. */

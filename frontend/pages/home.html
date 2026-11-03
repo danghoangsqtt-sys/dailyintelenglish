@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
+  <title>Daily Beyond English</title>
+  <link rel="stylesheet" href="/static/css/tokens.css" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/studio.css" />
+  <script src="/static/js/i18n_vi.js"></script>
+  <script src="/static/js/i18n.js"></script>
+</head>
+<body class="home-page">
+  <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation"></aside>
+  <script src="/static/js/app_sidebar.js"></script>
+  <header class="topbar">
+    <div class="actions">
+      <button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+
+  <!-- Phase 93 (Task 93.3, D141): Home shows only what needs the owner or is moving. The project grid, the production
+       board and the channel numbers moved to Videos and Channel. -->
+  <main class="e-page" id="home">
+    <div class="e-head"><h1>Today</h1><span class="e-sub" id="home-date"></span></div>
+
+    <div class="e-main">
+      <section class="e-band" aria-label="Lina, your assistant">
+        <div class="e-talk">
+          <span class="e-who">Lina · your assistant</span>
+          <p class="e-line" id="home-line">Looking at what happened overnight…</p>
+          <div class="e-acts" id="home-acts"></div>
+          <form class="e-topic" id="home-topic" action="/create">
+            <label class="visually-hidden" for="home-topic-input">Topic of the next video</label>
+            <input id="home-topic-input" name="topic" placeholder="What should the next video be about? For example: the second conditional" autocomplete="off" />
+            <button class="btn btn-primary btn-sm" type="submit">Create</button>
+          </form>
+        </div>
+        <div class="e-lina"><img id="home-lina" src="/api/assistant/frames/gesture-wave.webp" alt="Lina waves hello" /></div>
+      </section>
+
+      <section aria-labelledby="waiting-title">
+        <div class="e-sh"><h2 id="waiting-title">Waiting for you</h2><span class="e-state wait e-num" id="waiting-count" hidden></span><a class="e-more" href="/videos">All videos</a></div>
+        <div class="e-panel" id="waiting-list"><p class="e-empty">Loading…</p></div>
+      </section>
+
+      <section aria-labelledby="moving-title">
+        <div class="e-sh"><h2 id="moving-title">In progress</h2></div>
+        <div class="e-panel" id="moving-list"><p class="e-empty">Loading…</p></div>
+      </section>
+    </div>
+
+    <aside class="e-side">
+      <section aria-labelledby="week-title">
+        <div class="e-sh"><h2 id="week-title">This week</h2><a class="e-more" href="/channel">Open the calendar</a></div>
+        <div id="week-list" class="home-week"></div>
+      </section>
+    </aside>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/home.js"></script>
+</body>
+</html>
