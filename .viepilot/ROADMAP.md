@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 92 — Example clips for every kind of video (2026-11-03)
+
+Status: planned. A short muted example clip on every kind card in Step 1 and the Shorts batch page (plays on hover, "Xem ví dụ" for a larger one, "Ví dụ minh hoạ" and "Phù hợp cho…"), made by the app's renderer from the sample props in Vietnamese and English; the three 16:9 kinds cut from the owner's own videos. Defaults D134–D137. [Plan](phases/92-template-samples/PLAN.md).
+
 ## Phase 91 — Edit every kind of video on its video (2026-11-03)
 
 Status: implemented_verified (sandbox: news Short one spoken line → voice 6 s + render 48 s; chat one message → voice 3 s + render 35 s; flashcards and slow podcast edits live on the video; full pytest 2308; not built, installed or pushed). [Summary](phases/91-edit-on-video-all/SUMMARY.md). Step 2 keeps unchanged voices; slow podcast, flashcards, chat and would-you-rather Shorts get the Phase 90 editor with their own fields; solo explainers and the conversation storyboard keep their visual editors and gain spoken-line editing with changed-lines voice. Defaults D131–D133. [Plan](phases/91-edit-on-video-all/PLAN.md).
