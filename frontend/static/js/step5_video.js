@@ -575,6 +575,15 @@
     });
   }
 
+  // Phase 91.3 (D131): the spoken lines under an editor that keeps the visuals; only changed lines get a new voice
+  async function mountLinePanel(parent, onVoice) {
+    if (!window.LinePanel || !parent) return;
+    const box = document.createElement("div");
+    parent.append(box);
+    try { await window.LinePanel.mount(box, state.projectId, { onVoice }); }
+    catch (error) { box.textContent = `The spoken lines could not open: ${error.message || error}`; }
+  }
+
   async function loadProjectVisuals() {
     try {
       let characters, profiles;
@@ -887,10 +896,12 @@
       byId("project-visuals-section").hidden = true;
       byId("storyboard-section").hidden = true;
       byId("solo-explainer-section").hidden = false;
-      await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId,
+      const soloEditor = await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId,
         { style: state.project.explainer_style || "presenter", topic: state.project.topic || "" });
+      await mountLinePanel(byId("solo-explainer-section"), () => soloEditor?.preview?.());
     } else {
       await loadProjectVisuals();
+      await mountLinePanel(byId("storyboard-section"));  // Phase 91 (D132): no live video for talking characters
     }
     renderTimeline();
     renderInspector();

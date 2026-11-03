@@ -2073,3 +2073,8 @@ window.I18N_VI.patterns.push(
   [/^The card of “(.+)” \(from the lesson's vocabulary\)\.$/, "Thẻ của “$1” (lấy từ từ vựng của bài học)."],
   [/^(.+)'s message: the bubble shows the spoken line\.$/, "Tin nhắn của $1: bong bóng hiện đúng câu đọc."],
 );
+// Phase 91.3: the spoken lines panel
+window.I18N_VI.patterns.push(
+  [/^Line (\d+)$/, "Câu $1"],
+  [/^The spoken lines could not open: (.+)$/, "Không mở được các câu đọc: $1"],
+);

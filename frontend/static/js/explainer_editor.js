@@ -209,7 +209,7 @@ const ExplainerEditor = (() => {
     const destroy=()=>{state.disposed=true;clearTimeout(state.timer);state.previewToken++;state.preview?.destroy();window.removeEventListener("beforeunload",before);document.removeEventListener("click",navigate,true);};
     window.addEventListener("pagehide",destroy,{once:true});
     try {await reload();const active=await Api.getActiveAiJob(projectId,"propose_explainer");if(active)message(`A durable proposal is ${active.status}. Propose returns the existing job while it is active.`);}catch(error){fail(error);}
-    return {destroy,save,hasUnsaved:()=>state.dirty||!!state.saving};
+    return {destroy,save,hasUnsaved:()=>state.dirty||!!state.saving,preview};  // Phase 91: the spoken lines refresh it
   }
   return {mount};
 })();

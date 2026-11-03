@@ -86,3 +86,45 @@ async def test_a_spoken_line_edit_marks_only_that_lines_voice(browser_instance: 
     lines = (await (await page.request.get(f"{live_server_url}/api/projects/{project['id']}/script")).json())["data"]
     assert lines[2]["text"] == "Hiểu bản chất trong một phút!" and lines[2]["language_notes"]["grammar"]["beat"] == "hook"
     await page.close()
+
+
+async def test_a_slow_podcast_translation_shows_on_the_video(browser_instance: Browser, live_server_url: str):
+    """Phase 91.2: the editor opens for every Short drawn from its lines, with that kind's fields."""
+    page = await browser_instance.new_page(viewport={"width": 1500, "height": 1000})
+    response = await page.request.post(f"{live_server_url}/api/projects", data={
+        "name": "Morning", "topic": "Morning", "cefr_level": "B1", "duration_minutes": 0.75, "num_speakers": 1,
+        "genre": "informational", "accent": "american", "presentation_mode": "solo_explainer", "explainer_style": "slowpod",
+        "speakers": [{"name": "Huyền", "gender": "female", "accent": "american"}]})
+    project = (await response.json())["data"]
+    await page.request.put(f"{live_server_url}/api/projects/{project['id']}/script", data={"lines": [
+        {"speaker_id": project["speakers"][0]["id"], "text": "I wake up early.", "language_notes": {"translation_vi": "Tôi dậy sớm."}}]})
+    await page.goto(f"{live_server_url}/step5?project_id={project['id']}")
+    await page.locator(".beat-item").first.wait_for()
+    await page.locator(".beat-item").first.click()
+    await page.locator(".beat-form [data-f='translation_vi']").fill("Tôi thức dậy sớm.")
+    await page.wait_for_function("document.querySelector('[data-slowpod-translation]')?.innerText.includes('Tôi thức dậy sớm.')")
+    await page.close()
+
+
+async def test_a_news_short_has_its_spoken_lines_under_its_editor(browser_instance: Browser, live_server_url: str):
+    """Phase 91.3: a solo explainer keeps its visual editor and gains the spoken lines; one saved line keeps the others."""
+    page = await browser_instance.new_page(viewport={"width": 1500, "height": 1000})
+    response = await page.request.post(f"{live_server_url}/api/projects", data={
+        "name": "News", "topic": "Trees", "cefr_level": "B1", "duration_minutes": 0.9, "num_speakers": 1,
+        "genre": "informational", "accent": "american", "presentation_mode": "solo_explainer", "explainer_style": "news",
+        "speakers": [{"name": "Huyền", "gender": "female", "accent": "american"}]})
+    project = (await response.json())["data"]
+    await page.request.put(f"{live_server_url}/api/projects/{project['id']}/script", data={"lines": [
+        {"speaker_id": project["speakers"][0]["id"], "text": text} for text in ("Cities plant trees.", "It is cooler.")]})
+    await page.goto(f"{live_server_url}/step5?project_id={project['id']}")
+    panel = page.locator(".line-panel")
+    await panel.wait_for()
+    await panel.locator("textarea").nth(1).fill("The streets are cooler.")
+    await panel.locator("[data-act='save'][data-at='1']").click()
+    for _ in range(40):
+        lines = (await (await page.request.get(f"{live_server_url}/api/projects/{project['id']}/script")).json())["data"]
+        if lines[1]["text"] == "The streets are cooler.":
+            break
+        await page.wait_for_timeout(150)
+    assert [line["text"] for line in lines] == ["Cities plant trees.", "The streets are cooler."]
+    await page.close()
