@@ -27,7 +27,10 @@ const TemplateSamples = (() => {
   };
   const MODES = { classic: "conversation", solo_explainer: "presenter", vox: "vox" };
   const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  let index = null, language = "vi", dialog = null;
+  let index = null, language = "vi", dialog = null, vertical = false;
+  // owner 2026-11-03: on the Shorts batch page the conversation, presenter and VOX kinds are vertical Shorts, so their
+  // vertical clips are shown there (Step 1 shows the 16:9 long videos)
+  const keyOf = (kind) => (vertical && index?.[`${kind}_short`] ? `${kind}_short` : kind);
 
   async function load() {
     if (index) return index;
@@ -37,7 +40,7 @@ const TemplateSamples = (() => {
   const src = (entry, kind) => `/static/samples/${entry[kind === "poster" ? `poster_${language}` : language]}`;
 
   function openDialog(kind) {
-    const entry = index?.[kind]; if (!entry) return;
+    const entry = index?.[keyOf(kind)]; if (!entry) return;
     if (!dialog) {
       dialog = document.createElement("dialog");
       dialog.className = "sample-dialog";
@@ -66,7 +69,7 @@ const TemplateSamples = (() => {
   const titleOf = (kind) => titles[kind] || kind;
 
   function decorate(card, kind) {
-    const entry = index?.[kind];
+    const entry = index?.[keyOf(kind)];
     if (!entry || card.querySelector(".sample-thumb")) return;
     const thumb = document.createElement("span");
     thumb.className = `sample-thumb ${entry.aspect === "16:9" ? "is-wide" : ""}`;
@@ -90,8 +93,9 @@ const TemplateSamples = (() => {
   }
 
   /** Add the clips to the cards under `root`: `[data-template]` Short templates and `[data-mode]` video types. */
-  async function attach(root, { audience } = {}) {
+  async function attach(root, { audience, shorts = false } = {}) {
     await load();
+    vertical = shorts;
     language = audience === "international" ? "en" : "vi";
     root.querySelectorAll("[data-template]").forEach((card) => decorate(card, card.dataset.template));
     root.querySelectorAll("[data-mode]").forEach((card) => { if (MODES[card.dataset.mode]) decorate(card, MODES[card.dataset.mode]); });
@@ -101,12 +105,17 @@ const TemplateSamples = (() => {
     language = audience === "international" ? "en" : "vi";
     document.querySelectorAll(".sample-thumb video").forEach((video) => {
       const card = video.closest("[data-template], [data-mode]"); if (!card) return;
-      const entry = index?.[card.dataset.template || MODES[card.dataset.mode]]; if (!entry) return;
+      const entry = index?.[keyOf(card.dataset.template || MODES[card.dataset.mode])]; if (!entry) return;
       const playing = !video.paused;
       video.poster = src(entry, "poster"); video.dataset.src = src(entry, "clip");
       if (video.src) { video.src = video.dataset.src; if (playing) video.play().catch(() => {}); }
     });
   }
-  return { attach, setAudience, openDialog, BEST_FOR };
+  /** The kind's clip in the current language (null until the index is loaded or when the kind has none). */
+  function clipFor(kind) {
+    const entry = index?.[keyOf(kind)];
+    return entry ? { src: src(entry, "clip"), poster: src(entry, "poster"), aspect: entry.aspect } : null;
+  }
+  return { attach, setAudience, openDialog, clipFor, BEST_FOR };
 })();
 window.TemplateSamples = TemplateSamples;

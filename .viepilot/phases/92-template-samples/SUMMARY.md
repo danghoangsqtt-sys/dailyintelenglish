@@ -27,3 +27,15 @@ Done 2026-11-03 on `owner-runs/20261001-r9` (not pushed, not installed). Default
   Step 1 cards too long (now only in the dialog); clicking the middle of a narrow card opened the example instead of
   choosing the kind (the example button is now a corner icon).
 - Tests: `tests/test_template_samples_browser.py` (3) + Step 1 / Shorts batch / roots / grammar browser tests, 24 passed.
+
+## Owner review of the Shorts batch page (2026-11-03)
+
+- "bố cục giao diện khá bất hợp lý trong trang short hàng loạt": with the clips, the kind cards were two per row and
+  very tall, so steps 2 and 3 were far down, and the preview showed placeholder text before any idea. Step 1 now spans
+  the full width with compact cards (clip left, text right; 4 per row at 1300 px; its height went from ~1330 px to
+  844 px), and the preview beside steps 2–3 shows the chosen kind's example clip until ideas exist, then the live
+  preview of the selected idea.
+- "sao trong short lại có cả loại video dài khổ ngang?": the conversation, presenter and VOX kinds of the batch are
+  vertical Shorts, but their example clips were cut from the 16:9 long videos. The batch page now uses vertical clips
+  cut from the owner's own conversation, presenter and VOX Shorts (`*_short`), Step 1 keeps the 16:9 clips for the
+  long video types, and the group is named "Short có nhân vật, người dẫn hoặc hình ảnh (dọc 9:16)". 19 clips, 2.38 MB.

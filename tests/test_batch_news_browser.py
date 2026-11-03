@@ -99,14 +99,14 @@ async def test_kinds_save_place_make_now_and_results(page, base_url):
     """Phase 80 (owner 2026-10-26): the video types as cards, where the videos go, make now and the results panel."""
     await page.goto(base_url + "/shorts-batch")
     await expect(page.locator("#template-grid .template-card")).to_have_count(16)  # Phase 87: + word roots; Phase 88: + easy grammar
-    # Phase 81: the slow English podcast and flashcards have a silent preview like the other text templates
-    for kind in ("slowpod", "flashcards"):
+    # Phase 92 (owner 2026-11-03): before there are ideas the preview shows the kind's example clip, also for the kinds
+    # drawn from characters, a presenter or pictures (Phase 81/80 showed a silent sample or "No silent preview")
+    for kind in ("slowpod", "flashcards", "conversation"):
         await page.locator(f"#template-grid [data-template='{kind}']").click()
-        await expect(page.locator("#batch-player [aria-label='Preview frame']")).to_be_attached()
+        await expect(page.locator("#batch-player #batch-example")).to_have_attribute("src", f"/static/samples/{kind}-vi.mp4"
+                                                                                    if kind != "conversation" else "/static/samples/conversation_short.mp4")
         await expect(page.locator("#preview-error")).to_have_text("")
-    await page.locator("#template-grid [data-template='conversation']").click()
     await expect(page.locator("#cast-two-label")).to_be_visible()
-    await expect(page.locator("#preview-error")).to_contain_text("No silent preview")
     await page.locator("#template-grid [data-template='presenter']").click()
     await expect(page.locator("#cast-note")).to_contain_text("front picture pack")
     await expect(page.locator("#save-where")).to_contain_text("No main save folder yet")

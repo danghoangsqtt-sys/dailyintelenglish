@@ -19,7 +19,8 @@
     .batch-body { display: grid; grid-template-columns: minmax(0, 1fr) clamp(270px, 25vw, 340px); gap: 20px; align-items: start; }
     .batch-left { display: grid; gap: 20px; min-width: 0; }
     .batch-left > .card { padding: 22px 24px; min-width: 0; }
-    .batch-left h2 { margin: 0 0 16px; font-size: 20px; }
+    .batch-left h2, .kind-panel h2 { margin: 0 0 16px; font-size: 20px; }
+    .kind-panel { padding: 22px 24px; min-width: 0; }
     .batch-form { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px 16px; align-items: end; }
     .batch-form > * { grid-column: span 12; min-width: 0; }
     .batch-form .span-3 { grid-column: span 3; } .batch-form .span-4 { grid-column: span 4; } .batch-form .span-5 { grid-column: span 5; }
@@ -66,7 +67,7 @@
     @media (max-width: 620px) { .batch-form > *, .batch-form .span-3, .batch-form .span-4, .batch-form .span-6, .batch-form .span-8 { grid-column: span 12; } }
     /* Phase 80 (owner 2026-10-26): a guided page -- 1 kind (cards), 2 ideas, 3 save and make, 4 results with players and folders */
     .step-no { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 15px; vertical-align: 2px; }
-    .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+    .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
     .template-group { grid-column: 1 / -1; margin: 6px 0 0; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
     .template-card { display: grid; gap: 4px; align-content: start; text-align: left; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
       background: var(--surface); color: var(--text); cursor: pointer; font: inherit; min-height: 92px; }
@@ -75,6 +76,16 @@
     .template-card .t-name { font-weight: 800; font-size: 14.5px; }
     .template-card .t-desc { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
     .template-card .t-cast { justify-self: start; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+    /* Phase 92 (owner 2026-11-03: "bố cục ... bất hợp lý"): a compact card -- the example clip small on the left, the
+       name and description beside it -- so all kinds fit in a few rows and steps 2 and 3 stay close */
+    .template-card { grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; padding: 10px; min-height: 0; align-items: start; }
+    .template-card > :not(.sample-thumb) { grid-column: 2; }
+    .template-card .sample-thumb { grid-column: 1; grid-row: 1 / span 3; height: 104px; margin: 0; }
+    .template-card .sample-thumb.is-wide { height: 58px; }
+    .template-card .t-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .template-card .sample-thumb-badge { width: 22px; height: 22px; font-size: 13px; right: 4px; top: 4px; }
+    #batch-example { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 12px; background: #0B2A1E; object-fit: cover; }
+    #batch-example.is-wide { aspect-ratio: 16 / 9; }
     .list-title { margin: 18px 0 8px; font-size: 15px; }
     .save-where { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
     .save-where:empty { display: none; }
@@ -120,12 +131,13 @@
         own folder under the main save folder.</p>
       <div data-main-folder class="main-folder-slot" style="margin-top: 14px"></div>
     </section>
-    <div class="batch-body"><div class="batch-left">
-    <section class="card" id="kind-panel" aria-labelledby="kind-title">
+    <!-- Phase 92 (owner 2026-11-03): step 1 uses the full width; the preview sits beside the ideas it previews -->
+    <section class="card kind-panel" id="kind-panel" aria-labelledby="kind-title">
       <h2 id="kind-title"><span class="step-no">1</span> Kind of video</h2>
       <div id="template-grid" class="template-grid" role="radiogroup" aria-label="Kind of video"></div>
       <select id="batch-template" hidden aria-hidden="true" tabindex="-1"></select>
     </section>
+    <div class="batch-body"><div class="batch-left">
     <section class="card" id="ideas-panel" aria-labelledby="ideas-title">
       <h2 id="ideas-title"><span class="step-no">2</span> Ideas</h2>
       <div class="batch-tabs" role="tablist" aria-label="Batch source">

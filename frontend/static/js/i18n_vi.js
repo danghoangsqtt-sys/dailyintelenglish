@@ -720,6 +720,7 @@ window.I18N_VI = {
     "Would you rather: two choices, a timer and the answer.": "Bạn chọn gì: hai lựa chọn, đồng hồ đếm và câu trả lời.",
     "Example only": "Ví dụ minh hoạ",
     "Best for:": "Phù hợp cho:",
+    "Example only: your Shorts are written by the AI for your ideas. Propose ideas to preview them here.": "Ví dụ minh hoạ: Short của bạn do AI viết theo ý tưởng của bạn. Đề xuất ý tưởng để xem trước tại đây.",
     "See an example": "Xem ví dụ",
     // Phase 91: the other kinds
     "Card": "Thẻ",
@@ -819,6 +820,7 @@ window.I18N_VI = {
     "Make 5–10 vertical Shorts (at most a minute each; up to three for word roots and grammar) in one go: choose the kind of video, let the AI propose ideas from a topic or today's news, review them, then make the videos now or let Automation make them by their dates. Each Short is saved in its own folder under the main save folder.": "Làm 5–10 Short dọc (mỗi video tối đa một phút; gốc từ và ngữ pháp tối đa ba phút) trong một lần: chọn loại video, để AI đề xuất ý tưởng từ một chủ đề hoặc tin hôm nay, duyệt lại, rồi làm video ngay hoặc để Tự động làm theo ngày đăng. Mỗi Short được lưu trong thư mục riêng dưới thư mục lưu chính.",
     "Kind of video": "Loại video",
     "Video types": "Dạng video",
+    "Shorts with characters, a presenter or pictures": "Short có nhân vật, người dẫn hoặc hình ảnh (dọc 9:16)",
     "Text templates": "Mẫu chữ",
     "Two talking characters in an everyday situation.": "Hai nhân vật biết nói trong một tình huống hằng ngày.",
     "Solo presenter": "Người dẫn Solo",

@@ -4,9 +4,9 @@
   const $ = (id) => document.getElementById(id);
   // Phase 80 (owner 2026-10-26): the kinds of video as cards -- the app's video types, then the text templates
   const KINDS = [
-    { key: "conversation", name: "Conversation", group: "Video types", cast: 2, desc: "Two talking characters in an everyday situation." },
-    { key: "presenter", name: "Solo presenter", group: "Video types", cast: 1, desc: "One presenter explains one idea to camera." },
-    { key: "vox", name: "Vox", group: "Video types", cast: 1, desc: "A narrator's voice over pictures and on-screen text." },
+    { key: "conversation", name: "Conversation", group: "Shorts with characters, a presenter or pictures", cast: 2, desc: "Two talking characters in an everyday situation." },
+    { key: "presenter", name: "Solo presenter", group: "Shorts with characters, a presenter or pictures", cast: 1, desc: "One presenter explains one idea to camera." },
+    { key: "vox", name: "Vox", group: "Shorts with characters, a presenter or pictures", cast: 1, desc: "A narrator's voice over pictures and on-screen text." },
     { key: "wordday", name: "Word of the day", group: "Text templates", cast: 1, desc: "One word: meaning, pronunciation, examples, a memory tip." },
     { key: "mistakes", name: "Don't say / Say", group: "Text templates", cast: 1, desc: "Common learner mistakes and the natural phrase." },
     { key: "top5", name: "Top 5 phrases", group: "Text templates", cast: 1, desc: "Five phrases for one situation, as a countdown." },
@@ -41,6 +41,23 @@
     state.timer = setTimeout(() => {
       const box = $("batch-player");
       const idea = previewIdea();
+      // Phase 92 (owner 2026-11-03): before there is an idea the panel shows the kind's example clip, not a
+      // placeholder text; the live preview with the selected idea comes once ideas exist
+      const example = window.TemplateSamples?.clipFor(state.template);
+      if (!state.items.length && example) {
+        const label = KINDS.find((kind) => kind.key === state.template)?.name || state.template;
+        $("preview-what").textContent = label;
+        const video = Object.assign(document.createElement("video"), { id: "batch-example", muted: true, loop: true, playsInline: true,
+          autoplay: !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches, poster: example.poster, src: example.src,
+          className: example.aspect === "16:9" ? "is-wide" : "" });
+        box.replaceChildren(video);
+        state.player = null;
+        $("preview-note").textContent = "Example only: your Shorts are written by the AI for your ideas. Propose ideas to preview them here.";
+        $("preview-error").textContent = "";
+        return;
+      }
+      $("preview-note").textContent = "A silent preview of the look with this idea. The real Short is written by the AI and voiced by the narrator.";
+      if (box.querySelector("#batch-example")) { box.replaceChildren(); state.player = null; }
       if (NO_SAMPLE.includes(state.template)) {  // Phase 80: these are drawn from characters, a presenter or pictures
         $("preview-what").textContent = `${KINDS.find((kind) => kind.key === state.template).name} · ${idea.title}`;
         $("batch-player").replaceChildren();
@@ -133,7 +150,7 @@
     });
     grid.replaceChildren(...nodes);
     // Phase 92: an example clip on every kind card
-    window.TemplateSamples?.attach(grid, { audience: $("batch-audience").value || state.channelAudience });
+    window.TemplateSamples?.attach(grid, { audience: $("batch-audience").value || state.channelAudience, shorts: true }).then(refreshPreview);
   }
 
   function setTemplate(key) {
@@ -352,7 +369,7 @@
   });
   $("batch-level").addEventListener("change", refreshPreview);
   $("batch-audience").addEventListener("change", refreshPreview);  // Phase 72 (ENH-054)
-  $("batch-audience").addEventListener("change", () => window.TemplateSamples?.setAudience($("batch-audience").value || state.channelAudience));
+  $("batch-audience").addEventListener("change", () => { window.TemplateSamples?.setAudience($("batch-audience").value || state.channelAudience); refreshPreview(); });
   Api.getChannelAudience().then((data) => { state.channelAudience = data.audience; refreshPreview();
     window.TemplateSamples?.setAudience($("batch-audience").value || data.audience); }).catch(() => {});
   $("news-level").addEventListener("change", refreshPreview);

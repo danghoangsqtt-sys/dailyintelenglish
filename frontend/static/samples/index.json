@@ -158,5 +158,35 @@
     "poster_en": "vox.jpg",
     "seconds": 5,
     "bytes": 116891
+  },
+  "conversation_short": {
+    "kind": "conversation_short",
+    "aspect": "9:16",
+    "vi": "conversation_short.mp4",
+    "en": "conversation_short.mp4",
+    "poster_vi": "conversation_short.jpg",
+    "poster_en": "conversation_short.jpg",
+    "seconds": 5,
+    "bytes": 274987
+  },
+  "presenter_short": {
+    "kind": "presenter_short",
+    "aspect": "9:16",
+    "vi": "presenter_short.mp4",
+    "en": "presenter_short.mp4",
+    "poster_vi": "presenter_short.jpg",
+    "poster_en": "presenter_short.jpg",
+    "seconds": 5,
+    "bytes": 159487
+  },
+  "vox_short": {
+    "kind": "vox_short",
+    "aspect": "9:16",
+    "vi": "vox_short.mp4",
+    "en": "vox_short.mp4",
+    "poster_vi": "vox_short.jpg",
+    "poster_en": "vox_short.jpg",
+    "seconds": 5,
+    "bytes": 148808
   }
 }

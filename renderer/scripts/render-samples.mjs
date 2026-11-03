@@ -68,12 +68,13 @@ if (templates.length) {
 for (const [kind, spec] of Object.entries(config.sources).filter(([kind]) => !only.size || only.has(kind))) {
   if (!existsSync(spec.file)) { console.warn(`${kind}: ${spec.file} not found, kept as it was`); continue; }
   const clip = `${kind}.mp4`, poster = `${kind}.jpg`, seconds = spec.seconds ?? config.seconds;
+  const aspect = spec.aspect || "16:9", scale = aspect === "9:16" ? "scale=540:-2" : "scale=640:-2";
   execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", String(spec.from ?? 0), "-t", String(seconds), "-i", spec.file,
-    "-an", "-vf", "scale=640:-2", "-c:v", "libx264", "-crf", "30", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+    "-an", "-vf", scale, "-c:v", "libx264", "-crf", "30", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
     path.join(out, clip)]);
   execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", String((spec.from ?? 0) + 2), "-i", spec.file, "-frames:v", "1",
-    "-vf", "scale=640:-2", "-q:v", "5", path.join(out, poster)]);
-  index[kind] = {kind, aspect: "16:9", vi: clip, en: clip, poster_vi: poster, poster_en: poster, seconds};
+    "-vf", scale, "-q:v", "5", path.join(out, poster)]);
+  index[kind] = {kind, aspect, vi: clip, en: clip, poster_vi: poster, poster_en: poster, seconds};
   console.log(`${clip}: ${(size(clip) / 1024).toFixed(0)} KB`);
 }
 
