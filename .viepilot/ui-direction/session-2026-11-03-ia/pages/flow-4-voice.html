@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bước 4 Giọng đọc — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
+<body data-page="videos" data-crumbs="Video của tôi|Câu bị động: hiểu bản chất" data-step="4" data-hint="Chỉ những câu đã sửa mới được đọc lại">
+<main class="page">
+  <div class="split">
+    <div class="gap">
+      <section class="card">
+        <div class="card-head"><h2>Giọng của từng người nói</h2><span class="sub">1 người nói · 2 ngôn ngữ</span></div>
+        <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="voice"><img src="../../../../data/library/sprites/eba10f99-494c-47d6-ae8a-d52a3832f162/calm__open.png" alt=""><div class="grow"><b style="font-weight:600">Cô giáo · tiếng Việt</b><div class="muted" style="font-size:12.5px">Ngọc Huyền · VieNeu</div></div><a class="btn sm" href="#">Đổi</a><span class="playbtn ghost"><svg class="i fill sm"><use href="../icons.svg#play"/></svg></span></div>
+          <div class="voice"><img src="../../../../data/library/sprites/eba10f99-494c-47d6-ae8a-d52a3832f162/calm__open.png" alt=""><div class="grow"><b style="font-weight:600">Cô giáo · câu tiếng Anh</b><div class="muted" style="font-size:12.5px">Aria · Edge · Mỹ</div></div><a class="btn sm" href="#">Đổi</a><span class="playbtn ghost"><svg class="i fill sm"><use href="../icons.svg#play"/></svg></span></div>
+          <div class="field" style="grid-column:1/-1"><div class="lbl">Tốc độ đọc <small>1,0×</small></div><div class="seg"><button>0,9×</button><button aria-pressed="true">1,0×</button><button>1,1×</button></div></div>
+        </div>
+      </section>
+
+      <section class="card" style="overflow:hidden">
+        <div class="card-head"><h2>Nghe thử từng câu</h2><span class="sub">14 câu · 12 đã có giọng</span><div class="end"><a class="btn sm" href="#"><svg class="i sm"><use href="../icons.svg#refresh"/></svg>Đọc lại câu đã sửa (2)</a></div></div>
+        <div class="list" id="lines"></div>
+      </section>
+    </div>
+
+    <aside class="gap" style="position:sticky;top:180px">
+      <section class="card">
+        <div class="card-head"><h2>Tạo cả bài</h2></div>
+        <div class="card-body" style="display:grid;gap:12px">
+          <div class="row"><span class="grow">Đã có giọng</span><b class="mono">12/14 câu</b></div>
+          <div class="bar"><i style="width:86%"></i></div>
+          <div class="muted" style="font-size:12.5px">Câu 3 và 9 đã sửa sau lần đọc trước.</div>
+          <a class="btn primary block" href="#"><svg class="i"><use href="../icons.svg#mic"/></svg>Tạo giọng · khoảng 9 giây</a>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Nhạc nền</h2></div>
+        <div class="card-body" style="display:grid;gap:10px">
+          <div class="row"><span class="playbtn ghost"><svg class="i fill sm"><use href="../icons.svg#play"/></svg></span><div class="grow"><b style="font-weight:600">Morning Study</b><div class="muted" style="font-size:12.5px">Thư viện nhạc · nhẹ, piano</div></div><a class="btn sm" href="#">Đổi</a></div>
+          <div class="field"><div class="lbl">Âm lượng nhạc <small>12%</small></div><div class="bar"><i style="width:12%"></i></div></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+<script>
+// prototype only
+const L = [["Hôm nay mình hiểu câu bị động trong một phút nhé.", "0:03", 1], ["Câu chủ động nói ai làm việc gì: \"Workers built the bridge.\"", "0:05", 1],
+  ["Khi người làm không quan trọng, ta đưa vật bị tác động lên đầu câu…", "—", 0], ["Vậy câu bị động trả lời câu hỏi: chuyện gì đã xảy ra với vật đó?", "0:04", 1],
+  ["Công thức rất gọn: be + quá khứ phân từ.", "0:03", 1], ["\"The room is cleaned every day.\"", "0:02", 1]];
+const wave = '<div class="wave">' + Array.from({ length: 34 }, (_, i) => `<i style="height:${30 + Math.round(60 * Math.abs(Math.sin(i * 1.7)))}%"></i>`).join("") + "</div>";
+document.getElementById("lines").innerHTML = L.map(([t, d, ok], i) => `<div class="li"><span class="muted mono" style="width:18px">${i + 1}</span>
+  <span class="playbtn ${ok ? "ghost" : ""}" style="${ok ? "" : "background:var(--subtle);color:var(--text-3)"}"><svg class="i fill sm"><use href="../icons.svg#play"/></svg></span>
+  <div class="grow"><div style="font-size:13.5px">${t}</div></div><div style="width:200px">${ok ? wave : '<span class="badge amber">Đã sửa, chưa đọc lại</span>'}</div><span class="muted mono" style="width:34px;text-align:right">${d}</span></div>`).join("");
+</script>
+<script src="../shell.js"></script></body></html>

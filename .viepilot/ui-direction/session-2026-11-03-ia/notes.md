@@ -7,25 +7,19 @@ mắt, cân đối giữa kỹ thuật và mỹ thuật, giữa SEO và trải n
 Static prototype (sample data, buttons do nothing). Serve the repo root (`python -m http.server 8040`) and open
 `/.viepilot/ui-direction/session-2026-11-03-ia/index.html`; images come from `frontend/static`.
 
-## Look (v2, after the owner's "chưa đẹp")
+## Look (v4, after "chưa chuyên nghiệp và chưa đẹp")
 
-The brand's Canva/CapCut feel (owner 2026-10-06): warm cream page like the banner, white cards, Montserrat headings,
-line icons (`icons.svg`) instead of emoji, a light Canva-style rail with one green "+" create button. Pictures lead:
-video covers as 9:16 posters, the template gallery shows the real example clips' covers, the library shows real
-characters, scenes and pictures. Home opens with the channel banner (the teacher on the right, the lettering covered
-by a cream wash). Green marks the place you are and the one primary action; yellow only marks "needs you".
+v2 (cream, big posters) and v3 (green hero, round gradient buttons) still read as a consumer app. v4 follows studio
+tools (YouTube Studio, Linear, CapCut desktop): a labelled 244px sidebar with the channel at the top, one green
+"Tạo video" button and the running series; a top bar with breadcrumbs, search (Ctrl K) and notifications; one 14px
+type scale (Inter; Montserrat only for page titles); 8/12px radii; hairline borders and light shadows; neutral grey-green
+surfaces ("Sáng", picked by the owner 2026-11-03); green only for the primary action and the current place; amber only
+for "needs you". Status is a small dot badge; lists are tables or rows, not big posters. `shell.js` draws the shared
+sidebar, top bar and, inside one video, the stage bar and the bottom Back / Next bar.
 
-## Look (v3, after a second "chưa đẹp")
-
-v2 was all beige (page, covers, stats) and its banner crop showed a lone giant face; the 9:16 posters were too big and
-their tiny in-video text looked busy. v3: Home opens with a brand-green hero and a waving presenter cut-out from the
-character library, a round quick-create row (Canva's "what will you make"), "Cần bạn" as cards with a small cover
-beside the reason and the actions, and a week strip. A switcher (bottom right) compares three colour directions on
-every page: **Sáng** (neutral light), **Tối** (CapCut-like dark), **Kem** (v2's cream).
-
-**Owner picked Sáng (2026-11-03).** The switcher and the other two palettes are gone. Tạo video now opens with a
-search band and round category buttons like Canva, templates are smaller posters (6-7 a row); Video của tôi puts the
-"Cần bạn" cards first, then all videos as a poster grid; the calendar covers are larger.
+The one-video workflow keeps the app's seven steps (Config, Script, Learning, Audio, Video, Thumbnail, YouTube) and
+groups them in three stages: Nội dung (1–3), Sản xuất (4–5), Đăng (6–7). Each step page has the same frame: title
+with autosave, the stage bar, the work in the middle, a helper panel on the right, and one "next" button at the bottom.
 
 ## Why (checked in the app)
 
@@ -54,18 +48,24 @@ search band and round category buttons like Canva, templates are smaller posters
 | File | Area | Replaces / gathers |
 |---|---|---|
 | `index.html` | hub | — |
-| `style.css`, `icons.svg` | shared look (Sáng), line icons | — |
+| `style.css`, `icons.svg`, `shell.js` | shared look (v4), line icons, sidebar + top bar + stage bar | — |
 | `pages/home.html` | Hôm nay | Dashboard top, Automation review |
 | `pages/create.html` | Tạo video | Step 1 type cards, Shorts batch |
 | `pages/channel.html` | Kênh | Channel plan, Automation, Dashboard schedule |
 | `pages/videos.html` | Video của tôi | Dashboard project list |
-| `pages/library.html` | Thư viện | Character / Activity / Music libraries, voices, brand assets |
-| `pages/project.html` | One video | Steps 1–7 as 3 stages, SEO in Đăng |
+| `pages/library.html` | Thư viện | Character / Scene / Activity / Music libraries, voices, brand assets |
+| `pages/flow-1-setup.html` | One video · 1 Thiết lập | Step 1 Config |
+| `pages/flow-2-script.html` | One video · 2 Kịch bản | Step 2 Script, line panel |
+| `pages/flow-3-learning.html` | One video · 3 Học liệu | Step 3 Learning |
+| `pages/flow-4-voice.html` | One video · 4 Giọng đọc | Step 4 TTS Audio Studio, music |
+| `pages/flow-5-video.html` | One video · 5 Video | Step 5 Video Studio, beat editor (Phase 90/91), Shorts & TikTok |
+| `pages/flow-6-thumbnail.html` | One video · 6 Ảnh bìa | Step 6 Thumbnail |
+| `pages/flow-7-youtube.html` | One video · 7 YouTube | Step 7 YouTube package, SEO score |
 
 ## Open questions for the owner
 
 
 - Keep "Tự động" as its own item in the sidebar (some owners like a big on/off), or only inside Kênh as proposed?
 - "Video của tôi": v2 shows a poster grid (with a list toggle); keep the grid as default, or the dense table?
-- Should the Step 2–6 pages keep their current layout inside the 3 stages for now (smaller change), with only the
-  stage bar on top?
+- Build the step pages as drawn in `flow-*.html` (bigger change), or first only add the shared frame and the stage bar
+  around today's step pages?
