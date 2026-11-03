@@ -1,6 +1,6 @@
 # Phase 88 state
 
-Status: implemented_verified (2026-11-03, sandbox runs; not built, installed or pushed). Owner: "tiếp tục thực hiện nội dung tiếp theo /vp-auto" after Phase 87 was pushed.
+Status: implemented_verified and installed (2026-11-03). Installed (owner: "Xem xong, cài đi", 2026-11-03): Full 2.0.0 from 8dff263 (source_dirty false), package dist/2.0-phase88-20261103 (Full ZIP SHA256 de284e353f1d58d985cf80437476d438f4bf152b8228355773985738add762be), backup data/backups/desktop-20261103-144553-097; the running app reports commit 8dff263, 118 projects kept; VieNeu available; the easy-grammar Step 1 card, batch kind and silent preview are served. Not pushed. Owner: "tiếp tục thực hiện nội dung tiếp theo /vp-auto" after Phase 87 was pushed.
 Task cards written and committed before code; self-implemented in this session.
 
 | Task | Scope | Status |

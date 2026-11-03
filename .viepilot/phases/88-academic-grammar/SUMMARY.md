@@ -1,6 +1,8 @@
 # Phase 88 summary — the "Easy grammar" Short
 
-Done 2026-11-03 on `owner-runs/20261001-r9` (not pushed, not installed). Decisions D125–D127 (from Phase 87).
+Done 2026-11-03 on `owner-runs/20261001-r9` (not pushed). Decisions D125–D127 (from Phase 87).
+
+Installed (owner: "Xem xong, cài đi", 2026-11-03): Full 2.0.0 from 8dff263 (source_dirty false), package dist/2.0-phase88-20261103 (Full ZIP SHA256 de284e353f1d58d985cf80437476d438f4bf152b8228355773985738add762be), backup data/backups/desktop-20261103-144553-097; the running app reports commit 8dff263, 118 projects kept; VieNeu available; the easy-grammar Step 1 card, batch kind and silent preview are served. Not pushed.
 
 ## What changed
 

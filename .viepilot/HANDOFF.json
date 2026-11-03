@@ -1089,8 +1089,12 @@
       "88.4"
     ],
     "videos": "D:\\Videos\\Kiểm tra Ngữ pháp 2026-11-03\\Ngữ pháp v4",
-    "installed": false,
+    "installed": true,
     "pushed": false,
-    "next_task": "owner watches the v4 Shorts; then install, or Phase 89 (16:9 + series)"
+    "next_task": "Phase 89 (16:9 academic videos + series) when the owner asks",
+    "installed_from_commit": "8dff263",
+    "installed_backup": "data/backups/desktop-20261103-144553-097",
+    "package_directory": "dist/2.0-phase88-20261103",
+    "full_zip_sha256": "de284e353f1d58d985cf80437476d438f4bf152b8228355773985738add762be"
   }
 }
