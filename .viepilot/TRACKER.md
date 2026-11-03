@@ -2,7 +2,7 @@
 
 ## Phase 88 — "Easy grammar" Short (2026-11-03)
 
-Status: in_progress. Task cards 88.1–88.4 written before code. [Plan](phases/88-academic-grammar/PLAN.md).
+Status: implemented_verified (sandbox from source: Ngữ pháp v4 — Câu bị động 69.4 s and Thì hiện tại hoàn thành 56.0 s, 1080x1920, VieNeu voice, into D:\Videos\Kiểm tra Ngữ pháp 2026-11-03; 7 real-run problems fixed; full pytest 2285 passed + 3 browser tests that fail only under render load; vitest 203; not built, installed or pushed; the owner has not watched yet). Tasks 88.1–88.4, [summary](phases/88-academic-grammar/SUMMARY.md). [Plan](phases/88-academic-grammar/PLAN.md).
 
 ## Phase 87 — Vietnamese VieNeu voice and the "Word roots, prefixes and suffixes" Short (2026-11-03)
 

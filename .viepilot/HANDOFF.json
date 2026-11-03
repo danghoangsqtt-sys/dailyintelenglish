@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": "75",
+  "current_phase": 88,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1077,5 +1077,20 @@
   "phase83_default_save_folder": {
     "status": "implemented_verified",
     "installed_with": "phase84 build 9597292"
+  },
+  "phase88_academic_grammar": {
+    "status": "implemented_verified",
+    "date": "2026-11-03",
+    "branch": "owner-runs/20261001-r9",
+    "tasks": [
+      "88.1",
+      "88.2",
+      "88.3",
+      "88.4"
+    ],
+    "videos": "D:\\Videos\\Kiểm tra Ngữ pháp 2026-11-03\\Ngữ pháp v4",
+    "installed": false,
+    "pushed": false,
+    "next_task": "owner watches the v4 Shorts; then install, or Phase 89 (16:9 + series)"
   }
 }

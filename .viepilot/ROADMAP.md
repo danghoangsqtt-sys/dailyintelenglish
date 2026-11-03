@@ -6,7 +6,7 @@ Status: planned. Long `roots` (one root with 10–15 words, or 2–3 roots) and 
 
 ## Phase 88 — "Easy grammar" Short (2026-11-03)
 
-Status: in_progress (88.1–88.3 done; 88.4 sandbox runs). Short style `grammar`: break rote formulas, one rule, scene cards that stack, fixed colour code, summary table, karaoke; kinds: one point in essence, errors carried over from Vietnamese. [Plan](phases/88-academic-grammar/PLAN.md).
+Status: implemented_verified (sandbox from source: Ngữ pháp v4 — Câu bị động 69.4 s and Thì hiện tại hoàn thành 56.0 s, 1080x1920, VieNeu voice, into D:\Videos\Kiểm tra Ngữ pháp 2026-11-03; 7 real-run problems fixed; full pytest 2285 passed + 3 browser tests that fail only under render load; vitest 203; not built, installed or pushed; the owner has not watched yet). Tasks 88.1–88.4, [summary](phases/88-academic-grammar/SUMMARY.md). Short style `grammar`: break rote formulas, one rule, scene cards that stack, fixed colour code, summary table, karaoke; kinds: one point in essence, errors carried over from Vietnamese. [Plan](phases/88-academic-grammar/PLAN.md).
 
 ## Phase 87 — Vietnamese VieNeu voice and the "Word roots, prefixes and suffixes" Short (2026-11-03)
 
