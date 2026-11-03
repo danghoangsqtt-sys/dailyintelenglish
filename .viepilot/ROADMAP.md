@@ -1,5 +1,17 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 89 — Academic 16:9 videos and series (2026-11-03)
+
+Status: planned. Long `roots` (one root with 10–15 words, or 2–3 roots) and long `grammar` (scenes as chapters, practice, summary table); series presets that remember used roots and carry the quiz to the next episode. [Plan](phases/89-academic-long-series/PLAN.md).
+
+## Phase 88 — "Easy grammar" Short (2026-11-03)
+
+Status: planned. Short style `grammar`: break rote formulas, one rule, scene cards that stack, fixed colour code, summary table, karaoke; kinds: one point in essence, errors carried over from Vietnamese. [Plan](phases/88-academic-grammar/PLAN.md).
+
+## Phase 87 — Vietnamese VieNeu voice and the "Word roots, prefixes and suffixes" Short (2026-11-03)
+
+Status: planned (D125–D127). VieNeu v3 Turbo in an isolated worker for the academic templates only (one voice reads Vietnamese and English; word timings by alignment); Short style `roots` (word family split into prefix + root + suffix, line art, quiz), up to 3 minutes, brand colours. [Plan](phases/87-academic-roots/PLAN.md).
+
 ## Phase 86 — VOX videos on the viral explainer formula (2026-10-28)
 
 Status: implemented_verified (installed app: VOX why / how / list / Short made automatically into D:\Videos\Kiểm tra VOX 2026-10-28, cold open, evidence quotes, recap ending; seven real-run problems fixed on the way; full pytest 2254 passed; Full 2.0.0 from d4ba5bc installed, backup `data/backups/desktop-20261029-030114-271`; not pushed). Cold open on an English example and one question, evidence blocks, a visual every 5-8 s, evidence cards, collage object pictures, a recap ending; no intro slide for VOX. [Plan](phases/86-vox-formula/PLAN.md).

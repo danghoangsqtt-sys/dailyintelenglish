@@ -1,4 +1,20 @@
 {
+  "phase87_academic_roots": {
+    "status": "planned",
+    "plan": ".viepilot/phases/87-academic-roots/PLAN.md",
+    "decisions": [
+      "D125 VieNeu voice for roots/grammar only",
+      "D126 academic Shorts up to 3 min",
+      "D127 brand colours"
+    ],
+    "next_task": "87.1 VieNeu engine (isolated worker)",
+    "following_phases": [
+      ".viepilot/phases/88-academic-grammar/PLAN.md",
+      ".viepilot/phases/89-academic-long-series/PLAN.md"
+    ],
+    "research": "docs/brainstorm/vietnamese-voice-research-2026-11-03.md",
+    "pushed": false
+  },
   "phase86_vox_formula": {
     "status": "implemented_verified",
     "plan": ".viepilot/phases/86-vox-formula/PLAN.md",

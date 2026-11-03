@@ -3,7 +3,8 @@
 ## Session Info
 
 - **Date:** 2026-11-03, Asia/Bangkok
-- **Status:** Đã phân tích mẫu và đề xuất phạm vi. **Chờ owner chốt 6 câu ở mục 5**, rồi `/vp-crystallize` (hoặc `/vp-evolve`) để lập Phase 87–89.
+- **Status:** Phạm vi đã chốt (2026-11-03, owner trả lời bằng AskUserQuestion). Đã lập Phase 87–89 với quyết định D125–D127, xem [PLAN Phase 87](../../.viepilot/phases/87-academic-roots/PLAN.md).
+- **Owner chốt:** Q1 = VieNeu một giọng đọc cả câu (D125). Q2 = Short tới 3 phút (D126). Q3 = màu thương hiệu (D127). Q6 = 3 phase. Q4 và Q5 theo mặc định đề xuất.
 - **workflow_version:** 2.19.0
 - **Skill:** vp-brainstorm 1.1.0
 - **Language:** vi (theo owner)
