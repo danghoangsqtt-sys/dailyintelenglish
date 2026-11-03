@@ -19,6 +19,7 @@ datas = [
     ("frontend", "frontend"),
     ("backend/ai/prompts", "backend/ai/prompts"),
     ("backend/db/migrations", "backend/db/migrations"),
+    ("backend/content/data", "backend/content/data"),  # Phase 87: the checked word roots and the line icon names
     ("renderer/public/brand", "renderer/public/brand"),
 ]
 binaries = []

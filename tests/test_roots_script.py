@@ -241,3 +241,11 @@ def test_stray_chinese_characters_are_removed():
     bad = {**PRESS, "words": [{**PRESS["words"][0], "logic": "DE là xuống: ấn xuống thì tâm trạng也跟着 đi xuống."}] + PRESS["words"][1:]}
     clean = with_checked_facts(WordFamily.model_validate(bad), "Gốc PRESS", "vi")
     assert clean.words[0].logic == "DE là xuống: ấn xuống thì tâm trạng đi xuống."
+
+
+def test_the_desktop_build_ships_the_word_roots_data():
+    """Phase 87 install check: the packaged app reads backend/content/data/*.json next to its modules."""
+    from pathlib import Path
+
+    spec = Path("daily_intel_english_studio.spec").read_text(encoding="utf-8")
+    assert '("backend/content/data", "backend/content/data")' in spec
