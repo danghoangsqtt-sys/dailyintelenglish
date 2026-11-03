@@ -40,7 +40,8 @@ class FamilyWord(BaseModel):
     logic: str = Field(min_length=1, max_length=220)
     example_en: str = Field(default="", max_length=140)
     example_vi: str = Field(default="", max_length=160)
-    picture: str = Field(default="", max_length=160)
+    # required (real run 2026-11-03: left optional, the AI described only the quiz word and the others had no picture)
+    picture: str = Field(min_length=3, max_length=160)
     # Phase 87.4: one or two bundled line icons, drawn when the word has no Qwen picture
     icons: list[str] = Field(default_factory=list, max_length=4)
 
@@ -103,15 +104,64 @@ def parts_spell_word(word: FamilyWord) -> bool:
     return _bare("".join(part.text for part in word.parts)) == _bare(word.word)
 
 
+def _common_prefix(a: str, b: str) -> int:
+    size = 0
+    while size < min(len(a), len(b)) and a[size] == b[size]:
+        size += 1
+    return size
+
+
+def fit_parts(word: FamilyWord) -> FamilyWord | None:
+    """The word with parts that spell it, or None. Real run 2026-11-03: the AI adds an empty "-" suffix, and splits a
+    suffix family by the base word (decide + sion for decision); the base part then becomes the letters the word
+    really has (deci + sion), keeping its meaning. Anything that cannot be fitted this way is not used."""
+    parts = [part for part in word.parts if _bare(part.text)]
+    if not parts:
+        return None
+    fitted = word.model_copy(update={"parts": parts})
+    if parts_spell_word(fitted):
+        return fitted
+    text = _bare(word.word)
+    last = _bare(parts[-1].text)
+    if len(parts) >= 2 and text.endswith(last):
+        before = "".join(_bare(part.text) for part in parts[:-2])
+        base = text[:len(text) - len(last)]
+        if base.startswith(before):
+            rest = base[len(before):]
+            if rest and _common_prefix(rest, _bare(parts[-2].text)) >= min(3, len(rest)):
+                new = [*parts[:-2], parts[-2].model_copy(update={"text": rest}), parts[-1]]
+                return word.model_copy(update={"parts": new})
+    return None
+
+
 def usable_words(family: WordFamily) -> list[FamilyWord]:
     seen: set[str] = set()
     kept = []
     for word in family.words:
         key = _bare(word.word)
-        if key and key not in seen and parts_spell_word(word) and _bare(word.word) != _bare(family.quiz.word):
+        fitted = fit_parts(word)
+        if key and key not in seen and fitted and key != _bare(family.quiz.word):
             seen.add(key)
-            kept.append(word)
+            kept.append(fitted)
     return kept[:FAMILY_MAX_WORDS]
+
+
+def with_checked_facts(family: WordFamily, topic: str, lang: str) -> WordFamily:
+    """Real run 2026-11-03: the AI left the origin empty although it was given; a listed head keeps its checked origin
+    and meaning whatever the AI wrote, and the quiz word's parts are fitted like the others."""
+    update: dict = {}
+    quiz = fit_parts(family.quiz)
+    if quiz:
+        update["quiz"] = quiz
+    found = find_seed(topic)
+    if found:
+        kind, entry = found
+        heads = {_bare(alt) for alt in entry["head"].split("/")}
+        given = {_bare(alt) for alt in family.head.split("/")}
+        if given & heads:  # "-tion / -sion" or "-tion" both name the listed "-tion / -sion"
+            update.update(kind=kind, head=entry["head"], origin_lang=entry["origin_lang"], origin_form=entry["origin_form"],
+                          head_meaning=entry["meaning_vi"] if lang == "vi" else entry["meaning_en"])
+    return family.model_copy(update=update)
 
 
 def _cap(text: str) -> str:
@@ -199,6 +249,9 @@ def build_beats(family: WordFamily, lang: str) -> list[tuple[str, dict]]:
                   _card("quiz", word=quiz.word, parts=[part.model_dump() for part in quiz.parts], picture=quiz.picture,
                         icons=quiz.icons, answer=quiz.meaning)))
     beats.append((ROOTS_FOLLOW[lang], _card("follow", word=quiz.word)))
+    for _, card in beats:  # the renderer marks the family's own part (root, prefix or suffix) in brand green
+        if card.get("parts"):
+            card["kind"] = family.kind
     return beats
 
 
@@ -226,7 +279,10 @@ def roots_prompt(topic: str, cefr: str, lang: str, owner_words: list[str]) -> st
         "- kind is root, prefix or suffix; head is written as in a dictionary of roots (press, mit / miss, un-, -tion).\n"
         "- parts: the word split into prefix / root / suffix; the parts joined MUST spell the word exactly "
         "(com + press = compress, press + ure = pressure). meaning of a part: two to four words.\n"
-        "- meaning: the word's usual meaning in two to five words.\n"
+        "- meaning: the word's usual meaning as a short dictionary gloss of two to four words (bày tỏ; nén lại; gây ấn "
+        "tượng), never a whole explanation.\n"
+        "- parts: never add an empty part; for a suffix family the base part is the letters the word really has "
+        "(deci + sion for decision, happi + ness for happiness).\n"
         "- logic: ONE short sentence that explains how the parts give the meaning, like a memory trick "
         "(e.g. 'COM là cùng nhau, PRESS là ép: ép sát vào nhau thì chiếm ít chỗ hơn, nên compress là nén lại.').\n"
         "- example_en: one short natural B1 sentence with the word; example_vi: its translation.\n"
@@ -236,7 +292,7 @@ def roots_prompt(topic: str, cefr: str, lang: str, owner_words: list[str]) -> st
         "- origin_lang / origin_form: only when you are sure (e.g. Latin, 'premere → pressus'); otherwise empty.\n"
         "- head_logic: one sentence showing the head's own meaning in an everyday action; head_example_en a short "
         "sentence with the bare head when it is a word (else empty).\n"
-        "- quiz: one more family word, with parts; quiz_clue describes a situation that shows its meaning without "
+        "- quiz: one more family word, with parts; quiz_clue is ONE sentence of at most 20 words that describes a situation that shows its meaning without "
         "saying the word or its translation.\n"
         "Return ONLY a JSON object that validates against the schema."
     )

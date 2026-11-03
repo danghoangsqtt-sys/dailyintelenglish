@@ -40,7 +40,7 @@ from backend.content import project_service, script_service
 from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
-from backend.content.word_family import WordFamily, build_beats, roots_prompt
+from backend.content.word_family import WordFamily, build_beats, roots_prompt, with_checked_facts
 from backend.ai.tts.vocal_cues import caption_text
 
 if TYPE_CHECKING:
@@ -1397,7 +1397,7 @@ async def _run_roots_job(db, job: dict, project: dict, router: "AIRouter") -> No
                                 deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="word_family")
     try:
         result = await _call_router(db, job_id, router, request, section_index=None, is_repair=False, adapter=_FAMILY_ADAPTER)
-        family = parse_and_validate(result.text, _FAMILY_ADAPTER)
+        family = with_checked_facts(parse_and_validate(result.text, _FAMILY_ADAPTER), project["topic"], lang)
         beats = build_beats(family, lang)
     except ProviderError as exc:
         await _fail_provider(db, job_id, exc)

@@ -204,3 +204,32 @@ def test_the_shorts_batch_makes_roots_shorts_of_two_minutes(client):  # noqa: F8
     series = next(s for topic in tree["topics"] for s in topic["series"] if s["id"] == result["series_id"])
     project = data(client.get(f"/api/projects/{series['episodes'][0]['project_id']}"))
     assert project["explainer_style"] == "roots" and is_short_video(project) and project["duration_minutes"] == 2.0
+
+
+def test_real_run_splits_are_fitted_and_checked_facts_are_kept():
+    """Real run 2026-11-03: an empty "-" suffix part, base-word splits of a suffix family, and an empty origin."""
+    from backend.content.word_family import FamilyWord, fit_parts, with_checked_facts
+
+    empty = FamilyWord.model_validate(_word("express", [("ex-", "prefix", "ra"), ("press", "root", "ép"), ("-", "suffix", "")], "bày tỏ"))
+    assert [p.text for p in fit_parts(empty).parts] == ["ex-", "press"]
+    decision = FamilyWord.model_validate(_word("decision", [("decide", "root", "quyết định"), ("-sion", "suffix", "danh từ")], "quyết định"))
+    assert [p.text for p in fit_parts(decision).parts] == ["deci", "-sion"]
+    happiness = FamilyWord.model_validate(_word("happiness", [("happy", "root", "vui"), ("ness", "suffix", "trạng thái")], "hạnh phúc"))
+    assert [p.text for p in fit_parts(happiness).parts] == ["happi", "ness"]
+    wrong = FamilyWord.model_validate(_word("expression", [("ex", "prefix", "ra"), ("press", "root", "ép")], "biểu cảm"))
+    assert fit_parts(wrong) is None
+    family = WordFamily.model_validate({**PRESS, "origin_form": "", "origin_lang": "", "head_meaning": "ép mạnh"})
+    checked = with_checked_facts(family, "Gốc PRESS: express, impress", "vi")
+    assert checked.origin_form == "premere → pressus" and checked.head_meaning == "ấn, ép"
+    assert with_checked_facts(family, "Daily routines", "vi").origin_form == ""
+
+
+def test_word_cards_carry_the_family_kind_and_combined_heads_match_the_checked_list():
+    from backend.content.word_family import with_checked_facts
+
+    beats = build_beats(WordFamily.model_validate(PRESS), "vi")
+    assert all(card.get("kind") == "root" for _, card in beats if card.get("parts"))
+    suffix = WordFamily.model_validate({**PRESS, "kind": "suffix", "head": "-tion / -sion", "origin_form": ""})
+    assert with_checked_facts(suffix, "Hậu tố -tion: action, education", "vi").origin_form == "-tio"
+    with pytest.raises(PydanticValidationError):  # every word needs a picture description
+        WordFamily.model_validate({**PRESS, "quiz": {**PRESS["quiz"], "picture": ""}})

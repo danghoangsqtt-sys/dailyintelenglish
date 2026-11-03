@@ -11,6 +11,11 @@ describe("Phase 87: the word-roots Short", () => {
     expect(wordSegments("compress", [part("com", "prefix"), part("press", "root")])).toEqual(
       [{ text: "COM", role: "prefix" }, { text: "PRESS", role: "root" }]);
     expect(wordSegments("expression", [part("ex", "prefix"), part("press", "root")])).toEqual([{ text: "EXPRESSION", role: "root" }]);
+    // a suffix family marks its suffix, a prefix family its prefix; an empty part is ignored
+    expect(wordSegments("action", [part("act", "root"), part("ion", "suffix")], "suffix")).toEqual(
+      [{ text: "ACT", role: "prefix" }, { text: "ION", role: "root" }]);
+    expect(wordSegments("unhappy", [part("un-", "prefix"), part("happy", "root"), part("-", "suffix")], "prefix")).toEqual(
+      [{ text: "UN", role: "root" }, { text: "HAPPY", role: "prefix" }]);
   });
 
   it("marks the family's head inside a word, a suffix from the end", () => {

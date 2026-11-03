@@ -9,11 +9,14 @@ export type Segment = { text: string; role: "prefix" | "root" | "suffix" | "rest
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const ease = (value: number) => 1 - (1 - value) ** 3;
 
-/** The word as coloured segments: its parts when they spell it, else the whole word as one root. */
-export function wordSegments(word: string, parts?: RootsPart[]): Segment[] {
-  const clean = (parts || []).map((part) => ({ text: part.text.replace(/-/g, "").trim(), role: part.role }));
+/** The word as coloured segments: its parts when they spell it, else the whole word as one root. The family's own part
+ * (the root, or the prefix / suffix of a prefix / suffix family) is the green "root" segment; the other parts are ink. */
+export function wordSegments(word: string, parts?: RootsPart[], kind?: string): Segment[] {
+  const clean = (parts || []).map((part) => ({ text: part.text.replace(/-/g, "").trim(), role: part.role })).filter((part) => part.text);
   if (clean.length && clean.map((part) => part.text).join("").toLowerCase() === word.replace(/[^A-Za-z]/g, "").toLowerCase()) {
-    return clean.map((part) => ({ text: part.text.toUpperCase(), role: part.role }));
+    const own = kind === "prefix" || kind === "suffix" ? kind : "root";
+    return clean.map((part) => ({ text: part.text.toUpperCase(),
+      role: part.role === own ? "root" : own === "root" ? part.role : "prefix" }));
   }
   return [{ text: word.toUpperCase(), role: "root" }];
 }

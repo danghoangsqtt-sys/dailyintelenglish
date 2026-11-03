@@ -144,14 +144,14 @@ function Beat({ props, index, time, unit }: { props: EpisodeInputProps; index: n
   }
   if (card.beat === "quiz" || card.beat === "follow") {
     return <><Label text={vi ? "Đoán từ cuối nhé!" : "Guess the last word!"} unit={unit} />
-      {block(<><Lettering segments={wordSegments(word, card.parts)} size={fitSize(word, 860, 160)} unit={unit} />
+      {block(<><Lettering segments={wordSegments(word, card.parts, card.kind)} size={fitSize(word, 860, 160)} unit={unit} />
         <div style={{ fontFamily: HAND, color: INK, fontSize: 90 * unit }}>= ?</div></>)}
       <Picture card={card} progress={drawProgress(time, since)} unit={unit} />{caption}</>;
   }
   // hook, whole, split, example: the word stays while its beats go by
   const split = card.beat === "split" || card.beat === "example" ? splitProgress(time, card.beat === "split" ? line.startSec : -10) : 0;
   return <>{card.beat === "hook" ? <Label text={vi ? "Bạn có biết?" : "Did you know?"} unit={unit} /> : null}
-    {block(<><Lettering segments={wordSegments(word, card.parts)} size={fitSize(word, 860 - split * 120, 170)} split={split} unit={unit} />
+    {block(<><Lettering segments={wordSegments(word, card.parts, card.kind)} size={fitSize(word, 860 - split * 120, 170)} split={split} unit={unit} />
       <Underline progress={underlineProgress(time, since)} width={Math.min(560, 40 + word.length * 55)} unit={unit} />
       {meaningLine(card.meaning)}
       {split > 0 ? <div style={{ opacity: split }}>{small(card.breakdown)}</div> : null}</>)}
