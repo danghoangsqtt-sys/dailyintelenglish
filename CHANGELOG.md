@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Easy grammar Short (Phase 88, 2026-11-03)
+
+- A new Short, "Easy grammar": one grammar point explained by its essence instead of rote formulas — the formulas are stamped "forget them", then three to six scenes of colour-coded cards (S/V/O, BE, -ing, V3, modal) stack up with the narration, a summary table fills row by row and the video ends on the one core rule and a quick quiz; up to three minutes, in Vietnamese with the VieNeu voice (English for the international audience).
+- A second AI pass checks every rule and English example before the script is saved.
+
 ### Added — Word roots Short and a Vietnamese VieNeu voice (Phase 87, 2026-11-03)
 
 - A new Short, "Word roots, prefixes & suffixes": one root, prefix or suffix and its word family, each word split (COM + PRESS) and explained in Vietnamese, with an example, a line-art picture and a closing quiz; up to three minutes.

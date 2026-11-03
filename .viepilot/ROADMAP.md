@@ -6,7 +6,7 @@ Status: planned. Long `roots` (one root with 10–15 words, or 2–3 roots) and 
 
 ## Phase 88 — "Easy grammar" Short (2026-11-03)
 
-Status: planned. Short style `grammar`: break rote formulas, one rule, scene cards that stack, fixed colour code, summary table, karaoke; kinds: one point in essence, errors carried over from Vietnamese. [Plan](phases/88-academic-grammar/PLAN.md).
+Status: in_progress (88.1–88.3 done; 88.4 sandbox runs). Short style `grammar`: break rote formulas, one rule, scene cards that stack, fixed colour code, summary table, karaoke; kinds: one point in essence, errors carried over from Vietnamese. [Plan](phases/88-academic-grammar/PLAN.md).
 
 ## Phase 87 — Vietnamese VieNeu voice and the "Word roots, prefixes and suffixes" Short (2026-11-03)
 
