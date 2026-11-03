@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError as PydanticValidationError
 
 from backend.content.word_family import WordFamily, build_beats, find_seed, parts_spell_word, roots_prompt
+from tests.test_visuals_project_api import client, locked_character  # noqa: F401
 from backend.schemas.project import (
     LINE_DRAWN_STYLES, SHORT_STYLES, ScriptConfig, SpeakerConfig, is_short_video, short_max_minutes, short_minutes,
 )
@@ -119,3 +120,74 @@ async def test_a_roots_script_job_builds_beats_and_switches_the_narrator_to_vien
     speaker = (await project_service.get_project(db, project["id"]))["speakers"][0]
     assert speaker["tts_engine"] == "vieneu" and speaker["resolved_voice_id"] == "Ngọc Huyền"
     assert provider.call_count == 1
+
+
+def test_roots_cards_and_drawn_pictures_reach_the_video_props(client, monkeypatch, tmp_path):  # noqa: F811
+    import asyncio
+
+    import aiosqlite
+
+    from backend.core.config import settings
+    from backend.media import roots_pictures
+    from backend.media import video_renderer_remotion as remotion
+    from tests.test_visuals_project_api import data
+
+    project = data(client.post("/api/projects", json={
+        "name": "Gốc PRESS", "topic": "Gốc PRESS", "cefr_level": "B1", "duration_minutes": 2.0, "num_speakers": 1,
+        "genre": "informational", "accent": "american", "presentation_mode": "solo_explainer", "explainer_style": "roots",
+        "speakers": [{"name": "Huyền", "gender": "female", "accent": "american"}]}))
+    speaker = project["speakers"][0]["id"]
+    family = WordFamily.model_validate(PRESS)
+    beats = build_beats(family, "vi")[:4]
+    data(client.put(f"/api/projects/{project['id']}/script", json={"lines": [
+        {"speaker_id": speaker, "text": text, "language_notes": {"roots": card}} for text, card in beats]}))
+    saved = data(client.get(f"/api/projects/{project['id']}/script"))
+    assert saved[0]["language_notes"]["roots"]["beat"] == "hook"  # the card survives the Step 2 save
+
+    drawn = tmp_path / "express.png"
+    drawn.write_bytes(b"\x89PNG fake")
+
+    async def fake_pictures(db, project_id, cards):
+        assert roots_pictures.wanted_pictures(cards) == {"express": "a thing"}
+        return {"express": drawn}
+
+    monkeypatch.setattr(roots_pictures, "ensure_pictures", fake_pictures)
+    monkeypatch.setattr(remotion, "REMOTION_VISUALS_DIR", tmp_path / "public")
+    audio = {"mp3_path": str(settings.DATA_DIR / "x.mp3"), "word_timestamps": [{"words": []} for _ in beats],
+             "timestamps": [{"start_sec": float(at), "end_sec": at + 0.9, "label": "Huyền", "speaker_id": speaker, "text": line["text"]}
+                            for at, line in enumerate(saved)]}
+
+    async def props():
+        async with aiosqlite.connect(settings.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            full = data(client.get(f"/api/projects/{project['id']}"))
+            return await remotion._build_input_props(db, full, audio, None, visual_mode="podcast_black", layout="vertical")
+
+    built = asyncio.run(props())
+    assert built["shortStyle"] == "roots"
+    assert built["lines"][0]["roots"]["pictureUrl"] == f"remotion-render/visuals/{project['id']}/roots/express.png"
+    assert built["lines"][1]["roots"]["beat"] == "twins" and "pictureUrl" not in built["lines"][1]["roots"]
+    assert (tmp_path / "public" / project["id"] / "roots" / "express.png").is_file()
+
+
+async def test_missing_pictures_are_drawn_once_kept_in_the_library_and_reused(db, monkeypatch, tmp_path):
+    from backend.ai.image.engine import FakeImageEngine
+    from backend.core.config import settings
+    from backend.media import roots_pictures
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(settings, "IMAGE_ENGINE", "fake")
+    monkeypatch.setattr(settings, "AI_VISUALS_ENABLED", True)
+    FakeImageEngine.qwen_calls.clear()
+    cards = [{"beat": "whole", "word": "compress", "picture": "a monitor with a zipped folder"},
+             {"beat": "split", "word": "compress", "picture": "a monitor with a zipped folder"},
+             {"beat": "twins", "words": ["a", "b"]}, {"beat": "quiz", "word": "suppress", "picture": "a locked drawer"}]
+    drawn = await roots_pictures.ensure_pictures(db, "p1", cards)
+    assert sorted(drawn) == ["compress", "suppress"] and len(FakeImageEngine.qwen_calls) == 1
+    assert "line art" in FakeImageEngine.qwen_calls[0]["items"][0]["prompt"]
+    cursor = await db.execute("SELECT COUNT(*) FROM activity_library WHERE review_state = 'approved'")
+    assert (await cursor.fetchone())[0] == 2
+    again = await roots_pictures.ensure_pictures(db, "p1", cards)  # cached: no second draw
+    assert sorted(again) == ["compress", "suppress"] and len(FakeImageEngine.qwen_calls) == 1
+    monkeypatch.setattr(settings, "AI_VISUALS_ENABLED", False)  # without the image model the video is still made
+    assert await roots_pictures.ensure_pictures(db, "p2", cards) == {}

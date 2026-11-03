@@ -23,6 +23,29 @@ export const episodeWordSchema = z.object({
   endSec: z.number(),
 });
 
+/** Phase 87: one part of a word in a word-roots Short (prefix / root / suffix) and its meaning. */
+export const rootsPartSchema = z.object({ text: z.string(), role: z.enum(["prefix", "root", "suffix"]), meaning: z.string().optional().default("") });
+
+/** Phase 87: a word-roots Short's beat card, from the line's language notes (backend/content/word_family.py). */
+export const rootsCardSchema = z.object({
+  beat: z.string(),
+  word: z.string().optional(),
+  words: z.array(z.string()).optional(),
+  parts: z.array(rootsPartSchema).optional(),
+  head: z.string().optional(),
+  kind: z.string().optional(),
+  meaning: z.string().optional(),
+  breakdown: z.string().optional(),
+  origin: z.string().optional(),
+  origin_lang: z.string().optional(),
+  example_en: z.string().optional(),
+  example_vi: z.string().optional(),
+  answer: z.string().optional(),
+  picture: z.string().optional(),
+  icons: z.array(z.string()).optional(),
+  pictureUrl: z.string().optional(),
+});
+
 export const episodeLineSchema = z.object({
   startSec: z.number(),
   endSec: z.number(),
@@ -38,6 +61,8 @@ export const episodeLineSchema = z.object({
   words: z.array(episodeWordSchema).optional().default([]),
   /** Phase 81: the line's Vietnamese translation (slow English podcast). */
   translation: z.string().optional(),
+  /** Phase 87: the beat card of a word-roots Short. */
+  roots: rootsCardSchema.optional(),
 });
 
 /**
@@ -212,10 +237,12 @@ export const episodeInputPropsSchema = z.object({
   hook: z.string().optional(),
   hookAtSec: z.number().optional(),
   /** Phase 65 (ENH-047): a two-character conversation Short drawn from its lines -- "chat" or "wyr" (would you rather). */
-  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards"]).optional(),
+  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards", "roots"]).optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
+export type RootsCard = z.infer<typeof rootsCardSchema>;
+export type RootsPart = z.infer<typeof rootsPartSchema>;
 export type EpisodeLine = z.infer<typeof episodeLineSchema>;
 export type EpisodeSpeaker = z.infer<typeof episodeSpeakerSchema>;
 export type VocabItem = z.infer<typeof vocabItemSchema>;

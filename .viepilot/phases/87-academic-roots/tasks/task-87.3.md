@@ -30,3 +30,9 @@ See [PLAN.md](../PLAN.md), D127.
 ## Verification
 
 `npx vitest run`, `npx tsc --noEmit`, pytest for the props; frames checked in 87.6.
+
+## Result (2026-11-03)
+
+Stills of every beat of the silent sample rendered with `remotion still` and checked (hook, twins, wheel, split
+with "+", example with the gloss, quiz). `npx tsc --noEmit` clean; vitest 26 files / 198 tests passed; the props test
+(`tests/test_roots_script.py`) checks the cards and picture URLs.

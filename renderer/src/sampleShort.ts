@@ -7,7 +7,8 @@ import rules from "../../frontend/static/explainer-layout-rules.json";
 import type { EpisodeInputProps, EpisodeLine } from "./types";
 import type { SoloPayload, Visual } from "./soloTypes";
 
-export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards";
+export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards"
+  | "roots";
 export type SampleIdea = { title: string; brief?: string };
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
 const WORD_SEC = 0.34, LINE_GAP = 0.3, SEGMENT_GAP = 0.2, FPS = 30, GAP = 0.015;
@@ -23,7 +24,7 @@ export function quoted(text: string): string | null {
 const sentence = (text: string) => { const clean = text.trim().replace(/\s+/g, " "); return /[.!?]$/.test(clean) ? clean : `${clean}.`; };
 
 /** The sample segments of a voice-only template (the visuals the AI plan would use). */
-export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards">, idea: SampleIdea): Part[] {
+export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots">, idea: SampleIdea): Part[] {
   const title = idea.title.trim() || "Your Short", brief = (idea.brief || "").trim() || "The AI writes this part from your idea.";
   const card = (cardTitle: string, bullets: string[] = [], emphasis = ""): Visual => ({ kind: "text_card", title: cardTitle, bullets, emphasis }) as Visual;
   const follow = (text: string): Part => ({ visual: card("Daily Beyond English", [], text), lines: [`${text}!`] });
@@ -137,7 +138,28 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, learning: { vocab, idioms: [], audience },
       durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
-  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards">, idea);
+  if (template === "roots") {  // Phase 87: a word family's beats, drawn from their lines (the AI picks the real head)
+    const part = (text: string, role: "prefix" | "root" | "suffix", meaning: string) => ({ text, role, meaning });
+    const compress = [part("com", "prefix", "cùng nhau"), part("press", "root", "ép")];
+    const say: [string, Record<string, unknown>][] = [
+      ["Bạn có biết Express là bày tỏ,", { beat: "hook", word: "express", meaning: "bày tỏ", parts: [part("ex", "prefix", "ra ngoài"), part("press", "root", "ép")], icons: ["mood-smile"] }],
+      ["nhưng Express và Impress cùng một gốc?", { beat: "twins", words: ["express", "impress"], head: "press", kind: "root" }],
+      ["Sau video này, bạn sẽ nhớ được 5 từ tiếng Anh chỉ từ một gốc duy nhất!", { beat: "wheel", head: "press", kind: "root",
+        words: ["express", "impress", "compress", "depress", "suppress"] }],
+      ["Compress, nén lại.", { beat: "whole", word: "compress", meaning: "nén lại", parts: compress, icons: ["device-desktop", "file-zip"] }],
+      ["COM là cùng nhau, PRESS là ép: ép sát vào nhau thì chiếm ít chỗ hơn.", { beat: "split", word: "compress", meaning: "nén lại", parts: compress,
+        breakdown: "COM: cùng nhau · PRESS: ép", icons: ["device-desktop", "file-zip"] }],
+      ["We compress the files to save space.", { beat: "example", word: "compress", meaning: "nén lại", parts: compress,
+        breakdown: "COM: cùng nhau · PRESS: ép", example_en: "We compress the files to save space.", example_vi: "Chúng tôi nén các tệp để tiết kiệm dung lượng.",
+        icons: ["device-desktop", "file-zip"] }],
+      ["Đoán từ cuối nhé! Một bản tin bị khoá trong ngăn kéo.", { beat: "quiz", word: "suppress", parts: [part("sup", "prefix", "dưới"), part("press", "root", "đè")], icons: ["news", "lock"] }],
+      ["Comment đáp án và theo dõi Daily Beyond English nhé!", { beat: "follow", word: "suppress" }]];
+    const lines = timed(say.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.3)
+      .map((line, at) => ({ ...line, roots: say[at][1] }));
+    return { ...common, presentationMode: "classic", shortStyle: "roots", visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
+  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots">, idea);
   const lines: EpisodeLine[] = [], timeline: SoloPayload["timeline"] = [], segments: unknown[] = [];
   let time = 0.3;
   parts.forEach((part, index) => {

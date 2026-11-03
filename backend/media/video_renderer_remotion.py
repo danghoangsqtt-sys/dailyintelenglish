@@ -454,6 +454,20 @@ async def _build_input_props(
         notes = [json.loads(row[0] or "{}") for row in await cursor.fetchall()]
         for index, line in enumerate(lines):
             line["translation"] = (notes[index] if index < len(notes) else {}).get("translation_vi", "")
+    if project.get("explainer_style") == "roots":  # Phase 87: each line's beat card, and the words' line-art pictures
+        from backend.media import roots_pictures
+
+        cards = await roots_pictures.line_cards(db, project_id)
+        drawn = await roots_pictures.ensure_pictures(db, project_id, cards)
+        staged = REMOTION_VISUALS_DIR / project_id / "roots"
+        for key, source in drawn.items():
+            await asyncio.to_thread(_copy_if_changed, source, staged / source.name)
+        for index, line in enumerate(lines):
+            card = dict(cards[index]) if index < len(cards) else {}
+            key = roots_pictures.picture_key(card["word"]) if card.get("word") else None
+            if key in drawn:
+                card["pictureUrl"] = f"remotion-render/visuals/{project_id}/roots/{drawn[key].name}"
+            line["roots"] = card
     # Phase 44 (D123): the drawn-shot ("illustrated") video is gone; an old request for it gets talking characters
     visual_mode = "podcast_sprites" if visual_mode == "illustrated" else visual_mode
     still_plate = await _resolve_still_plate(db, project_id, still_scene_id) if visual_mode == "podcast_still" else None

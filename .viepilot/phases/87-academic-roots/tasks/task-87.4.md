@@ -19,3 +19,9 @@ See [PLAN.md](../PLAN.md) (Q5 default: line icons + Qwen line art).
 `backend/content/word_family.py` (icons + prompt), `backend/ai/image/recipes.py`, `backend/media/roots_pictures.py`
 (new), `backend/media/video_renderer_remotion.py`, `renderer/src/lineartIcons.ts` (new, generated),
 `renderer/LICENSE-tabler-icons.txt`, `scripts/build_lineart_icons.py` (new), tests.
+
+## Result (2026-11-03)
+
+The Activity Library only keeps 16:9 cutaways, so pictures are drawn at 1344x768 (Qwen's usual size). Tabler v3.24.0
+has no `megaphone`, `bridge` or `handshake`: 145 icons kept. Tests: fake engine draws once, two library copies,
+cached on the next render, no pictures (and no failure) without the image model.

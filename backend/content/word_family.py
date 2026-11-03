@@ -14,13 +14,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 FAMILY_MIN_WORDS = 4
 FAMILY_MAX_WORDS = 7
 ROOTS_FOLLOW = {"vi": "Comment đáp án và theo dõi Daily Beyond English nhé!",
                 "en": "Comment your answer and follow Daily Beyond English!"}
 _SEED_PATH = Path(__file__).resolve().parent / "data" / "word_roots.json"
+_ICONS_PATH = Path(__file__).resolve().parent / "data" / "lineart_icons.json"
 _ORIGIN_VI = {"Latin": "Latin", "Greek": "Hy Lạp", "Old English": "Anh cổ"}
 _KIND_VI = {"root": "gốc", "prefix": "tiền tố", "suffix": "hậu tố"}
 _KIND_EN = {"root": "root", "prefix": "prefix", "suffix": "suffix"}
@@ -40,6 +41,14 @@ class FamilyWord(BaseModel):
     example_en: str = Field(default="", max_length=140)
     example_vi: str = Field(default="", max_length=160)
     picture: str = Field(default="", max_length=160)
+    # Phase 87.4: one or two bundled line icons, drawn when the word has no Qwen picture
+    icons: list[str] = Field(default_factory=list, max_length=4)
+
+    @field_validator("icons")
+    @classmethod
+    def known_icons(cls, value: list[str]) -> list[str]:
+        known = set(icon_names())
+        return [name for name in (str(v).strip().lower() for v in value) if name in known][:2]
 
 
 class WordFamily(BaseModel):
@@ -54,6 +63,11 @@ class WordFamily(BaseModel):
     words: list[FamilyWord] = Field(min_length=FAMILY_MIN_WORDS, max_length=FAMILY_MAX_WORDS + 3)
     quiz: FamilyWord
     quiz_clue: str = Field(min_length=1, max_length=200)
+
+
+@lru_cache(maxsize=1)
+def icon_names() -> list[str]:
+    return json.loads(_ICONS_PATH.read_text(encoding="utf-8"))
 
 
 @lru_cache(maxsize=1)
@@ -121,7 +135,7 @@ def _card(beat: str, **fields) -> dict:
 
 def _word_card(beat: str, word: FamilyWord, **extra) -> dict:
     return _card(beat, word=word.word, parts=[part.model_dump() for part in word.parts], meaning=word.meaning,
-                 picture=word.picture, **extra)
+                 picture=word.picture, icons=word.icons, **extra)
 
 
 def _breakdown(word: FamilyWord) -> str:
@@ -183,7 +197,7 @@ def build_beats(family: WordFamily, lang: str) -> list[tuple[str, dict]]:
     quiz = family.quiz
     beats.append((("Đoán từ cuối nhé! " if vi else "Guess the last word! ") + _sentence(family.quiz_clue),
                   _card("quiz", word=quiz.word, parts=[part.model_dump() for part in quiz.parts], picture=quiz.picture,
-                        answer=quiz.meaning)))
+                        icons=quiz.icons, answer=quiz.meaning)))
     beats.append((ROOTS_FOLLOW[lang], _card("follow", word=quiz.word)))
     return beats
 
@@ -218,6 +232,7 @@ def roots_prompt(topic: str, cefr: str, lang: str, owner_words: list[str]) -> st
         "- example_en: one short natural B1 sentence with the word; example_vi: its translation.\n"
         "- picture: a simple object scene for a line drawing that shows the meaning, in English, no people's faces "
         "and no text (e.g. 'a computer monitor showing a zipped folder').\n"
+        f"- icons: one or two names from this list that show the same idea: {', '.join(icon_names())}.\n"
         "- origin_lang / origin_form: only when you are sure (e.g. Latin, 'premere → pressus'); otherwise empty.\n"
         "- head_logic: one sentence showing the head's own meaning in an everyday action; head_example_en a short "
         "sentence with the bare head when it is a word (else empty).\n"

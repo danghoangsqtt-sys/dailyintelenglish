@@ -8,6 +8,7 @@ import {InteractScene} from "./InteractScene";
 import {ChatScene} from "./ChatScene";
 import { FlashcardScene } from "./FlashcardScene";
 import { SlowPodScene } from "./SlowPodScene";
+import { RootsScene } from "./RootsScene";
 import {resolvedMedia} from "./Presenter";
 import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
@@ -479,6 +480,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           solo.style === "vox" ? <VoxScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           <SoloScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" />}
         </> : shortStyle === "slowpod" ? <SlowPodScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
+        : shortStyle === "roots" ? <RootsScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle === "flashcards" ? <FlashcardScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle ? <ChatScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" /> : <AudioWindowContent
           lines={lines}

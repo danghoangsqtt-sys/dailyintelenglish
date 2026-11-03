@@ -48,6 +48,15 @@ def qwen_collage_prompt(description: str) -> str:
             "uncluttered, landscape composition. No faces, no people in close-up, no text, no letters, no logo, no watermark.")
 
 
+def qwen_lineart_prompt(description: str) -> str:
+    """Phase 87.4 (roots Short): a simple line drawing on cream paper, like the hand-drawn explainer the owner sent."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "a simple object that shows the word's meaning"
+    return ("Minimal hand-drawn line art illustration, single-weight dark brown ink lines on plain cream paper, flat, "
+            f"no shading: {what}. One small soft green accent fill, lots of empty space, centred, simple and clear like a "
+            "textbook doodle. Stick figures only if a person is needed, with a plain round head and no face. No text, "
+            "no letters, no numbers, no logo, no watermark, no frame.")
+
+
 SCENE_COMPOSITION = (
     "Landscape 16:9 background plate, eye-level wide view with believable perspective and open foreground space "
     "for characters added later. The place is completely empty: no people, faces, human figures or silhouettes. "
