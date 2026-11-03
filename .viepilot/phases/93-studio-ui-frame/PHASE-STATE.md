@@ -1,10 +1,10 @@
 # Phase 93 state
 
-Status: planned (2026-11-04). Owner: "Lập kế hoạch" after approving direction E for every page. Defaults D138–D142.
+Status: in_progress (2026-11-04). Owner: "Chạy Phase 93" with the defaults D138–D142. Task cards written and committed before code.
 
 | Task | Scope | Status |
 |---|---|---|
-| 93.1 | Tokens and fonts | planned |
+| 93.1 | Tokens and fonts | in_progress |
 | 93.2 | One rail | planned |
 | 93.3 | Hôm nay | planned |
 | 93.4 | Tạo video | planned |
