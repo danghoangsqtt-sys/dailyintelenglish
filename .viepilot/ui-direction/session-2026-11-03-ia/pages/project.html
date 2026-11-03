@@ -2,50 +2,50 @@
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Một video — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
 <body><div class="app">
-<aside class="side">
-  <div class="brand"><img src="../../../../frontend/static/brand/logo-64.png" alt=""><span>Daily Beyond<small>ENGLISH</small></span></div>
-  <nav class="nav">
-    <a href="home.html">🏠 <span>Hôm nay</span><b class="count">3</b></a>
-    <a href="create.html">➕ <span>Tạo video</span></a>
-    <a href="channel.html">📅 <span>Kênh</span></a>
-    <a href="videos.html" aria-current="page">🎬 <span>Video của tôi</span></a>
-    <hr>
-    <a href="library.html">🗂️ <span>Thư viện</span></a>
-    <a href="#">⚙️ <span>Cài đặt</span></a>
-  </nav>
-  <div class="foot">Tự động: bật · đêm nay 23:00</div>
-</aside>
+<nav class="rail" aria-label="Điều hướng">
+  <img class="logo" src="../../../../frontend/static/brand/logo-64.png" alt="Daily Beyond English">
+  <a class="create" href="create.html" title="Tạo video"><svg class="i"><use href="../icons.svg#plus"/></svg></a>
+  <a href="home.html"><svg class="i"><use href="../icons.svg#home"/></svg>Hôm nay<span class="dot">3</span></a>
+  <a href="channel.html"><svg class="i"><use href="../icons.svg#calendar"/></svg>Kênh</a>
+  <a href="videos.html" aria-current="page"><svg class="i"><use href="../icons.svg#film"/></svg>Video</a>
+  <a href="library.html"><svg class="i"><use href="../icons.svg#library"/></svg>Thư viện</a>
+  <a class="bottom" href="#"><svg class="i"><use href="../icons.svg#settings"/></svg>Cài đặt</a>
+</nav>
 <main class="main">
-  <div class="head"><div><p class="hint" style="margin:0"><a href="videos.html">Video của tôi</a> › Ngữ pháp bản chất › Tập 1</p><h1>Câu bị động: hiểu bản chất</h1></div>
-    <span class="spacer"></span><a class="btn" href="#">Tải MP4</a><a class="btn primary" href="#">✓ Duyệt và lên lịch</a></div>
+  <div class="top"><div class="grow"><p style="margin:0 0 2px"><a href="videos.html" class="muted">Video</a> <span class="muted">/ Ngữ pháp bản chất · Tập 1</span></p><h1>Câu bị động: hiểu bản chất</h1></div>
+    <a class="btn" href="#"><svg class="i"><use href="../icons.svg#spark"/></svg>Làm lại phần này</a><a class="btn primary" href="#"><svg class="i"><use href="../icons.svg#check"/></svg>Duyệt và lên lịch</a></div>
 
-  <div class="stages">
-    <div class="stage done"><b>1 · Nội dung</b><span class="hint">Cấu hình · Kịch bản · Bài học</span><div class="steps"><span class="pill green">✓ xong</span></div></div>
-    <div class="stage done"><b>2 · Sản xuất</b><span class="hint">Giọng · Video · Thumbnail</span><div class="steps"><span class="pill green">✓ xong</span></div></div>
-    <div class="stage now"><b>3 · Đăng</b><span class="hint">Tiêu đề · Mô tả · Thẻ · Lịch</span><div class="steps"><span class="pill yellow">đang ở đây</span></div></div>
+  <div class="stepper">
+    <div class="step done"><span class="n"><svg class="i" style="width:18px"><use href="../icons.svg#check"/></svg></span><div><b>Nội dung</b><span>Chủ đề, kịch bản, thẻ</span></div></div>
+    <div class="step done"><span class="n"><svg class="i" style="width:18px"><use href="../icons.svg#check"/></svg></span><div><b>Sản xuất</b><span>Giọng, hình, dựng video</span></div></div>
+    <div class="step now"><span class="n">3</span><div><b>Đăng</b><span>Tiêu đề, mô tả, lịch</span></div></div>
   </div>
 
-  <div class="grid cols-2">
+  <div class="studio">
+    <div>
+      <div class="phone"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px"><a class="btn sm" href="#"><svg class="i fill" style="width:14px"><use href="../icons.svg#play"/></svg>Xem 0:58</a><a class="btn sm" href="#">Sửa trên video</a></div>
+    </div>
+
     <section class="card">
-      <h2>Gói YouTube</h2>
-      <div class="filters" style="display:grid;grid-template-columns:1fr;gap:10px">
-        <label class="hint">Tiêu đề (58/70 ký tự)<input value="Câu bị động: hiểu BẢN CHẤT, khỏi học vẹt công thức | Ngữ pháp tiếng Anh" style="width:100%"></label>
-        <label class="hint">2 dòng đầu mô tả (người xem thấy trước khi bấm "thêm")<input value="Học câu bị động trong 1 phút: TO BE gánh thì, V3 là nhãn dán đứng im." style="width:100%"></label>
-        <label class="hint">Thẻ<input value="câu bị động, passive voice, ngữ pháp tiếng anh, học tiếng anh" style="width:100%"></label>
-      </div>
-      <div class="row"><img class="thumb" src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><div class="grow"><div class="title">Thumbnail</div><div class="sub">Chữ trên ảnh: "BỊ ĐỘNG = TRẠNG THÁI" · 3 từ, đọc được ở cỡ nhỏ</div></div><a class="btn small" href="#">Đổi</a></div>
-      <div class="row"><div class="grow"><div class="title">Lịch đăng</div><div class="sub">Thứ Tư 4/11, 19:00 · series Ngữ pháp bản chất</div></div><a class="btn small" href="#">Đổi</a></div>
+      <div class="section-head"><h2>Trên YouTube</h2><span class="muted">AI viết sẵn, bạn sửa được</span></div>
+      <div class="field"><label>Tiêu đề <span class="muted">58/100</span></label><input value="Câu bị động tiếng Anh: hiểu bản chất trong 1 phút #shorts"></div>
+      <div class="field"><label>Mô tả <span class="muted">412/5000</span></label><textarea rows="5">Vì sao tiếng Anh cần câu bị động? Khi người làm không quan trọng, ta đưa vật bị tác động lên đầu câu…
+Ví dụ: The bridge was built in 1990.
+#tienganh #nguphap #shorts</textarea></div>
+      <div class="field"><label>Thẻ</label><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip">câu bị động</span><span class="chip">passive voice</span><span class="chip">ngữ pháp tiếng Anh</span><span class="chip">học tiếng Anh</span><span class="chip blue">+ gợi ý</span></div></div>
+      <div class="field"><label>Ảnh bìa</label><div style="display:flex;gap:10px"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt="" style="width:64px;height:112px;border-radius:10px;object-fit:cover;box-shadow:0 0 0 3px var(--green)"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt="" style="width:64px;height:112px;border-radius:10px;object-fit:cover;opacity:.7"><div style="width:64px;height:112px;border-radius:10px;border:2px dashed var(--line);display:grid;place-items:center;color:var(--muted)"><svg class="i"><use href="../icons.svg#plus"/></svg></div></div></div>
+      <div class="field" style="margin:0"><label>Lịch đăng</label><div style="display:flex;gap:8px"><span class="chip green" style="height:38px;padding:0 14px"><svg class="i" style="width:16px"><use href="../icons.svg#calendar"/></svg>Thứ Tư 4/11 · 19:00</span><span class="chip" style="height:38px;padding:0 14px">Giờ tốt nhất của kênh</span></div></div>
     </section>
+
     <aside class="card">
-      <h2>Điểm SEO</h2>
-      <div class="score">86<span class="hint" style="font-size:15px">/100</span></div>
-      <div class="check"><i>✅</i><span>Tiêu đề có từ khoá chính "câu bị động" ở đầu</span></div>
-      <div class="check"><i>✅</i><span>Tiêu đề dưới 70 ký tự, không cắt trên điện thoại</span></div>
-      <div class="check"><i>✅</i><span>2 dòng đầu mô tả nói rõ người xem được gì</span></div>
-      <div class="check"><i>⚠️</i><span>Thiếu hashtag #shorts và 1–2 hashtag chủ đề</span> <a class="btn small" href="#">Thêm</a></div>
-      <div class="check"><i>⚠️</i><span>Thẻ: thêm "passive voice explained"</span> <a class="btn small" href="#">Thêm</a></div>
-      <div class="check"><i>✅</i><span>Thumbnail có ≤ 4 từ, tương phản tốt</span></div>
-      <p class="hint">Gợi ý chỉ hiện ở chặng Đăng; các chặng trước giữ gọn cho việc làm nội dung.</p>
+      <div class="section-head"><h2>Điểm SEO</h2></div>
+      <div class="ring"><div><span>86<small>/100</small></span></div></div>
+      <div class="check"><svg class="i ok"><use href="../icons.svg#check"/></svg><div class="grow">Từ khóa chính ở đầu tiêu đề</div></div>
+      <div class="check"><svg class="i ok"><use href="../icons.svg#check"/></svg><div class="grow">Mô tả có câu ví dụ và hashtag</div></div>
+      <div class="check"><svg class="i ok"><use href="../icons.svg#check"/></svg><div class="grow">Phụ đề tiếng Việt và tiếng Anh</div></div>
+      <div class="check"><svg class="i warn"><use href="../icons.svg#clock"/></svg><div class="grow">Thêm 2 thẻ dài hơn<div class="muted" style="font-size:12.5px">ví dụ "cách dùng câu bị động"</div></div><a class="btn sm ghost" href="#">Thêm</a></div>
+      <div class="check"><svg class="i warn"><use href="../icons.svg#clock"/></svg><div class="grow">Gắn vào danh sách phát "Ngữ pháp"</div><a class="btn sm ghost" href="#">Gắn</a></div>
     </aside>
   </div>
 </main></div></body></html>

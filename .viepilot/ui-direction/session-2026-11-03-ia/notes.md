@@ -7,6 +7,14 @@ mắt, cân đối giữa kỹ thuật và mỹ thuật, giữa SEO và trải n
 Static prototype (sample data, buttons do nothing). Serve the repo root (`python -m http.server 8040`) and open
 `/.viepilot/ui-direction/session-2026-11-03-ia/index.html`; images come from `frontend/static`.
 
+## Look (v2, after the owner's "chưa đẹp")
+
+The brand's Canva/CapCut feel (owner 2026-10-06): warm cream page like the banner, white cards, Montserrat headings,
+line icons (`icons.svg`) instead of emoji, a light Canva-style rail with one green "+" create button. Pictures lead:
+video covers as 9:16 posters, the template gallery shows the real example clips' covers, the library shows real
+characters, scenes and pictures. Home opens with the channel banner (the teacher on the right, the lettering covered
+by a cream wash). Green marks the place you are and the one primary action; yellow only marks "needs you".
+
 ## Why (checked in the app)
 
 - The schedule is shown three times (Dashboard "next two weeks", Automation "14 days", Channel plan episode dates).
@@ -34,6 +42,7 @@ Static prototype (sample data, buttons do nothing). Serve the repo root (`python
 | File | Area | Replaces / gathers |
 |---|---|---|
 | `index.html` | hub | — |
+| `style.css`, `icons.svg` | shared look, line icons | — |
 | `pages/home.html` | Hôm nay | Dashboard top, Automation review |
 | `pages/create.html` | Tạo video | Step 1 type cards, Shorts batch |
 | `pages/channel.html` | Kênh | Channel plan, Automation, Dashboard schedule |
@@ -44,6 +53,6 @@ Static prototype (sample data, buttons do nothing). Serve the repo root (`python
 ## Open questions for the owner
 
 - Keep "Tự động" as its own item in the sidebar (some owners like a big on/off), or only inside Kênh as proposed?
-- "Video của tôi" as a table (proposed, dense, sortable) or as a grid of thumbnails?
+- "Video của tôi": v2 shows a poster grid (with a list toggle); keep the grid as default, or the dense table?
 - Should the Step 2–6 pages keep their current layout inside the 3 stages for now (smaller change), with only the
   stage bar on top?

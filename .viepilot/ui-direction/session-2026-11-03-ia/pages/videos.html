@@ -1,39 +1,49 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Video của tôi — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
+<title>Video — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
 <body><div class="app">
-<aside class="side">
-  <div class="brand"><img src="../../../../frontend/static/brand/logo-64.png" alt=""><span>Daily Beyond<small>ENGLISH</small></span></div>
-  <nav class="nav">
-    <a href="home.html">🏠 <span>Hôm nay</span><b class="count">3</b></a>
-    <a href="create.html">➕ <span>Tạo video</span></a>
-    <a href="channel.html">📅 <span>Kênh</span></a>
-    <a href="videos.html" aria-current="page">🎬 <span>Video của tôi</span></a>
-    <hr>
-    <a href="library.html">🗂️ <span>Thư viện</span></a>
-    <a href="#">⚙️ <span>Cài đặt</span></a>
-  </nav>
-  <div class="foot">Tự động: bật · đêm nay 23:00</div>
-</aside>
+<nav class="rail" aria-label="Điều hướng">
+  <img class="logo" src="../../../../frontend/static/brand/logo-64.png" alt="Daily Beyond English">
+  <a class="create" href="create.html" title="Tạo video"><svg class="i"><use href="../icons.svg#plus"/></svg></a>
+  <a href="home.html"><svg class="i"><use href="../icons.svg#home"/></svg>Hôm nay<span class="dot">3</span></a>
+  <a href="channel.html"><svg class="i"><use href="../icons.svg#calendar"/></svg>Kênh</a>
+  <a href="videos.html" aria-current="page"><svg class="i"><use href="../icons.svg#film"/></svg>Video</a>
+  <a href="library.html"><svg class="i"><use href="../icons.svg#library"/></svg>Thư viện</a>
+  <a class="bottom" href="#"><svg class="i"><use href="../icons.svg#settings"/></svg>Cài đặt</a>
+</nav>
 <main class="main">
-  <div class="head"><div><h1>Video của tôi</h1><p>146 video · tìm, lọc và mở bất kỳ video nào.</p></div><span class="spacer"></span><a class="btn primary" href="create.html">＋ Tạo video</a></div>
+  <div class="top"><div class="grow"><h1>Video của tôi</h1><p>48 video · 3 cần bạn · 5 đã lên lịch</p></div>
+    <div class="searchbar"><svg class="i"><use href="../icons.svg#search"/></svg>Tìm theo tên, chủ đề, series…</div>
+    <a class="btn" href="#" title="Dạng danh sách"><svg class="i"><use href="../icons.svg#list"/></svg></a></div>
   <div class="filters">
-    <input placeholder="Tìm theo tên, chủ đề, series">
-    <select><option>Mọi trạng thái</option><option>Cần bạn</option><option>Đang làm</option><option>Đã xong</option><option>Đã đăng</option></select>
-    <select><option>Mọi loại</option><option>Ngữ pháp</option><option>Gốc từ</option><option>Hội thoại 16:9</option></select>
-    <select><option>Mọi series</option></select>
-    <select><option>Mới nhất</option><option>Ngày đăng</option></select>
+    <span class="chip" aria-pressed="true">Tất cả <b style="opacity:.6">48</b></span>
+    <span class="chip"><span style="width:8px;height:8px;border-radius:50%;background:var(--yellow)"></span>Cần bạn 3</span>
+    <span class="chip">Đang làm 2</span><span class="chip">Đã lên lịch 5</span><span class="chip">Đã đăng 38</span>
+    <span style="flex:1"></span>
+    <span class="chip">Short</span><span class="chip">Video dài</span><span class="chip">Series ▾</span>
   </div>
-  <section class="card" style="padding:6px 8px">
-    <table>
-      <thead><tr><th></th><th>Video</th><th>Loại</th><th>Trạng thái</th><th>Ngày đăng</th><th>SEO</th><th></th></tr></thead>
-      <tbody>
-        <tr><td><img class="thumb" src="../../../../frontend/static/samples/grammar-vi.jpg" alt="" style="width:40px;height:70px"></td><td><b>Câu bị động: hiểu bản chất</b><div class="hint">Ngữ pháp bản chất · Tập 1</div></td><td>Ngữ pháp</td><td><span class="pill yellow">Chờ duyệt</span></td><td>4/11</td><td><span class="pill green">86</span></td><td><a class="btn small" href="project.html">Mở</a></td></tr>
-        <tr><td><img class="thumb" src="../../../../frontend/static/samples/roots-vi.jpg" alt="" style="width:40px;height:70px"></td><td><b>Gốc SPECT</b><div class="hint">Một gốc – cả họ từ · Tập 4</div></td><td>Gốc từ</td><td><span class="pill green">Sẵn sàng</span></td><td>3/11</td><td><span class="pill green">91</span></td><td><a class="btn small" href="project.html">Mở</a></td></tr>
-        <tr><td><img class="thumb" src="../../../../frontend/static/samples/chat-vi.jpg" alt="" style="width:40px;height:70px"></td><td><b>Planning a picnic by text</b><div class="hint">Chat · Tập 1</div></td><td>Chat</td><td><span class="pill blue">Đang làm</span></td><td>5/11</td><td><span class="pill yellow">64</span></td><td><a class="btn small" href="project.html">Mở</a></td></tr>
-        <tr><td><img class="thumb wide" src="../../../../frontend/static/samples/conversation.jpg" alt="" style="width:70px;height:40px"></td><td><b>Talking about weekend plans</b><div class="hint">The Office Startup · Tập 2</div></td><td>Hội thoại 16:9</td><td><span class="pill">Đã đăng</span></td><td>28/10</td><td><span class="pill green">88</span></td><td><a class="btn small" href="project.html">Mở</a></td></tr>
-      </tbody>
-    </table>
-  </section>
-  <p class="hint">Cột SEO là điểm của gói YouTube (tiêu đề, mô tả, chương, thẻ, thumbnail) — bấm vào để xem cần sửa gì.</p>
-</main></div></body></html>
+
+  <div class="posters" id="grid"></div>
+</main></div>
+<script>
+// prototype only: example videos built from the real sample thumbnails
+const V = [
+  ["grammar-vi","Câu bị động: hiểu bản chất","Ngữ pháp · đêm qua","yellow","Chờ duyệt",1],
+  ["roots-vi","Hậu tố -MENT","Gốc từ · thiếu 3 hình","red","Thiếu hình",1],
+  ["news-vi","Cities plant more trees","Tin tức · đã sửa 1 câu","yellow","Chờ duyệt",1],
+  ["mistakes-vi","Lỗi \"I very like\"","Đừng nói / Hãy nói","blue","Đang dựng 90%",0],
+  ["roots-vi","Gốc SPECT","Hôm nay 19:00","green","Đã lên lịch",0],
+  ["chat-vi","Planning a picnic","Chat · Thứ Năm","green","Đã lên lịch",0],
+  ["wordday-vi","Word of the day: cozy","Từ của ngày · Thứ Bảy","green","Đã lên lịch",0],
+  ["conversation_short","The Office · Tập 5","Hội thoại · 1,2 N lượt xem","","Đã đăng",0],
+  ["flashcards-vi","10 từ về nhà bếp","Flashcard · 860 lượt xem","","Đã đăng",0],
+  ["slowpod-vi","Morning routine","Podcast nói chậm · 2,4 N lượt xem","","Đã đăng",0],
+  ["quiz-vi","Quiz: giới từ","Quiz · 540 lượt xem","","Đã đăng",0],
+  ["presenter_short","Vì sao nói \"have been\"?","Người dẫn · 3,1 N lượt xem","","Đã đăng",0],
+];
+document.getElementById("grid").innerHTML = V.map(([img, name, meta, tone, label, needs]) => `
+  <a class="poster${needs ? " needs" : ""}" href="project.html"><div class="art"><img src="../../../../frontend/static/samples/${img}.jpg" alt="">
+    <span class="tl chip ${tone || "dark"}">${label}</span>
+    <div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div>
+    <div class="name">${name}</div><div class="meta">${meta}</div></a>`).join("");
+</script></body></html>

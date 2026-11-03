@@ -2,60 +2,46 @@
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kênh — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
 <body><div class="app">
-<aside class="side">
-  <div class="brand"><img src="../../../../frontend/static/brand/logo-64.png" alt=""><span>Daily Beyond<small>ENGLISH</small></span></div>
-  <nav class="nav">
-    <a href="home.html">🏠 <span>Hôm nay</span><b class="count">3</b></a>
-    <a href="create.html">➕ <span>Tạo video</span></a>
-    <a href="channel.html" aria-current="page">📅 <span>Kênh</span></a>
-    <a href="videos.html">🎬 <span>Video của tôi</span></a>
-    <hr>
-    <a href="library.html">🗂️ <span>Thư viện</span></a>
-    <a href="#">⚙️ <span>Cài đặt</span></a>
-  </nav>
-  <div class="foot">Tự động: bật · đêm nay 23:00</div>
-</aside>
+<nav class="rail" aria-label="Điều hướng">
+  <img class="logo" src="../../../../frontend/static/brand/logo-64.png" alt="Daily Beyond English">
+  <a class="create" href="create.html" title="Tạo video"><svg class="i"><use href="../icons.svg#plus"/></svg></a>
+  <a href="home.html"><svg class="i"><use href="../icons.svg#home"/></svg>Hôm nay<span class="dot">3</span></a>
+  <a href="channel.html" aria-current="page"><svg class="i"><use href="../icons.svg#calendar"/></svg>Kênh</a>
+  <a href="videos.html"><svg class="i"><use href="../icons.svg#film"/></svg>Video</a>
+  <a href="library.html"><svg class="i"><use href="../icons.svg#library"/></svg>Thư viện</a>
+  <a class="bottom" href="#"><svg class="i"><use href="../icons.svg#settings"/></svg>Cài đặt</a>
+</nav>
 <main class="main">
-  <div class="head"><div><h1>Kênh</h1><p>Một lịch duy nhất cho mọi video: đã đăng, sắp đăng, đang làm và kế hoạch.</p></div>
-    <span class="spacer"></span><a class="btn" href="#">✨ Lên kế hoạch bằng AI</a><a class="btn primary" href="create.html">＋ Thêm series</a></div>
-  <nav class="tabs"><a href="#" aria-current="page">Lịch</a><a href="#series">Series</a><a href="#auto">Tự động</a><a href="#">Báo cáo</a></nav>
+  <div class="top"><div class="grow"><h1>Kênh</h1><p>Tháng 11 · 14 video đã lên lịch · đăng Thứ Tư và Thứ Bảy, Short mỗi ngày</p></div>
+    <a class="btn" href="#"><svg class="i"><use href="../icons.svg#spark"/></svg>Lên kế hoạch bằng AI</a><a class="btn primary" href="create.html"><svg class="i"><use href="../icons.svg#plus"/></svg>Series mới</a></div>
+  <div class="tabs"><a class="tab" aria-current="page" href="#"><svg class="i"><use href="../icons.svg#calendar"/></svg>Lịch</a><a class="tab" href="#"><svg class="i"><use href="../icons.svg#layers"/></svg>Series <small>6</small></a><a class="tab" href="#"><svg class="i"><use href="../icons.svg#moon"/></svg>Tự động <small>bật</small></a><a class="tab" href="#"><svg class="i"><use href="../icons.svg#trend"/></svg>Báo cáo</a></div>
 
-  <div class="grid cols-2">
+  <div class="cal">
+    <div class="dow">Thứ 2</div><div class="dow">Thứ 3</div><div class="dow">Thứ 4</div><div class="dow">Thứ 5</div><div class="dow">Thứ 6</div><div class="dow">Thứ 7</div><div class="dow">CN</div>
+    <div class="day"><div class="n">2</div><div class="ep"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><span>Gốc PRESS<br><span class="chip green" style="height:20px;margin-top:3px">Đã đăng</span></span></div></div>
+    <div class="day today"><div class="n">3 <span class="chip green" style="height:20px">Hôm nay</span></div>
+      <div class="ep"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><span>Gốc SPECT<br><span class="chip green" style="height:20px;margin-top:3px">19:00</span></span></div>
+      <div class="ep"><img src="../../../../frontend/static/samples/mistakes-vi.jpg" alt=""><span>I very like<br><span class="chip yellow" style="height:20px;margin-top:3px">Chờ duyệt</span></span></div></div>
+    <div class="day"><div class="n">4</div><div class="ep"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><span>Câu bị động<br><span class="chip yellow" style="height:20px;margin-top:3px">Chờ duyệt</span></span></div><div class="ep"><img src="../../../../frontend/static/samples/conversation.jpg" alt="" style="width:60px;height:34px"><span>The Office · Tập 6</span></div></div>
+    <div class="day"><div class="n">5</div><div class="ep planned"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><span>Hiện tại hoàn thành</span></div></div>
+    <div class="day"><div class="n">6</div><div class="ep planned"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><span>Tiền tố RE-</span></div></div>
+    <div class="day"><div class="n">7</div><div class="ep planned"><img src="../../../../frontend/static/samples/wordday-vi.jpg" alt=""><span>Word: cozy</span></div><div class="ep planned"><img src="../../../../frontend/static/samples/conversation.jpg" alt="" style="width:60px;height:34px"><span>The Office · Tập 7</span></div></div>
+    <div class="day"><div class="n">8</div><div class="ep planned"><img src="../../../../frontend/static/samples/news-vi.jpg" alt=""><span>Tin tuần</span></div></div>
+  </div>
+  <p class="muted" style="margin-top:12px"><span class="chip green">Đã đăng / sẵn sàng</span> <span class="chip yellow">Chờ bạn duyệt</span> <span class="chip">Kế hoạch (mờ)</span> · Kéo một tập sang ngày khác để đổi lịch.</p>
+
+  <div class="split section">
     <section class="card">
-      <h2>Tháng 11 · tuần này và tuần sau</h2>
-      <div class="cal">
-        <div class="dow">T2</div><div class="dow">T3</div><div class="dow">T4</div><div class="dow">T5</div><div class="dow">T6</div><div class="dow">T7</div><div class="dow">CN</div>
-        <div class="day"><span class="n">2</span><span class="ev">Gốc PRESS</span></div>
-        <div class="day today"><span class="n">3 · hôm nay</span><span class="ev">Gốc SPECT</span><span class="ev wait">I very like</span></div>
-        <div class="day"><span class="n">4</span><span class="ev wait">Câu bị động</span></div>
-        <div class="day"><span class="n">5</span><span class="ev plan">Hiện tại hoàn thành</span></div>
-        <div class="day"><span class="n">6</span><span class="ev plan">Tiền tố RE-</span></div>
-        <div class="day"><span class="n">7</span></div>
-        <div class="day"><span class="n">8</span><span class="ev plan">Tin tức tuần</span></div>
-        <div class="day"><span class="n">9</span><span class="ev plan">Hậu tố -MENT</span></div>
-        <div class="day"><span class="n">10</span></div>
-        <div class="day"><span class="n">11</span><span class="ev plan">Câu điều kiện</span></div>
-        <div class="day"><span class="n">12</span></div>
-        <div class="day"><span class="n">13</span><span class="ev plan">Gốc PORT</span></div>
-        <div class="day"><span class="n">14</span></div>
-        <div class="day"><span class="n">15</span></div>
-      </div>
-      <p class="hint" style="margin:10px 0 0"><span class="pill green">Đã đăng / sẵn sàng</span> <span class="pill yellow">Chờ duyệt</span> <span class="pill">Kế hoạch</span> · kéo một tập sang ngày khác để đổi lịch.</p>
+      <div class="section-head"><h2>Series đang chạy</h2></div>
+      <div class="task"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><div class="grow"><div class="t">Ngữ pháp bản chất</div><div class="s">Short · mỗi 2 ngày · 3/10 tập</div><div class="bar"><i style="width:30%"></i></div></div><a class="btn sm" href="#">Mở</a></div>
+      <div class="task"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><div class="grow"><div class="t">Một gốc – cả họ từ</div><div class="s">Short · mỗi ngày · 6/20 tập</div><div class="bar"><i style="width:30%"></i></div></div><a class="btn sm" href="#">Mở</a></div>
+      <div class="task"><img src="../../../../frontend/static/samples/conversation.jpg" alt="" style="width:78px;height:44px"><div class="grow"><div class="t">The Office Startup</div><div class="s">Hội thoại 16:9 · Thứ Tư và Thứ Bảy · 5/12 tập</div><div class="bar"><i style="width:42%"></i></div></div><a class="btn sm" href="#">Mở</a></div>
     </section>
-
-    <aside class="grid" style="align-content:start">
-      <section class="card" id="auto">
-        <h2>Tự động</h2>
-        <div class="row"><div class="grow"><div class="title">Làm video ban đêm</div><div class="sub">23:00 – 06:00 · tối đa 4 video · tập đăng trong 3 ngày tới</div></div><span class="pill green">Bật</span></div>
-        <div class="row"><div class="grow"><div class="title">Đêm nay sẽ làm</div><div class="sub">Hiện tại hoàn thành · Tiền tố RE-</div></div><a class="btn small" href="#">Đổi</a></div>
-        <div class="row"><div class="grow"><div class="title">Lượt gần nhất</div><div class="sub">Đêm qua · 3 xong, 1 cần xem</div></div><a class="btn small" href="#">Báo cáo</a></div>
-      </section>
-      <section class="card" id="series">
-        <h2>Series</h2>
-        <div class="row"><div class="grow"><div class="title">Ngữ pháp bản chất</div><div class="sub">Short · 3/10 tập · mỗi 2 ngày</div></div><span class="pill">Short</span></div>
-        <div class="row"><div class="grow"><div class="title">Một gốc – cả họ từ</div><div class="sub">Short · 6/20 tập · mỗi ngày</div></div><span class="pill">Short</span></div>
-        <div class="row"><div class="grow"><div class="title">The Office Startup</div><div class="sub">Hội thoại 16:9 · 5/5 tập</div></div><span class="pill green">Xong</span></div>
-      </section>
+    <aside class="card">
+      <div class="section-head"><h2>Tự động</h2><span class="chip green" style="margin-left:auto">Đang bật</span></div>
+      <div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><b>23:00</b><span>bắt đầu mỗi đêm</span></div><div class="stat"><b>4</b><span>video tối đa/đêm</span></div></div>
+      <div class="task"><svg class="i" style="color:var(--green)"><use href="../icons.svg#moon"/></svg><div class="grow"><div class="t">Đêm nay</div><div class="s">Hiện tại hoàn thành · Tiền tố RE-</div></div></div>
+      <div class="task"><svg class="i" style="color:var(--green)"><use href="../icons.svg#check"/></svg><div class="grow"><div class="t">Đêm qua</div><div class="s">3 xong · 1 cần xem</div></div><a class="btn sm ghost" href="#">Báo cáo</a></div>
     </aside>
   </div>
 </main></div></body></html>
