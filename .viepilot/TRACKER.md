@@ -1,5 +1,9 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 91 — Edit every kind of video on its video (2026-11-03)
+
+Status: in_progress (owner: "áp dụng sửa trên video cho các dạng video khác, điều chỉnh tính năng cho phù hợp với các dạng khác nhau"). Step 2 keeps unchanged voices; slow podcast, flashcards, chat and would-you-rather Shorts get the Phase 90 editor with their own fields; solo explainers and the conversation storyboard keep their visual editors and gain spoken-line editing with changed-lines voice. Defaults D131–D133. [Plan](phases/91-edit-on-video-all/PLAN.md).
+
 ## Phase 90 — Edit a word-roots or grammar Short on its video (2026-11-03)
 
 Status: implemented_verified (sandbox: grammar Short edited — one rule card and one spoken line — voice for that line 9 s, render ~52 s, both edits in the video; word-roots meaning edited once reached all its beats; not built, installed or pushed). [Summary](phases/90-edit-on-video/SUMMARY.md). A video-editor-like "Sửa trên video" in Step 5: beat list, the 9:16 video beside it, a form for the selected beat; every card edit shows at once, spoken text edits re-make only those lines' audio, one render at the end. Defaults D128–D130. [Plan](phases/90-edit-on-video/PLAN.md).
