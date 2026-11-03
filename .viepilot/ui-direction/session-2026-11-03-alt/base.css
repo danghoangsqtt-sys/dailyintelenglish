@@ -1,0 +1,22 @@
+/* Shared basics for the three directions (2026-11-03, after "quá nhiều khoảng trống, chữ thì nhỏ, bố cục không hợp lý"):
+   every page fills the screen, body text 16px, no narrow centred column. Each direction adds its own look on top. */
+@font-face { font-family: "Montserrat"; src: url("../../../frontend/static/fonts/Montserrat-Variable.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Inter"; src: url("../../../frontend/static/fonts/Inter-Variable.ttf"); font-weight: 100 900; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 16px/1.45 "Inter", "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p { margin: 0; }
+img { display: block; }
+.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.i.fill { fill: currentColor; stroke: none; }
+.row { display: flex; align-items: center; gap: 10px; }
+.grow { flex: 1; min-width: 0; }
+.th { aspect-ratio: 9 / 16; border-radius: 8px; overflow: hidden; flex: none; background: #0b2a1e; }
+.th img { width: 100%; height: 100%; object-fit: cover; }
+.th.w { aspect-ratio: 16 / 9; }
+/* the direction switcher at the bottom-left of every page */
+.switch { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 99; display: flex; gap: 4px; padding: 5px; border-radius: 14px;
+  background: rgba(20, 24, 22, .9); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); font: 600 14px "Inter", sans-serif; }
+.switch a { padding: 8px 14px; border-radius: 10px; color: #cfd6d1; }
+.switch a[aria-current="page"] { background: #fff; color: #111; }

@@ -4,8 +4,9 @@ Owner (2026-11-03): "Các tính năng Bảng điều khiển + Kế hoạch kên
 khoa học … Các loại thư viện tách rời như hiện tại thì sao? có gộp được không? … dễ dùng hơn nữa, rõ ràng và không rối
 mắt, cân đối giữa kỹ thuật và mỹ thuật, giữa SEO và trải nghiệm người dùng", then "Làm bản mẫu".
 
-**Status: approved for now (owner 2026-11-03, "okey tạm thời chốt giao diện hiện tại").** The current pages (v4 look, v5
-decluttering, v6 Lina mascot) are the direction for the next UI phase; the open questions below are still to settle.
+**Status: not approved.** The owner first said "okey tạm thời chốt giao diện hiện tại", then "giao diện quá nhiều khoảng trống,
+chữ thì nhỏ, bố cục không hợp lý" and "Không chốt giao diện này, tạo lại giao diện khác đi" (2026-11-03). New directions:
+`../session-2026-11-03-alt/`. The five areas, the 7 steps in 3 stages and Lina stay as content ideas.
 
 Static prototype (sample data, buttons do nothing). Serve the repo root (`python -m http.server 8040`) and open
 `/.viepilot/ui-direction/session-2026-11-03-ia/index.html`; images come from `frontend/static`.
