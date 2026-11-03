@@ -243,3 +243,19 @@ def test_real_run_the_error_lesson_has_its_own_model_long_stickers_become_rules_
     beats = build_beats(GrammarLesson.model_validate(lesson), "vi")
     assert not any(card["beat"] == "summary" for _, card in beats)
     assert next(card for _, card in beats if card["beat"] == "core")["cards"][0]["kind"] == "core"
+
+
+def test_a_grammar_line_cannot_be_regenerated_alone(client):  # noqa: F811
+    """2026-11-03: the general rewrite prompt wrote an English line and dropped the beat's card."""
+    from tests.test_visuals_project_api import data
+
+    project = data(client.post("/api/projects", json={
+        "name": "Câu bị động", "topic": "Câu bị động", "cefr_level": "B1", "duration_minutes": 2.0, "num_speakers": 1,
+        "genre": "informational", "accent": "american", "presentation_mode": "solo_explainer", "explainer_style": "grammar",
+        "speakers": [{"name": "Huyền", "gender": "female", "accent": "american"}]}))
+    speaker = project["speakers"][0]["id"]
+    text, card = build_beats(GrammarLesson.model_validate(PASSIVE), "vi")[0]
+    lines = data(client.put(f"/api/projects/{project['id']}/script", json={"lines": [
+        {"speaker_id": speaker, "text": text, "language_notes": {"grammar": card}}]}))
+    response = client.post(f"/api/projects/{project['id']}/script/regenerate", json={"line_id": lines[0]["id"]})
+    assert response.status_code in (400, 422) and "cannot be regenerated alone" in response.text

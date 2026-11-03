@@ -13,7 +13,7 @@ from backend.core.voice import profile_voice_settings, resolve_voice_id, voice_r
 from backend.ai.tts import voice_catalog_service
 from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
-from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerUpdate, TopicIdeasRequest
+from backend.schemas.project import ACADEMIC_STYLES, ProjectUpdate, ScriptConfig, SpeakerUpdate, TopicIdeasRequest
 from backend.schemas.script import RegenerateLineRequest, ScriptUpdate
 from backend.channel import dashboard_service
 from backend.content import export_service, project_service, script_service, source_service
@@ -316,6 +316,11 @@ async def regenerate_script_line(
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         current_line = await script_service.get_script_line(db, project_id, payload.line_id)
+    if project.get("explainer_style") in ACADEMIC_STYLES:
+        # Phase 88 (2026-11-03): the general rewrite prompt writes an English line and drops the beat's card (the scene
+        # then shows nothing); these lines are edited by hand, or the whole lesson is made again
+        raise ValidationError("A line of a word-roots or grammar Short cannot be regenerated alone; edit its text, or "
+                              "regenerate the whole script")
     new_line = await script_service.regenerate_line(  # no lock held — provider gateway call
         project_id, project, payload.line_id,
         current_line["text"], current_line["speaker_id"],

@@ -259,6 +259,8 @@
     const isBusy = state.saveStatus === "saving" || state.isGenerating;
     const hasUnsaved = state.saveStatus === "dirty" || state.saveStatus === "failed";
     const regenerateDisabled = isRegenerating || isBusy || hasUnsaved;
+    // Phase 88: a word-roots / grammar line keeps its beat card; it is edited by hand, never regenerated alone
+    const lineRegenerates = !ACADEMIC_STYLES.includes(state.project?.explainer_style);
 
     const isSelected = state.selectedLineId === line.id;
 
@@ -266,9 +268,9 @@
       <div class="card line-card${isSelected ? " selected" : ""}" data-line-id="${line.id}">
         <div class="line-header">
           <span class="speaker-chip" style="background:${hexToRgba(color, 0.15)}; border-color:${hexToRgba(color, 0.4)}; color:${color};">${escapeHtml(name)}</span>
-          <button class="btn btn-ghost btn-sm" data-action="regenerate" ${regenerateDisabled ? "disabled" : ""}>
+          ${lineRegenerates ? `<button class="btn btn-ghost btn-sm" data-action="regenerate" ${regenerateDisabled ? "disabled" : ""}>
             ${isRegenerating ? '<span class="spinner spinner-dark"></span> Regenerating…' : "🔄 Regenerate this line"}
-          </button>
+          </button>` : ""}
         </div>
         <div class="line-text" data-action="edit-text" role="button" tabindex="0"><span class="visually-hidden">Edit dialogue: </span><span translate="no">${escapeHtml(line.text)}</span></div>
         ${state.project?.explainer_style === "slowpod" ? `<label class="line-translation">Vietnamese translation
@@ -328,7 +330,7 @@
       <div class="callout"><strong>Language notes</strong><br />${escapeHtml(notesSummary)}</div>
       <div class="inspector-actions">
         <button type="button" class="btn btn-ghost" data-inspector-action="listen" ${previewing ? "disabled" : ""}>${previewing ? '<span class="spinner spinner-dark"></span> Synthesizing…' : "🔊 Listen"}</button>
-        <button type="button" class="btn btn-primary" data-inspector-action="regenerate" ${regenerateDisabled ? "disabled" : ""}>🔁 Regenerate</button>
+        ${ACADEMIC_STYLES.includes(state.project?.explainer_style) ? "" : `<button type="button" class="btn btn-primary" data-inspector-action="regenerate" ${regenerateDisabled ? "disabled" : ""}>🔁 Regenerate</button>`}
       </div>
       <audio id="inspector-audio" class="inspector-audio" controls ${state.previewReadyLineId === line.id ? "" : "hidden"}></audio>`;
   }
@@ -342,6 +344,8 @@
   }
 
   // Phase 84 (owner 2026-10-28): the editor pass -- scores, outcome and notes; it can also be run by hand
+  const ACADEMIC_STYLES = ["roots", "grammar"];  // Phase 87/88: lines drawn from their beat cards
+
   const EDITOR_CRITERIA = [["hook", "Hook"], ["message", "One clear message"], ["examples", "Examples"],
     ["natural", "Natural English"], ["level", "Fits the level"], ["ending", "Ending"]];
   const EDITOR_OUTCOMES = { passed: "The script passed the editor.", rewritten: "The editor rewrote the script once.",

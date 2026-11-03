@@ -50,6 +50,7 @@ async def test_step2_save_keeps_the_grammar_cards(browser_instance: Browser, liv
     text = page.locator("#script-list [data-action='edit-text']").first
     await text.wait_for()
     assert await page.locator("#editor-review").is_hidden()  # the beats are built by the server: no editor review
+    assert await page.locator("#script-list [data-action='regenerate']").count() == 0  # a line keeps its card
     await text.click()
     editor = page.locator("#script-list textarea").first
     await editor.fill("V3 giống hệt một chiếc nhãn dán.")
