@@ -310,18 +310,28 @@ async def save_script(
     lines = [{**line, "text": caption_text(line["text"])} for line in lines]
     if any(not line["text"].strip() for line in lines):
         raise ValidationError("Script lines must contain spoken dialogue.")
+    # Phase 91 (D133): a line whose position, speaker and text are unchanged keeps its id and its voice, so a Step 2
+    # edit makes only the changed lines' voice again (it used to make every line's voice again)
+    cursor = await db.execute(
+        "SELECT id, speaker_id, text, audio_cache_path, duration_seconds FROM script_lines WHERE project_id = ? "
+        "ORDER BY line_index", (project_id,))
+    previous = [dict(row) for row in await cursor.fetchall()]
     await db.execute("DELETE FROM script_lines WHERE project_id = ?", (project_id,))
     for index, line in enumerate(lines):
+        old = previous[index] if index < len(previous) else None
+        kept = old is not None and old["speaker_id"] == line["speaker_id"] and old["text"] == line["text"]
         await db.execute(
-            "INSERT INTO script_lines (id, project_id, line_index, speaker_id, text, language_notes) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO script_lines (id, project_id, line_index, speaker_id, text, language_notes, audio_cache_path, "
+            "duration_seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
-                str(uuid.uuid4()),
+                old["id"] if kept else str(uuid.uuid4()),
                 project_id,
                 index,
                 line["speaker_id"],
                 line["text"],
                 json.dumps(line.get("language_notes") or {}),
+                old["audio_cache_path"] if kept else None,
+                old["duration_seconds"] if kept else None,
             ),
         )
     if commit:
