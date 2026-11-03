@@ -134,12 +134,34 @@ def fit_parts(word: FamilyWord) -> FamilyWord | None:
     return None
 
 
+def around_root(word: FamilyWord, head: str) -> FamilyWord:
+    """A root family's word split around the whole root: what comes before it, the root, what comes after. Sandbox run
+    2026-11-03: the AI split suspect as SUS + PECT and spectator as SPECTA + TOR, so the root SPECT never showed whole.
+    The parts' meanings are kept by role; a word whose root part is already the root is unchanged."""
+    text = _bare(word.word)
+    alternatives = sorted({_bare(alt) for alt in head.split("/") if _bare(alt)}, key=len, reverse=True)
+    roots = [part for part in word.parts if part.role == "root"]
+    if not roots or _bare(roots[0].text) in alternatives:
+        return word
+    for alt in alternatives:
+        at = text.find(alt)
+        if at < 0:
+            continue
+        meaning = {part.role: part.meaning for part in word.parts}
+        pieces = [(text[:at], "prefix"), (alt, "root"), (text[at + len(alt):], "suffix")]
+        parts = [FamilyPart(text=piece, role=role, meaning=meaning.get(role, "")) for piece, role in pieces if piece]
+        return word.model_copy(update={"parts": parts})
+    return word
+
+
 def usable_words(family: WordFamily) -> list[FamilyWord]:
     seen: set[str] = set()
     kept = []
     for word in family.words:
         key = _bare(word.word)
         fitted = fit_parts(word)
+        if fitted and family.kind == "root":
+            fitted = around_root(fitted, family.head)
         if key and key not in seen and fitted and key != _bare(family.quiz.word):
             seen.add(key)
             kept.append(fitted)
@@ -177,7 +199,10 @@ def with_checked_facts(family: WordFamily, topic: str, lang: str) -> WordFamily:
         if given & heads:  # "-tion / -sion" or "-tion" both name the listed "-tion / -sion"
             update.update(kind=kind, head=entry["head"], origin_lang=entry["origin_lang"], origin_form=entry["origin_form"],
                           head_meaning=entry["meaning_vi"] if lang == "vi" else entry["meaning_en"])
-    return family.model_copy(update=update)
+    family = family.model_copy(update=update)
+    if family.kind == "root":  # the quiz word is split around the whole root like the others
+        family = family.model_copy(update={"quiz": around_root(family.quiz, family.head)})
+    return family
 
 
 def _cap(text: str) -> str:

@@ -249,3 +249,18 @@ def test_the_desktop_build_ships_the_word_roots_data():
 
     spec = Path("daily_intel_english_studio.spec").read_text(encoding="utf-8")
     assert '("backend/content/data", "backend/content/data")' in spec
+
+
+def test_real_run_a_root_family_word_is_split_around_the_whole_root():
+    """Sandbox run 2026-11-03: suspect came as SUS + PECT and spectator as SPECTA + TOR."""
+    from backend.content.word_family import FamilyWord, around_root
+
+    suspect = FamilyWord.model_validate(_word("suspect", [("sus", "prefix", "dưới"), ("pect", "root", "nhìn")], "nghi ngờ"))
+    assert [(p.text, p.role, p.meaning) for p in around_root(suspect, "spect").parts] == [
+        ("su", "prefix", "dưới"), ("spect", "root", "nhìn")]
+    spectator = FamilyWord.model_validate(_word("spectator", [("specta", "root", "nhìn"), ("tor", "suffix", "người")], "khán giả"))
+    assert [p.text for p in around_root(spectator, "spect").parts] == ["spect", "ator"]
+    inspect = FamilyWord.model_validate(_word("inspect", [("in", "prefix", "vào"), ("spect", "root", "nhìn")], "kiểm tra"))
+    assert around_root(inspect, "spect") is inspect
+    dismiss = FamilyWord.model_validate(_word("dismiss", [("dis", "prefix", "rời"), ("mis", "root", "gửi"), ("s", "suffix", "")], "giải tán"))
+    assert [p.text for p in around_root(dismiss, "mit / miss").parts] == ["dis", "miss"]
