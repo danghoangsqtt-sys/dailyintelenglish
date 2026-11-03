@@ -179,7 +179,9 @@ function Beat({ props, index, time, unit }: { props: EpisodeInputProps; index: n
     <div style={{ position: "absolute", left: 60 * unit, right: 60 * unit, top: 170 * unit, display: "grid", justifyItems: "center",
       gap: 14 * unit, opacity: head, transform: `translateY(${((1 - head) * -20 * unit).toFixed(1)}px)` }}>
       <div data-grammar-pill="true" style={{ background: pillColour(card.beat, card.scene), color: "#FFFFFF", fontFamily: SANS, fontWeight: 800,
-        fontSize: 32 * unit, letterSpacing: "0.04em", padding: `${10 * unit}px ${30 * unit}px`, borderRadius: 999 }}>
+        // kept clear of the channel logo in the top-right corner (sandbox run 2026-11-03: a long label ran under it)
+        fontSize: (pillText(card.beat, card.scene, card.label, vi).length > 30 ? 26 : 32) * unit, letterSpacing: "0.04em",
+        padding: `${10 * unit}px ${30 * unit}px`, borderRadius: 999, maxWidth: 760 * unit, textAlign: "center" }}>
         {pillText(card.beat, card.scene, card.label, vi)}</div>
       <div style={{ fontFamily: LETTERS, color: INK, fontSize: (card.title.length > 48 ? 54 : card.title.length > 34 ? 66 : 80) * unit, lineHeight: 1.05, textAlign: "center",
         letterSpacing: "0.01em" }}>{card.title}</div>
