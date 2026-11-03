@@ -202,6 +202,17 @@ def with_checked_facts(family: WordFamily, topic: str, lang: str) -> WordFamily:
     family = family.model_copy(update=update)
     if family.kind == "root":  # the quiz word is split around the whole root like the others
         family = family.model_copy(update={"quiz": around_root(family.quiz, family.head)})
+    # sandbox run 2026-11-03: meanings ended in a stray ";" ("phát lại; xem lại...;")
+    tidy = lambda word: word.model_copy(update={"meaning": word.meaning.strip().rstrip(";,.:").strip()})  # noqa: E731
+    family = family.model_copy(update={"words": [tidy(word) for word in family.words], "quiz": tidy(family.quiz)})
+    from backend.content.grammar_lesson import looks_english  # a local import: grammar_lesson imports this module
+
+    if lang == "vi" and looks_english(family.quiz_clue):
+        # sandbox run 2026-11-03: the RE- Short read an English clue in a Vietnamese video; the clue becomes the parts'
+        # meanings ("Gợi ý: RE là lại, CYCLE là vòng.")
+        hints = [f"{part.text.strip('-').upper()} là {part.meaning}" for part in family.quiz.parts if part.meaning.strip()]
+        clue = "Gợi ý: " + ", ".join(hints) if hints else "Hãy đoán nghĩa từ các phần của nó"
+        family = family.model_copy(update={"quiz_clue": clue})
     return family
 
 

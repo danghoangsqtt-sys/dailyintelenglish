@@ -264,3 +264,18 @@ def test_real_run_a_root_family_word_is_split_around_the_whole_root():
     assert around_root(inspect, "spect") is inspect
     dismiss = FamilyWord.model_validate(_word("dismiss", [("dis", "prefix", "rời"), ("mis", "root", "gửi"), ("s", "suffix", "")], "giải tán"))
     assert [p.text for p in around_root(dismiss, "mit / miss").parts] == ["dis", "miss"]
+
+
+def test_real_run_an_english_quiz_clue_in_a_vietnamese_video_becomes_the_parts_meanings():
+    """Sandbox run 2026-11-03: the RE- Short read "What do you do with old newspapers...?" in a Vietnamese video, and
+    meanings ended in a stray ";"."""
+    from backend.content.word_family import with_checked_facts
+
+    data = json.loads(json.dumps(PRESS))
+    data["quiz_clue"] = "What do you do with a newspaper that must never be published?"
+    data["words"][0]["meaning"] = "bày tỏ;"
+    family = with_checked_facts(WordFamily.model_validate(data), "gốc PRESS", "vi")
+    assert family.quiz_clue == "Gợi ý: SUP là dưới, PRESS là đè"
+    assert family.words[0].meaning == "bày tỏ"
+    english = with_checked_facts(WordFamily.model_validate(data), "PRESS", "en")
+    assert english.quiz_clue.startswith("What do you do")
