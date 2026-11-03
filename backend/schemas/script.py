@@ -10,6 +10,7 @@ class LanguageNotesEdit(BaseModel):
     idioms: list[str] = Field(default_factory=list)
     grammar_point: str = ""
     translation_vi: str = Field(default="", max_length=600)  # Phase 81: shown under the English in a slow English podcast
+    roots: dict | None = None  # Phase 87: a word-roots beat card, kept with its line through Step 2 edits
 
 
 class ScriptLineEdit(BaseModel):

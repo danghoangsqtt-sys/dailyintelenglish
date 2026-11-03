@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.core.constants import (
     ACCENTS, CEFR_LEVELS, GENDERS, GENRES, MAX_SPEAKERS, MIN_SPEAKERS, PROJECT_STATUSES,
-    TTS_ENGINES, TTS_SPEED_MAX, TTS_SPEED_MIN,
+    TTS_ENGINES, TTS_SPEED_MAX, TTS_SPEED_MIN, VIENEU_PRESETS,
 )
 
 
@@ -75,6 +75,13 @@ class SpeakerConfig(BaseModel):
             raise ValueError(f"tts_engine must be one of {TTS_ENGINES}")
         return value
 
+    @model_validator(mode="after")
+    def validate_vieneu_voice(self) -> "SpeakerConfig":
+        # Phase 87 (D125): a VieNeu speaker keeps one of the engine's presets (or none: the gender's default)
+        if self.tts_engine == "vieneu" and self.voice_id and self.voice_id not in VIENEU_PRESETS:
+            raise ValueError("voice_id must be a VieNeu preset voice for the vieneu engine")
+        return self
+
 
 class SpeakerUpdate(BaseModel):
     """Partial update for one speaker's TTS voice settings (Step 4 Audio Studio).
@@ -115,16 +122,20 @@ class SpeakerUpdate(BaseModel):
 # Phase 65 (ENH-047): + the interactive Shorts -- quiz and listening challenge (one narrator), chat and would you
 # rather (a two-character conversation, drawn from its script lines)
 # Phase 81: + the slow English podcast and vocabulary flashcards (one narrator, drawn from their script lines)
-SOLO_SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards")
+SOLO_SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots")
+# Phase 87 (D125/D126): the academic Shorts -- Vietnamese explanation in a VieNeu voice, up to three minutes
+ACADEMIC_STYLES = ("roots",)
 CONVERSATION_SHORT_STYLES = ("chat", "wyr")
 VOICE_ONLY_STYLES = ("vox",) + SOLO_SHORT_STYLES
 SHORT_STYLES = SOLO_SHORT_STYLES + CONVERSATION_SHORT_STYLES
 ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards",
-                         "chat", "wyr"]
+                         "roots", "chat", "wyr"]
 # drawn from their script lines by the renderer: no visual plan to propose or approve
-LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards")
+LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards", "roots")
 SLOWPOD_SPEED = 0.8  # Phase 81: the slow English podcast narrator's default speed
 SHORT_MAX_MINUTES = 1.0
+ACADEMIC_SHORT_MAX_MINUTES = 3.0  # Phase 87 (D126)
+ACADEMIC_SHORT_MINUTES = 2.0
 # Phase 82 (owner 2026-10-28): knowledge / news Shorts use a full minute to carry their message (57 s + the 2 s end card);
 # the quick-learning templates stay short
 MESSAGE_SHORT_STYLES = ("news", "blur", "mistakes", "top5", "presenter", "vox")
@@ -134,7 +145,14 @@ QUICK_SHORT_MINUTES = 0.75
 
 def short_minutes(style: str | None) -> float:
     """The length a new Short of this style is written for."""
+    if style in ACADEMIC_STYLES:
+        return ACADEMIC_SHORT_MINUTES
     return MESSAGE_SHORT_MINUTES if style in MESSAGE_SHORT_STYLES else QUICK_SHORT_MINUTES
+
+
+def short_max_minutes(style: str | None) -> float:
+    """The longest a Short of this style may be: a minute, three for the academic Shorts (D126)."""
+    return ACADEMIC_SHORT_MAX_MINUTES if style in ACADEMIC_STYLES else SHORT_MAX_MINUTES
 
 
 SHORT_FORMAT_STYLES = (None, "presenter", "vox")  # Phase 80: these become a Short at <= 1 minute (conversation, presenter, vox)
@@ -225,8 +243,8 @@ class ScriptConfig(BaseModel):
                 raise ValueError("A chat or would-you-rather Short is a conversation of two characters.")
             if self.explainer_structure is None:
                 self.explainer_structure = SUBJECT_STRUCTURES[self.explainer_subject]
-            if self.explainer_style in SHORT_STYLES and self.duration_minutes > SHORT_MAX_MINUTES:
-                raise ValueError("A Short lasts at most 60 seconds.")
+            if self.explainer_style in SHORT_STYLES and self.duration_minutes > short_max_minutes(self.explainer_style):
+                raise ValueError("A Short lasts at most 60 seconds (an academic Short at most three minutes).")
         elif self.explainer_style in CONVERSATION_SHORT_STYLES:
             # Phase 65: a conversation Short keeps its style (chat / would you rather)
             self.explainer_subject = None

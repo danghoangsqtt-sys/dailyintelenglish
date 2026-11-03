@@ -55,3 +55,14 @@ the video renderer need no change. Edge stays the default; nothing else changes 
 
 - `pytest tests/test_vieneu_service.py tests/test_tts_service.py -q` — pass.
 - Manual: run the setup script, synthesise the three research lines, transcript matches, timings monotonic.
+
+## Result (2026-11-03)
+
+- `pytest tests/test_vieneu_service.py` 8 passed (alignment, caps, presets, dispatch, fake-worker contract with retry and
+  speed scaling); TTS/projects/script suites 203 passed with 87.2.
+- Real worker on this machine (`scripts/setup_vieneu.ps1`, model in `backend/ai/models/vieneu`): three research lines in
+  Thiện Minh's voice, 11.0 s (first line, model load) / 3.0 s / 3.6 s; every script word got a monotonic time, English
+  words included ("We@6.27 compress@6.47 … space@8.13").
+- Found while running: `-I` ignores PYTHONIOENCODING (the worker now sets UTF-8 on its pipes); Windows PowerShell 5.1
+  turns native stderr into errors under `Stop`; an interrupted venv has no `pyvenv.cfg`; ONNX Runtime refuses graph data
+  reached through the hub cache's symlinks (`HF_HUB_DISABLE_SYMLINKS=1`).

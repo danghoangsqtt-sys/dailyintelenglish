@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from backend.core.responses import ok
 from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
+from backend.core.constants import VIENEU_PRESETS
 from backend.core.voice import profile_voice_settings, resolve_voice_id, voice_revision
 from backend.ai.tts import voice_catalog_service
 from backend.db.database import get_db
@@ -198,6 +199,10 @@ async def update_speaker(
                               exclude={"expected_voice_revision", "apply_profile_voice", "name"})
     if "voice_id" in patch.model_fields_set:
         fields["voice_id"] = patch.voice_id
+    elif patch.tts_engine and patch.tts_engine != speaker["tts_engine"]:
+        fields["voice_id"] = None  # Phase 87: an Edge voice id means nothing to VieNeu (and back); use the default
+    if fields.get("tts_engine", speaker["tts_engine"]) == "vieneu" and fields.get("voice_id")             and fields["voice_id"] not in VIENEU_PRESETS:
+        raise ValidationError("Choose one of the VieNeu Vietnamese voices.")
     if patch.apply_profile_voice:
         if patch.voice_id is not None:
             raise ValidationError("Choose either a project voice or apply the profile voice.")

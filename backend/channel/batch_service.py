@@ -42,8 +42,11 @@ TEMPLATES = {
     # Phase 81 (owner 2026-10-28)
     "slowpod": ("Slow English podcast", "a calm, slow monologue of eight to ten short everyday sentences about one small topic"),
     "flashcards": ("Vocabulary flashcards", "eight to ten useful words or phrases for one everyday topic (one part of a deck)"),
+    # Phase 87 (D125): one word family per Short, explained in Vietnamese for Vietnamese learners
+    "roots": ("Word roots, prefixes and suffixes",
+              "one English root, prefix or suffix (e.g. PRESS, un-, -tion) and five to seven common words built with it"),
 }
-TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "chat", "wyr",
+TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "chat", "wyr",
                         "conversation", "presenter", "vox"]
 TWO_CHARACTERS = (*CONVERSATION_SHORT_STYLES, "conversation")
 

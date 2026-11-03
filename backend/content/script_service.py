@@ -28,6 +28,8 @@ class LanguageNotesOut(BaseModel):
     grammar_point: str = ""
     # Phase 81: the line's Vietnamese translation (shown under the English in a slow English podcast)
     translation_vi: str = ""
+    # Phase 87: a word-roots Short's beat card (hook, split, example, quiz...), drawn by the renderer from its line
+    roots: dict | None = None
 
 
 class ScriptLineOut(BaseModel):

@@ -49,3 +49,4 @@ MIGRATIONS_DIR = BACKEND_DIR / "db" / "migrations"
 RENDERER_DIR = RUNTIME_ROOT / "renderer"
 MODELS_DIR = RUNTIME_ROOT / "backend/ai/models"  # local model weights (gitignored)
 IMAGE_VENV_DIR = RUNTIME_ROOT / ".venv-image"  # the image worker's own Python (torch, diffusers)
+VIENEU_VENV_DIR = RUNTIME_ROOT / ".venv-vieneu"  # Phase 87: the VieNeu TTS worker's own Python (vieneu, faster-whisper)

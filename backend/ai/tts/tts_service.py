@@ -1,4 +1,4 @@
-"""Synthesize plain dialogue using Edge TTS and its native word timestamps."""
+"""Synthesize plain dialogue using Edge TTS and its native word timestamps, or (Phase 87) a local VieNeu voice."""
 
 import asyncio
 import json
@@ -13,6 +13,7 @@ import aiosqlite
 import edge_tts
 from pydub import AudioSegment
 
+from backend.ai.tts import vieneu_service
 from backend.ai.tts.vocal_cues import caption_text, has_vocal_cues
 from backend.core.config import settings
 from backend.core.constants import EDGE_TTS_PITCH_LIMIT_HZ, EDGE_TTS_VOICE_MAP
@@ -186,7 +187,7 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
     (even an unrelated dashboard GET) for the duration of a live Edge TTS call.
 
     Returns:
-        {"audio_path": str, "engine_used": "edge_tts"}
+        {"audio_path": str, "engine_used": "edge_tts" | "vieneu"}
 
     Raises:
         NotFoundError: If the line's speaker_id doesn't match any project speaker.
@@ -199,11 +200,16 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
     speaker = _find_speaker(project, line["speaker_id"])
 
     # Problems the user can fix are 422s whose message the UI shows; provider failures stay 502.
-    if (speaker.get("tts_engine") or "edge_tts") != "edge_tts":
-        raise ValidationError("Only Edge TTS is supported. Reload the updated project settings.")
+    engine = speaker.get("tts_engine") or "edge_tts"
+    if engine not in ("edge_tts", "vieneu"):
+        raise ValidationError("Only Edge TTS and the VieNeu Vietnamese voice are supported. Reload the project settings.")
     if not caption_text(line["text"]).strip():
         raise ValidationError("Enter spoken dialogue before generating audio.")
-    audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
+    if engine == "vieneu":
+        audio_bytes, raw = await vieneu_service.synthesize(caption_text(line["text"]).strip(), speaker)
+        word_boundaries = [WordBoundary(text=t, offset_sec=o, duration_sec=d) for t, o, d in raw]
+    else:
+        audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
 
     cache_dir = settings.DATA_DIR / "tts_cache" / project["id"] / uuid.uuid4().hex
     audio_path = cache_dir / f"{line['id']}.mp3"
@@ -214,7 +220,7 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
         audio_path.with_suffix(".tts.json").write_text,
         json.dumps(line_fingerprint(project, line), sort_keys=True), encoding="utf-8",
     )
-    return {"audio_path": str(audio_path), "engine_used": "edge_tts"}
+    return {"audio_path": str(audio_path), "engine_used": engine}
 
 
 async def save_line_audio_cache(
@@ -299,7 +305,7 @@ def cache_matches(project: dict, line: dict, *, allow_legacy: bool = True) -> bo
     project_root = (settings.DATA_DIR / "tts_cache" / project["id"]).resolve()
     try:
         engine = line_fingerprint(project, line)["engine"]
-        needs_word_timings = engine == "edge_tts"
+        needs_word_timings = engine in ("edge_tts", "vieneu")
         if (project_root not in path.resolve().parents or not path.is_file()
                 or (needs_word_timings and not has_word_timings(str(path)))):
             return False

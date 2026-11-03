@@ -12,7 +12,7 @@ import aiosqlite
 from backend.core.config import settings
 from backend.core.constants import CEFR_DEFAULT_TTS_SPEED, PROJECT_STATUSES
 from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
-from backend.core.voice import resolve_voice_id, voice_revision
+from backend.core.voice import resolve_vieneu_voice, resolve_voice_id, voice_revision
 from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerConfig, SpeakerUpdate
 
 logger = logging.getLogger(__name__)
@@ -286,9 +286,10 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
     cast = {row["speaker_index"]: dict(row) for row in await cast_cursor.fetchall()}
     for speaker in project["speakers"]:
         speaker["voice_revision"] = voice_revision(speaker)
+        engine = speaker.get("tts_engine", "edge_tts")
         speaker["resolved_voice_id"] = (
-            (speaker.get("voice_id") or resolve_voice_id(speaker))
-            if speaker.get("tts_engine", "edge_tts") == "edge_tts" else None
+            (speaker.get("voice_id") or resolve_voice_id(speaker)) if engine == "edge_tts"
+            else resolve_vieneu_voice(speaker) if engine == "vieneu" else None
         )
         member = cast.get(speaker["speaker_index"], {})
         speaker["character_id"] = member.get("character_id")

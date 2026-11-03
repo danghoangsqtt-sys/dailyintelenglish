@@ -68,7 +68,33 @@ VOICE_PREVIEW_SAMPLE_TEXT = "A clear explanation begins with a simple example. L
 TTS_SPEED_DEFAULT = 1.0
 # Owner decision 2026-10-24: plain Edge speech only. Legacy stored engines are
 # converted explicitly by migration040; new requests cannot select them.
-TTS_ENGINES = ["edge_tts"]
+# Phase 87 (D125): VieNeu-TTS is the one exception -- a local Vietnamese voice for the academic templates.
+TTS_ENGINES = ["edge_tts", "vieneu"]
+
+# Phase 87 (D125): VieNeu-TTS v3 Turbo presets (id = the SDK's preset name), run by an isolated worker in .venv-vieneu.
+# Each entry: id -> (gender, region, style), as the SDK lists them.
+VIENEU_PRESETS: dict[str, tuple[str, str, str]] = {
+    "Adam bựa": ("male", "Bắc", "tự nhiên"), "Trúc Ly": ("female", "Bắc", "tự nhiên"),
+    "Thiện Minh": ("male", "Bắc", "kể chuyện"), "Mai Anh": ("female", "Bắc", "tin tức"),
+    "Hải Đăng": ("male", "Bắc", "tự nhiên"), "Thùy Dung": ("female", "Nam", "tin tức"),
+    "Thiền Tâm Đức": ("male", "Bắc", "kể chuyện"), "Ngọc Huyền": ("female", "Bắc", "tự nhiên"),
+    "Quang Sơn": ("male", "Trung", "tự nhiên"), "Ngọc Trân": ("female", "Trung", "tự nhiên"),
+    "Minh Đức": ("male", "Bắc", "tin tức"), "Phạm Tuyên": ("male", "Bắc", "tự nhiên"),
+    "Thái Sơn": ("male", "Nam", "kể chuyện"), "Xuân Vĩnh": ("male", "Bắc", "tự nhiên"),
+    "Thanh Bình": ("male", "Bắc", "kể chuyện"), "Ngọc Linh": ("female", "Bắc", "kể chuyện"),
+    "Đoan Trang": ("female", "Bắc", "tự nhiên"), "Thục Đoan": ("female", "Nam", "kể chuyện"),
+    "Minh Triết": ("male", "Nam", "tin tức"), "Mỹ Duyên": ("female", "Nam", "đọc truyện"),
+    "Quỳnh Anh": ("female", "Bắc", "đọc truyện"), "Đức Trí": ("male", "Nam", "đọc truyện"),
+    "Kim Thanh": ("female", "Nam", "đọc truyện"), "Adam": ("male", "Nam", "tự nhiên"),
+    "Quốc Tuấn": ("male", "Bắc", "tự nhiên"),
+}
+VIENEU_DEFAULT_VOICE = {"female": "Ngọc Huyền", "male": "Thiện Minh", "neutral": "Ngọc Huyền"}
+VIENEU_SDK_VERSION = "3.8.3"
+VIENEU_MODEL_REPO = "pnnbao-ump/VieNeu-TTS-v3-Turbo"
+VIENEU_MODEL_REVISION = "61b85e3d937fbbacb387714180e8182823512523"
+VIENEU_LINE_TIMEOUT_SECONDS = 180  # one line, including the first model load (~11 s on CPU)
+VIENEU_IDLE_SECONDS = 300  # the worker exits after this long without a line, freeing ~2 GB of RAM
+VIENEU_MIN_WORD_MATCH = 0.6  # a take whose transcript matches fewer script words is synthesized once more
 
 # Edge TTS voice map: accent -> gender -> ShortName, verified live against
 # edge_tts.list_voices() on 2026-09-11. "scottish" has no distinct Edge TTS locale,

@@ -9,6 +9,7 @@ venv/
 # Task 20.2: isolated Python 3.14 environment for the SDXL image worker (keeps torch and
 # diffusers, ~5.5 GB, out of the main venv and the .exe). Set up via `backend/ai/image/requirements.txt`.
 .venv-image/
+.venv-vieneu/
 *.egg-info/
 dist/
 build/

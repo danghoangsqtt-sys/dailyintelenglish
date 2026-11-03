@@ -40,6 +40,7 @@ from backend.content import project_service, script_service
 from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
+from backend.content.word_family import WordFamily, build_beats, roots_prompt
 from backend.ai.tts.vocal_cues import caption_text
 
 if TYPE_CHECKING:
@@ -1367,6 +1368,63 @@ async def _run_flashcard_job(db, job: dict, project: dict, router: "AIRouter") -
     await export_service.sync_quietly(db, project_id)
 
 
+_FAMILY_ADAPTER = TypeAdapter(WordFamily)
+
+
+async def _set_narrator_engine(db, project: dict, speaker_id: str, lang: str) -> None:
+    """Phase 87 (D125): a Vietnamese-narrated academic Short speaks with a VieNeu voice, an English one with Edge.
+    Runs inside the caller's write transaction; the stored voice is cleared so the engine's default for the gender
+    applies (an Edge voice id means nothing to VieNeu, and back)."""
+    speaker = next(s for s in project["speakers"] if s["id"] == speaker_id)
+    engine = "vieneu" if lang == "vi" else "edge_tts"
+    if (speaker.get("tts_engine") or "edge_tts") != engine:
+        await db.execute("UPDATE speakers SET tts_engine = ?, voice_id = NULL WHERE id = ? AND project_id = ?",
+                         (engine, speaker_id, project["id"]))
+
+
+async def _run_roots_job(db, job: dict, project: dict, router: "AIRouter") -> None:
+    """Phase 87: a word-roots Short is built from one schema-checked word family (like the flashcard deck), in the
+    narration language of its audience: Vietnamese explanation for Việt Nam / Cả hai, English for Quốc tế."""
+    from backend.content import audience as audience_settings
+
+    job_id, project_id = job["id"], project["id"]
+    owner_words = _source_context(project)["source_words"]
+    async with read_transaction():
+        lang = "en" if await audience_settings.resolve(db, project_id) == "international" else "vi"
+    await _update_progress(db, job_id, "family", 20)
+    request = GenerationRequest(prompt=roots_prompt(project["topic"], project["cefr_level"], lang, owner_words),
+                                json_schema=WordFamily.model_json_schema(),
+                                deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="word_family")
+    try:
+        result = await _call_router(db, job_id, router, request, section_index=None, is_repair=False, adapter=_FAMILY_ADAPTER)
+        family = parse_and_validate(result.text, _FAMILY_ADAPTER)
+        beats = build_beats(family, lang)
+    except ProviderError as exc:
+        await _fail_provider(db, job_id, exc)
+        return
+    except (SchemaValidationError, ValueError) as exc:
+        await _fail(db, job_id, "word_family_invalid", [str(exc)[:300]])
+        return
+    speaker_id = project["speakers"][0]["id"]
+    server_lines = [{"speaker_id": speaker_id, "text": text,
+                     "language_notes": LanguageNotesOut(roots=card).model_dump()} for text, card in beats]
+    async with write_transaction(db):
+        final_project = await project_service.get_project(db, project_id)
+        if _job_project_hash(final_project, job) != job["config_hash"]:
+            await ai_job_service.mark_stale(db, job_id, commit=False)
+            return
+        if await _is_cancelled(db, job_id, project_id):
+            await ai_job_service.transition_status(db, job_id, "cancelled", commit=False)
+            return
+        await ai_job_service.transition_status(db, job_id, "validating", commit=False)
+        await _set_narrator_engine(db, final_project, speaker_id, lang)
+        await script_service.save_script(db, project_id, server_lines, {speaker_id}, commit=False)
+        await project_service.mark_script_changed(db, project_id, commit=False)
+        await ai_job_service.transition_status(db, job_id, "complete", commit=False)
+    from backend.content import export_service
+    await export_service.sync_quietly(db, project_id)
+
+
 class _Translations(BaseModel):
     translations: list[str] = Field(min_length=1, max_length=200)
 
@@ -1421,6 +1479,9 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
 
     if project.get("explainer_style") == "flashcards":  # Phase 81: a deck, not prose
         await _run_flashcard_job(db, job, project, router)
+        return
+    if project.get("explainer_style") == "roots":  # Phase 87: a word family, not prose
+        await _run_roots_job(db, job, project, router)
         return
 
     known_speaker_ids = {speaker["id"] for speaker in project["speakers"]}

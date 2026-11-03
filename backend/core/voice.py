@@ -6,7 +6,7 @@ import hashlib
 import json
 
 from backend.ai.tts.vocal_cues import caption_text
-from backend.core.constants import EDGE_TTS_VOICE_MAP
+from backend.core.constants import EDGE_TTS_VOICE_MAP, VIENEU_DEFAULT_VOICE, VIENEU_PRESETS
 from backend.core.exceptions import ValidationError
 
 
@@ -23,6 +23,16 @@ def resolve_voice_id(speaker: dict) -> str:
     return accent.get(speaker.get("gender"), accent["neutral"])
 
 
+def resolve_vieneu_voice(speaker: dict) -> str:
+    """Phase 87 (D125): the speaker's VieNeu preset, or the default preset for its gender."""
+    own = speaker.get("voice_id")
+    if own:
+        if own not in VIENEU_PRESETS:
+            raise ValidationError("The saved voice is not a VieNeu Vietnamese voice. Select a voice again.")
+        return own
+    return VIENEU_DEFAULT_VOICE.get(speaker.get("gender"), VIENEU_DEFAULT_VOICE["neutral"])
+
+
 def voice_parameters(speaker: dict) -> dict:
     """The effective engine identity and synthesis settings, independent of display names."""
     engine = speaker.get("tts_engine") or "edge_tts"
@@ -35,6 +45,9 @@ def voice_parameters(speaker: dict) -> dict:
     if engine == "edge_tts":
         voice_id = resolve_voice_id(speaker)
         result.update(voice_id=voice_id, locale=voice_id.rsplit("-", 1)[0])
+    elif engine == "vieneu":
+        result.update(voice_id=resolve_vieneu_voice(speaker), locale="vi-VN")
+        result.pop("pitch")  # VieNeu has no pitch control; a pitch edit must not invalidate the cache
     else:
         raise ValidationError(f"Unsupported TTS engine: {engine}")
     return result
