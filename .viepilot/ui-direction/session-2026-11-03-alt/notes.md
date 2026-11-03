@@ -28,6 +28,19 @@ Duolingo's round bold face, chunky buttons with a solid bottom edge, a red count
 band with her own speech column. Checked at 1920×1080 and 1366×768. Nunito comes from Google Fonts in the prototype
 (the app would ship the font file).
 
+## Scores against Anthropic's interface design guidance (owner asked, 2026-11-03)
+
+Ten criteria, 10 points each: subject detail, type, colour, layout, selective cards, information design, avoiding the
+generic "AI look", copy, build (phone, dark theme, focus, reduced motion), one bold moment.
+Sidebar prototype 57, A 66, B 62, C 54, D 65. The owner then asked for a redesign scoring 90–100.
+
+`e-studio.html` (direction E) was built for that target: Baloo 2 headings with Be Vietnam Pro body (both made for
+Vietnamese), one accent (brand green) with semantic states kept separate, tinted neutrals, light and dark tokens, a
+labelled rail that becomes a bottom tab bar under 860 px, Lina's green dotted band as the only loud element, plain
+panels for review and work in progress, the week as an unboxed agenda with the channel's fixed slots, CEFR badges and a
+7-step strip as subject details, focus rings and reduced motion. Checked at 1920×1080, 1366×768 and 375×812 (light and
+dark, no sideways scroll). Self-score 90: 9 on every criterion.
+
 ## Pages inventory
 
 | File | Purpose |
@@ -37,6 +50,7 @@ band with her own speech column. Checked at 1920×1080 and 1366×768. Nunito com
 | `b-studio.html` | direction B, Home |
 | `c-bento.html` | direction C, Home |
 | `d-friendly.html` | direction D, Home (Canva + Notion + Duolingo) |
+| `e-studio.html` | direction E, Home, built to score 90+ |
 
 ## Open question for the owner
 

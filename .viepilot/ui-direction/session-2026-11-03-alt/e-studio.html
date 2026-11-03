@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="vi">
+<title>Daily Beyond English Studio</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: a labelled left rail (Canva) + one fluid 12-column work area; the single loud moment is Lina's green band,
+   everything under it is quiet lists (Notion/Linear). On phones the rail becomes a bottom tab bar. */
+:root {
+  --bg: #f6f7f2; --surface: #ffffff; --sunk: #eef1e9; --line: #dfe5da; --ink: #17231b; --ink-2: #48574c; --ink-3: #7b877e;
+  --brand: #1f8a4c; --brand-deep: #13603a; --brand-tint: #e3f2e8; --on-brand: #ffffff; --link: #13603a;
+  --wait: #a86d00; --wait-tint: #fff1cc; --err: #c4362c; --err-tint: #fde6e3; --run: #2161b0; --run-tint: #e3eefb;
+  --display: "Baloo 2", "Nunito", "Segoe UI", sans-serif; --body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --r-ctl: 10px; --r-panel: 16px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111613; --surface: #181f1b; --sunk: #1f2823; --line: #2b3630; --ink: #e9f0eb; --ink-2: #bcc8bf; --ink-3: #8a978e;
+  --brand: #38b06a; --brand-deep: #1f8a4c; --brand-tint: #1d3326; --on-brand: #06140c; --link: #6fd79a;
+  --wait: #f2b84b; --wait-tint: #3a2f14; --err: #ff8a7f; --err-tint: #3a1d1a; --run: #8cc3ff; --run-tint: #1a2b40; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111613; --surface: #181f1b; --sunk: #1f2823; --line: #2b3630; --ink: #e9f0eb; --ink-2: #bcc8bf; --ink-3: #8a978e;
+  --brand: #38b06a; --brand-deep: #1f8a4c; --brand-tint: #1d3326; --on-brand: #06140c; --link: #6fd79a;
+  --wait: #f2b84b; --wait-tint: #3a2f14; --err: #ff8a7f; --err-tint: #3a1d1a; --run: #8cc3ff; --run-tint: #1a2b40; color-scheme: dark }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); -webkit-font-smoothing: antialiased;
+  display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { font-family: var(--display); font-weight: 800; line-height: 1.15; text-wrap: balance; }
+img { max-width: 100%; display: block; }
+.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
+/* rail */
+.rail { position: sticky; top: 0; height: 100vh; padding: 20px 14px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; background: var(--surface); }
+.brand { display: flex; align-items: center; gap: 10px; padding: 2px 10px 18px; font: 800 18px/1.1 var(--display); }
+.brand img { width: 40px; height: 40px; border-radius: 50%; }
+.rail a.nav { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 12px; border-radius: var(--r-ctl); font-weight: 600; color: var(--ink-2); }
+.rail a.nav:hover { background: var(--sunk); color: var(--ink); }
+.rail a.nav[aria-current="page"] { background: var(--brand-tint); color: var(--link); }
+.rail .count { margin-left: auto; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; background: var(--wait-tint); color: var(--wait); font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+.rail .bottom { margin-top: auto; }
+
+/* buttons: one chunky primary (Duolingo), quiet secondaries */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: var(--r-ctl);
+  font: 700 15.5px var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--sunk); }
+.btn.primary { background: var(--brand); color: var(--on-brand); border: 0; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .18); padding-bottom: 3px; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.primary:active { box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .18); padding-bottom: 0; transform: translateY(1px); }
+.btn.sm { height: 38px; padding: 0 14px; font-size: 14.5px; }
+.rail .btn.primary { width: 100%; margin-bottom: 14px; }
+
+main { padding-block: 28px 56px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 28px 32px; align-content: start; max-width: 1680px; width: 100%; }
+.head { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.head h1 { font-size: 40px; }
+.head .date { color: var(--ink-3); font-size: 17px; }
+.head .slots { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 15px; }
+.slot { padding: 3px 10px; border-radius: 8px; background: var(--sunk); font-weight: 600; font-size: 14px; }
+
+/* Lina's band: the one loud moment */
+.band { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 250px; align-items: end; min-height: 236px;
+  border-radius: 22px; background-color: var(--brand-deep); color: #fff; overflow: hidden;
+  background-image: radial-gradient(rgba(255, 255, 255, .09) 1.5px, transparent 1.6px); background-size: 22px 22px; }
+.band .talk { padding: 30px 0 30px 32px; display: grid; gap: 18px; align-self: center; }
+.band .who { font: 700 13px var(--body); letter-spacing: .08em; text-transform: uppercase; color: #b9e5c8; }
+.band .line { font: 700 30px/1.25 var(--display); }
+.band .line b { color: #ffd60a; font-weight: 800; }
+.band .acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.band .btn.primary { background: #ffd60a; color: #2b2200; }
+.band .btn.ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .35); }
+.band .btn.ghost:hover { background: rgba(255, 255, 255, .1); }
+.band .topic { display: flex; align-items: center; gap: 10px; height: 52px; max-width: 640px; padding: 0 8px 0 16px; border-radius: 14px; background: #fff; color: #17231b; }
+.band .topic input { flex: 1; min-width: 0; border: 0; outline: 0; font: 500 16.5px var(--body); color: #17231b; background: transparent; }
+.band .topic input::placeholder { color: #7b877e; }
+.band .lina { position: relative; height: 270px; align-self: end; }
+.band .lina img { position: absolute; right: 8px; bottom: 0; height: 100%; width: auto; max-width: none; transform-origin: 50% 100%; animation: breathe 4s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.006, 1.012); } }
+
+/* sections */
+.col-main { grid-column: 1 / span 8; display: grid; gap: 28px; align-content: start; min-width: 0; }
+.col-side { grid-column: 9 / -1; display: grid; gap: 28px; align-content: start; min-width: 0; }
+.sh { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sh h2 { font-size: 24px; }
+.sh .badge { font: 700 14px var(--body); }
+.sh .more { margin-left: auto; font-weight: 600; font-size: 15px; color: var(--link); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-panel); }
+
+.row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; gap: 16px; align-items: center; padding: 14px 18px; }
+.row + .row { border-top: 1px solid var(--line); }
+.thumb { width: 48px; aspect-ratio: 9 / 16; border-radius: 8px; overflow: hidden; background: #0b2a1e; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.row .t { font-weight: 700; font-size: 17px; line-height: 1.3; }
+.row .m { color: var(--ink-3); font-size: 14.5px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.cefr { font: 700 12px var(--body); letter-spacing: .04em; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); color: var(--ink-2); }
+.state { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 14px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.state.wait { background: var(--wait-tint); color: var(--wait); }
+.state.err { background: var(--err-tint); color: var(--err); }
+.state.run { background: var(--run-tint); color: var(--run); }
+.state.ok { background: var(--brand-tint); color: var(--link); }
+.acts2 { display: flex; gap: 8px; }
+
+/* the seven steps as a strip of dots: done / now / to do */
+.steps { display: flex; gap: 4px; margin-top: 8px; }
+.steps i { width: 26px; height: 6px; border-radius: 3px; background: var(--sunk); }
+.steps i.d { background: var(--brand); }
+.steps i.n { background: var(--run); }
+.prog-l { font-size: 14px; color: var(--ink-3); margin-top: 6px; }
+
+/* week agenda: plain, no card; the channel's fixed slots marked */
+.day { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.day:first-of-type { border-top: 0; padding-top: 0; }
+.day .d { font: 700 14px var(--body); color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+.day .d b { display: block; font: 800 26px/1 var(--display); color: var(--ink); letter-spacing: 0; text-transform: none; margin-top: 2px; }
+.day.today .d, .day.today .d b { color: var(--link); }
+.ev { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 15px; }
+.ev + .ev { margin-top: 8px; }
+.ev .thumb { width: 26px; border-radius: 5px; }
+.ev .w { font-weight: 600; }
+.ev time { color: var(--ink-3); font-size: 14px; }
+.ev.plan { color: var(--ink-3); }
+.ev.plan .thumb { opacity: .45; }
+.empty { color: var(--ink-3); font-size: 14.5px; }
+
+@media (max-width: 1280px) { .col-main, .col-side { grid-column: 1 / -1; } .col-side { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px) {
+  body { grid-template-columns: minmax(0, 1fr); padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+  .rail { position: fixed; inset: auto 0 0 0; height: auto; flex-direction: row; justify-content: space-around; padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+    border-right: 0; border-top: 1px solid var(--line); z-index: 20; }
+  .rail .brand, .rail .btn.primary, .rail .bottom { display: none; }
+  .rail a.nav { flex-direction: column; height: 54px; gap: 2px; padding: 4px 8px; font-size: 12px; position: relative; }
+  .rail .count { position: absolute; top: 0; right: 4px; min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; }
+  main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); gap: 22px; }
+  .head h1 { font-size: 32px; } .head .slots { margin-left: 0; flex-wrap: wrap; } .head .slots .lbl { display: none; }
+  .band { grid-template-columns: minmax(0, 1fr); }
+  .band .talk { padding: 20px; } .band .line { font-size: 22px; padding-right: 92px; } .band .who { padding-right: 92px; }
+  .band .lina { position: absolute; right: 0; top: 8px; height: 150px; width: 110px; overflow: hidden; } .band .lina img { right: -14px; }
+  .band .topic { max-width: none; } .band .acts .btn { flex: 1; }
+  .col-side { grid-template-columns: minmax(0, 1fr); }
+  .row { grid-template-columns: 44px minmax(0, 1fr); } .row .state, .row .acts2 { grid-column: 2; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .band .lina img { animation: none; } }
+</style>
+
+<nav class="rail" aria-label="Điều hướng chính">
+  <a class="brand" href="#"><img src="../../../frontend/static/brand/logo-64.png" alt="">Daily Beyond English</a>
+  <a class="btn primary" href="#"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#plus"/></svg>Tạo video</a>
+  <a class="nav" href="#" aria-current="page"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#home"/></svg>Hôm nay<span class="count num">3</span></a>
+  <a class="nav" href="#"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#calendar"/></svg>Kênh</a>
+  <a class="nav" href="#"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#film"/></svg>Video</a>
+  <a class="nav" href="#"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#library"/></svg>Thư viện</a>
+  <a class="nav bottom" href="#"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#settings"/></svg>Cài đặt</a>
+</nav>
+
+<main>
+  <div class="head"><h1>Hôm nay</h1><span class="date">Thứ Ba, 3 tháng 11</span>
+    <span class="slots"><span class="lbl">Lịch kênh</span> <span class="slot">Short mỗi ngày 19:00</span><span class="slot">Video dài Thứ Tư · Thứ Bảy</span></span></div>
+
+
+  <div class="col-main">
+  <section class="band" aria-label="Lina, trợ lý">
+    <div class="talk">
+      <span class="who">Lina · trợ lý của bạn</span>
+      <p class="line" id="say">Đêm qua mình làm xong <b>3 video</b>. Duyệt xong là chúng tự lên lịch tuần này.</p>
+      <div class="acts"><a class="btn primary" href="#review">Duyệt 3 video</a><a class="btn ghost" href="#">Xem đêm qua làm gì</a></div>
+      <label class="topic" for="topic"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#spark"/></svg>
+        <input id="topic" placeholder="Video tiếp theo nói về gì? Ví dụ: câu điều kiện loại 2"><button class="btn sm primary" type="button" style="background:var(--brand);color:#fff">Tạo</button></label>
+    </div>
+    <div class="lina"><img id="lina" src="../session-2026-11-03-ia/mascot/lina/front/gesture-wave.webp" alt="Lina vẫy tay chào"></div>
+  </section>
+    <section id="review">
+      <div class="sh"><h2>Chờ bạn duyệt</h2><span class="state wait badge num">3</span><a class="more" href="#">Tất cả video</a></div>
+      <div class="panel">
+        <div class="row"><div class="thumb"><img src="../../../frontend/static/samples/grammar-vi.jpg" alt=""></div>
+          <div><div class="t">Câu bị động: hiểu bản chất</div><div class="m">Ngữ pháp <span class="cefr">B1</span> Short <span class="num">0:58</span> · làm xong 02:14</div></div>
+          <span class="state wait">Chờ duyệt</span><div class="acts2"><a class="btn sm" href="#">Xem</a><a class="btn sm primary" href="#">Duyệt</a></div></div>
+        <div class="row"><div class="thumb"><img src="../../../frontend/static/samples/roots-vi.jpg" alt=""></div>
+          <div><div class="t">Hậu tố -MENT</div><div class="m">Gốc từ <span class="cefr">B2</span> Short <span class="num">1:45</span> · 3 từ chưa có hình</div></div>
+          <span class="state err">Thiếu hình</span><div class="acts2"><a class="btn sm primary" href="#">Vẽ lại 3 hình</a></div></div>
+        <div class="row"><div class="thumb"><img src="../../../frontend/static/samples/news-vi.jpg" alt=""></div>
+          <div><div class="t">Cities plant more trees</div><div class="m">Tin tức <span class="cefr">A2</span> Short <span class="num">0:57</span> · Lina đã sửa câu 4</div></div>
+          <span class="state wait">Chờ duyệt</span><div class="acts2"><a class="btn sm" href="#">Xem câu 4</a><a class="btn sm primary" href="#">Duyệt</a></div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sh"><h2>Đang làm</h2><span class="more" style="color:var(--ink-3);font-weight:500">7 bước: nội dung → sản xuất → đăng</span></div>
+      <div class="panel">
+        <div class="row"><div class="thumb"><img src="../../../frontend/static/samples/mistakes-vi.jpg" alt=""></div>
+          <div><div class="t">Lỗi "I very like"</div><div class="steps" aria-label="Bước 5 trên 7"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="n"></i><i></i><i></i></div>
+            <div class="prog-l">Bước 5 · Dựng video, cảnh 5/6</div></div>
+          <span class="state run num">còn 40 giây</span><span></span></div>
+        <div class="row"><div class="thumb"><img src="../../../frontend/static/samples/grammar-vi.jpg" alt=""></div>
+          <div><div class="t">Thì hiện tại hoàn thành</div><div class="steps" aria-label="Bước 4 trên 7"><i class="d"></i><i class="d"></i><i class="d"></i><i></i><i></i><i></i><i></i></div>
+            <div class="prog-l">Bước 4 · Giọng đọc, chạy lúc 23:00</div></div>
+          <span class="state">Đêm nay</span><span></span></div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="col-side">
+    <section>
+      <div class="sh"><h2>Tuần này</h2><a class="more" href="#">Mở lịch</a></div>
+      <div id="week"></div>
+    </section>
+  </aside>
+</main>
+
+<script>
+// Prototype data. Lina: waves for two seconds, then stands calm and blinks.
+const S = (img) => `../../../frontend/static/samples/${img}.jpg`;
+const W = [
+  ["T3", 3, true, [["roots-vi", "Gốc SPECT", "19:00"]]],
+  ["T4", 4, false, [["grammar-vi", "Câu bị động", "19:00", "wait"], ["conversation", "The Office · tập 6", "20:00"]]],
+  ["T5", 5, false, [["chat-vi", "Planning a picnic", "19:00"]]],
+  ["T6", 6, false, [["roots-vi", "Tiền tố RE-", "19:00", "plan"]]],
+  ["T7", 7, false, [["wordday-vi", "Word of the day: cozy", "09:00"], ["conversation", "The Office · tập 7", "20:00", "plan"]]],
+  ["CN", 8, false, []],
+];
+document.getElementById("week").innerHTML = W.map(([d, n, today, evs]) => `<div class="day${today ? " today" : ""}"><div class="d">${d}<b class="num">${n}</b></div><div>${
+  evs.length ? evs.map(([img, t, time, k]) => `<div class="ev${k === "plan" ? " plan" : ""}"><div class="thumb"><img src="${S(img)}" alt=""></div><span class="w">${t}${k === "wait" ? ' <span class="state wait" style="height:22px;font-size:12.5px;padding:0 8px">chờ duyệt</span>' : ""}</span><time class="num">${time}</time></div>`).join("")
+  : '<span class="empty">Chưa có video. Lina có thể làm một Short tối nay.</span>'}</div></div>`).join("");
+const lina = document.getElementById("lina"), F = "../session-2026-11-03-ia/mascot/lina/front/";
+["calm__closed", "blink"].forEach((n) => { new Image().src = F + n + ".webp"; });
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  setTimeout(() => { lina.src = F + "calm__closed.webp"; lina.alt = "Lina"; }, 2200);
+  (function blink() { setTimeout(() => { if (lina.src.includes("calm__closed")) { lina.src = F + "blink.webp"; setTimeout(() => { lina.src = F + "calm__closed.webp"; }, 120); } blink(); }, 2600 + Math.random() * 3200); })();
+}
+</script>
