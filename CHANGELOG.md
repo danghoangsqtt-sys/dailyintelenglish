@@ -8,6 +8,15 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Edit every kind of video on its video (Phase 91, 2026-11-03)
+
+- Slow podcast, flashcards, chat and would-you-rather Shorts open the same "Edit on the video" editor with their own fields (translation; part of speech, IPA, meaning; messages) and the live video.
+- Explainer Shorts and videos (news, blur, mistakes, word of the day, top 5, quiz, listening, VOX, presenter) and the conversation storyboard gain "Spoken lines": edit one line and make the voice of the changed lines only.
+
+### Changed — Phase 91
+
+- Saving the script in Step 2 keeps the voice of every unchanged line, so one edit no longer makes the whole video's voice again.
+
 ### Added — Edit a word-roots or grammar Short on its video (Phase 90, 2026-11-03)
 
 - Step 5 of these Shorts shows the beats, the vertical video playing beside them and the selected beat's cards: edit a label, a title, a formula chip and its colour, a table cell, an example, a word's meaning or split, and see it on the video at once; undo / redo; a word's picture can be drawn again.

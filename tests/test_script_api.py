@@ -386,8 +386,8 @@ def test_script_change_downgrades_downstream_status(
 
 
 def test_put_script_reissues_fresh_ids_and_invalidates_stale_ones(client, monkeypatch):
-    """save_script always mints new ids (delete+insert) — a client using the pre-save id
-    for a later Regenerate must fail, and using the id from the save response must work.
+    """A changed line gets a new id — a client using the pre-save id for a later Regenerate must fail, and using the id
+    from the save response must work. Phase 91.1 (D133): an unchanged line keeps its id (and its voice).
     """
     project = create_project(client)
     speaker_ids = [s["id"] for s in project["speakers"]]
@@ -396,7 +396,11 @@ def test_put_script_reissues_fresh_ids_and_invalidates_stale_ones(client, monkey
     first_save = client.put(f"/api/projects/{project['id']}/script", json=payload).json()["data"]
     stale_id = first_save[0]["id"]
 
-    second_save = client.put(f"/api/projects/{project['id']}/script", json=payload).json()["data"]
+    same_save = client.put(f"/api/projects/{project['id']}/script", json=payload).json()["data"]
+    assert same_save[0]["id"] == stale_id  # the same line keeps its identity
+
+    changed = {"lines": [{"speaker_id": speaker_ids[0], "text": "Second save."}]}
+    second_save = client.put(f"/api/projects/{project['id']}/script", json=changed).json()["data"]
     fresh_id = second_save[0]["id"]
 
     assert stale_id != fresh_id

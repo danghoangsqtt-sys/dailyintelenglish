@@ -710,6 +710,7 @@ window.I18N_VI = {
     "This line has no card: edit what it says.": "Câu này không có thẻ: hãy sửa lời đọc.",
     "The bubble shows the spoken line; an asking line's two options are its \"A or B\" text.": "Bong bóng hiện đúng câu đọc; câu hỏi \"A hay B\" chính là hai lựa chọn.",
     "Spoken lines": "Các câu đọc",
+    "The plan was saved on the new voice: approve it, then generate the video": "Đã lưu lại kế hoạch hình theo giọng mới: hãy duyệt kế hoạch, rồi tạo video",
     "Edit a line and save it: only the lines you change get a new voice. Then generate the video.": "Sửa một câu rồi lưu: chỉ những câu đã sửa mới cần tạo lại giọng. Sau đó tạo video.",
     "Edit on the video": "Sửa trên video",
     "Click a beat, change its cards on the right and see it on the video at once. Cards keep their voice; a changed spoken line needs its voice made again. Generate the video once when you are done.": "Bấm vào một nhịp, sửa thẻ ở bên phải và xem ngay trên video. Sửa thẻ không ảnh hưởng giọng; câu đọc nào đổi lời thì cần tạo lại giọng cho câu đó. Sửa xong thì bấm Tạo video một lần.",

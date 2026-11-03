@@ -898,7 +898,7 @@
       byId("solo-explainer-section").hidden = false;
       const soloEditor = await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId,
         { style: state.project.explainer_style || "presenter", topic: state.project.topic || "" });
-      await mountLinePanel(byId("solo-explainer-section"), () => soloEditor?.preview?.());
+      await mountLinePanel(byId("solo-explainer-section"), () => soloEditor?.rebase?.());
     } else {
       await loadProjectVisuals();
       await mountLinePanel(byId("storyboard-section"));  // Phase 91 (D132): no live video for talking characters

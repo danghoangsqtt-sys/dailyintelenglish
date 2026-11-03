@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": 90,
+  "current_phase": 91,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1104,5 +1104,13 @@
     "installed": false,
     "pushed": false,
     "next_task": "Phase 91: the same editing for the other video kinds (owner 2026-11-03)"
+  },
+  "phase91_edit_on_video_all": {
+    "status": "implemented_verified",
+    "date": "2026-11-03",
+    "branch": "owner-runs/20261001-r9",
+    "installed": false,
+    "pushed": false,
+    "next_task": "owner review; install Phases 88 fixes + 90 + 91 together"
   }
 }

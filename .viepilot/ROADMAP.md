@@ -2,7 +2,7 @@
 
 ## Phase 91 — Edit every kind of video on its video (2026-11-03)
 
-Status: in_progress (owner: "áp dụng sửa trên video cho các dạng video khác, điều chỉnh tính năng cho phù hợp với các dạng khác nhau"). Step 2 keeps unchanged voices; slow podcast, flashcards, chat and would-you-rather Shorts get the Phase 90 editor with their own fields; solo explainers and the conversation storyboard keep their visual editors and gain spoken-line editing with changed-lines voice. Defaults D131–D133. [Plan](phases/91-edit-on-video-all/PLAN.md).
+Status: implemented_verified (sandbox: news Short one spoken line → voice 6 s + render 48 s; chat one message → voice 3 s + render 35 s; flashcards and slow podcast edits live on the video; full pytest 2308; not built, installed or pushed). [Summary](phases/91-edit-on-video-all/SUMMARY.md). Step 2 keeps unchanged voices; slow podcast, flashcards, chat and would-you-rather Shorts get the Phase 90 editor with their own fields; solo explainers and the conversation storyboard keep their visual editors and gain spoken-line editing with changed-lines voice. Defaults D131–D133. [Plan](phases/91-edit-on-video-all/PLAN.md).
 
 ## Phase 90 — Edit a word-roots or grammar Short on its video (2026-11-03)
 

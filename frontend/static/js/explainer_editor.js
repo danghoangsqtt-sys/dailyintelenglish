@@ -209,7 +209,11 @@ const ExplainerEditor = (() => {
     const destroy=()=>{state.disposed=true;clearTimeout(state.timer);state.previewToken++;state.preview?.destroy();window.removeEventListener("beforeunload",before);document.removeEventListener("click",navigate,true);};
     window.addEventListener("pagehide",destroy,{once:true});
     try {await reload();const active=await Api.getActiveAiJob(projectId,"propose_explainer");if(active)message(`A durable proposal is ${active.status}. Propose returns the existing job while it is active.`);}catch(error){fail(error);}
-    return {destroy,save,hasUnsaved:()=>state.dirty||!!state.saving,preview};  // Phase 91: the spoken lines refresh it
+    // Phase 91.3: after a spoken line and its voice changed, the plan is saved again on the new script and audio (its
+    // anchors follow the kept line ids); it then waits for the owner's approval as after any script change
+    async function rebase(){await reload();if(!state.view?.plan)return;state.dirty=true;state.edit++;await save();if(state.conflict)return;
+      message("The plan was saved on the new voice: approve it, then generate the video");await preview().catch(fail);}
+    return {destroy,save,hasUnsaved:()=>state.dirty||!!state.saving,preview,rebase};  // Phase 91: the spoken lines use them
   }
   return {mount};
 })();
