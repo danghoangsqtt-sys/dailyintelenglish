@@ -504,3 +504,39 @@ html[data-local-image-ai="off"] .needs-local-gpu { display: none !important; }
 /* Phase 81: a slow-podcast line's Vietnamese translation in Step 2 */
 .line-translation { display: grid; gap: 4px; margin-top: 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
 .line-translation input { width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-weight: 500; font-size: 14px; }
+
+/* Phase 90: edit a word-roots or grammar Short on its video */
+.beat-editor { margin-top: 18px; }
+.beat-editor-head h2 { margin: 0 0 4px; }
+.beat-editor-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+.beat-editor-status { font-size: 13px; color: var(--text-muted); margin-right: auto; }
+.beat-editor-grid { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 300px) minmax(260px, 1.3fr); gap: 16px; align-items: start; }
+.beat-list { list-style: none; margin: 0; padding: 0; max-height: 640px; overflow: auto; display: grid; gap: 6px; }
+.beat-item { width: 100%; text-align: left; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; color: var(--text); font: inherit; }
+.beat-item:hover { border-color: var(--border-strong); }
+.beat-item.selected { border-color: var(--accent); background: var(--accent-soft); }
+.beat-no { font-weight: 700; color: var(--text-muted); font-size: 12px; }
+.beat-kind { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+.beat-voice-dot { color: var(--cta); font-size: 12px; }
+.beat-text { grid-column: 1 / -1; font-size: 13px; color: var(--text-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.beat-player { position: sticky; top: 12px; }
+.beat-player-box { width: 100%; }
+.beat-form { display: grid; gap: 10px; max-height: 640px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; min-width: 0; }
+.beat-form > *, .beat-card > * { min-width: 0; }
+.beat-field input, .beat-field textarea { width: 100%; box-sizing: border-box; }
+.beat-form h3 { margin: 0; }
+.beat-field { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.beat-field input, .beat-field textarea, .beat-chip-row input, .beat-chip-row select, .beat-table input, .beat-add select {
+  font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.beat-card { border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: grid; gap: 8px; margin: 0; }
+.beat-card legend { font-weight: 700; font-size: 13px; padding: 0 4px; }
+.beat-chip-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.beat-chip-row input { flex: 1 1 90px; }
+.beat-chip-row select { flex: 0 1 auto; }
+.beat-sub { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.beat-table { display: grid; gap: 4px; align-items: center; }
+.beat-table input { width: 100%; box-sizing: border-box; }
+.beat-table-head { font-weight: 700; }
+.beat-card-actions, .beat-add { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 1100px) { .beat-editor-grid { grid-template-columns: 1fr; } .beat-player { position: static; max-width: 320px; } .beat-list { max-height: 260px; } }

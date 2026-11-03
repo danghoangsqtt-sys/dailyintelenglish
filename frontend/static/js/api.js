@@ -182,6 +182,11 @@ const Api = (() => {
         body: JSON.stringify({ background_music: backgroundMusic || null }),
       }),
     getAudioStatus: (projectId) => request(`/api/projects/${projectId}/audio/status`),
+    // Phase 90: edit a word-roots or grammar Short on its video
+    getBeats: (projectId) => request(`/api/projects/${projectId}/beats`),
+    saveBeats: (projectId, lines) => request(`/api/projects/${projectId}/beats`, json("PUT", { lines })),
+    saveBeatText: (projectId, lineId, text) => request(`/api/projects/${projectId}/beats/${lineId}/text`, json("PUT", { text })),
+    redrawBeatPicture: (projectId, word, picture) => request(`/api/projects/${projectId}/beats/picture`, json("POST", { word, picture })),
     audioDownloadUrl: (projectId, format) => `/api/projects/${projectId}/audio/download?format=${format}`,
     listMusic: () => request("/api/music"),
     uploadMusic: (file) => {
