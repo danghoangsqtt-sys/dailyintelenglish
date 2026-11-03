@@ -65,9 +65,11 @@ function Example({ item, unit }: { item: GrammarItem; unit: number }) {
   return <div style={cardBox(unit, { display: "grid", gap: 10 * unit, textAlign: "center" })}>
     <div style={{ fontFamily: SANS, fontWeight: 800, color: INK, fontSize: 48 * unit, lineHeight: 1.3 }}>
       {pieces.map((piece, at) => piece.role
-        ? <span key={at} style={{ color: piece.role === "v3" ? "#151515" : chipColour(piece.role).fill,
+        // a "plain" mark is ink (sandbox run 2026-11-03: its beige chip fill made "really" invisible on the card)
+        ? <span key={at} style={{ color: piece.role === "v3" || piece.role === "plain" ? "#151515" : chipColour(piece.role).fill,
           background: piece.role === "v3" ? YELLOW : "transparent", borderRadius: 10 * unit, padding: piece.role === "v3" ? `0 ${8 * unit}px` : 0,
-          textDecoration: piece.role === "v3" ? "none" : `underline ${5 * unit}px`, textUnderlineOffset: `${8 * unit}px` }}>{piece.text}</span>
+          textDecoration: piece.role === "v3" ? "none" : `underline ${5 * unit}px`, textUnderlineOffset: `${8 * unit}px`,
+          textDecorationColor: piece.role === "plain" ? YELLOW : undefined }}>{piece.text}</span>
         : <span key={at}>{piece.text}</span>)}
     </div>
     {item.vi ? <div style={{ fontFamily: HAND, color: MUTED, fontSize: 40 * unit, lineHeight: 1.2 }}>{item.vi}</div> : null}
