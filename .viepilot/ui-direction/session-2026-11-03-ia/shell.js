@@ -13,7 +13,7 @@
   ].map(([k, href, ic, t, n]) => `<a href="${href}"${k === page ? ' aria-current="page"' : ""}>${I(ic)}${t}${n ? `<span class="n">${n}</span>` : ""}</a>`).join("");
   // v5: the sidebar keeps only places; series, automation and notifications were repeats of Kênh and Hôm nay
   const side = `<aside class="side">
-    <a class="ws" href="home.html"><img src="${R}frontend/static/brand/logo-64.png" alt=""><span class="grow"><b>Daily Beyond English</b><small>Kênh YouTube</small></span></a>
+    <a class="ws" href="home.html"><img src="${R}frontend/static/brand/logo-64.png" alt=""><span class="grow"><b>Daily Beyond English</b></span></a>
     <a class="btn primary new" href="create.html"${page === "create" ? ' aria-current="page"' : ""}>${I("plus")}Tạo video</a>
     <nav class="nav">${nav}</nav>
     <div class="foot"><nav class="nav"><a href="#">${I("help")}Hướng dẫn</a><a href="#">${I("settings")}Cài đặt</a></nav></div></aside>`;
