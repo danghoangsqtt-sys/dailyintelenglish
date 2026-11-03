@@ -64,8 +64,7 @@ with autosave, the stage bar, the work in the middle, a helper panel on the righ
 
 ## Open questions for the owner
 
-
 - Keep "Tự động" as its own item in the sidebar (some owners like a big on/off), or only inside Kênh as proposed?
-- "Video của tôi": v2 shows a poster grid (with a list toggle); keep the grid as default, or the dense table?
+- "Video của tôi": v4 shows a table (with a grid toggle); keep the table as default?
 - Build the step pages as drawn in `flow-*.html` (bigger change), or first only add the shared frame and the stage bar
   around today's step pages?
