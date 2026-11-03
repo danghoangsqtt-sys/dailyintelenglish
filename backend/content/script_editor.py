@@ -31,7 +31,7 @@ CRITERIA = ("hook", "message", "examples", "natural", "level", "ending")
 PASS_SCORE = 4
 SOURCE_LIMIT = 6000
 # A flashcard deck and a slow podcast (with its translations) are built line by line: the editor leaves them alone
-SKIPPED_STYLES = ("flashcards", "slowpod", "roots")  # Phase 87: a word family's beats too
+SKIPPED_STYLES = ("flashcards", "slowpod", "roots", "grammar")  # Phase 87/88: a word family's or a lesson's beats too
 
 
 class EditorScores(BaseModel):

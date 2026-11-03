@@ -137,7 +137,7 @@ def _link(item: dict[str, Any]) -> str:
 KINDS = {"presenter": "Solo", "vox": "VOX", "news": "Short · English news", "blur": "Short · text on blur",
          "mistakes": "Short · Don't say / Say", "wordday": "Short · word of the day", "top5": "Short · top 5",
          "slowpod": "Short · slow English podcast", "flashcards": "Short · vocabulary flashcards",
-         "roots": "Short · word roots",
+         "roots": "Short · word roots", "grammar": "Short · easy grammar",
          "quiz": "Short · quiz", "listen": "Short · listening", "chat": "Short · chat", "wyr": "Short · would you rather"}
 
 

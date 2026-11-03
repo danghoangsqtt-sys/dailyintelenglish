@@ -40,6 +40,7 @@ from backend.content import project_service, script_service
 from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
+from backend.content import grammar_lesson
 from backend.content.word_family import WordFamily, build_beats, roots_prompt, with_checked_facts
 from backend.ai.tts.vocal_cues import caption_text
 
@@ -1425,6 +1426,79 @@ async def _run_roots_job(db, job: dict, project: dict, router: "AIRouter") -> No
     await export_service.sync_quietly(db, project_id)
 
 
+_LESSON_ADAPTER = TypeAdapter(grammar_lesson.GrammarLesson)
+_REVIEW_ADAPTER = TypeAdapter(grammar_lesson.LessonReview)
+
+
+async def _reviewed_lesson(db, job_id: str, router: "AIRouter", lesson: grammar_lesson.GrammarLesson,
+                           lang: str) -> grammar_lesson.GrammarLesson:
+    """Phase 88: a second pass checks the rules and the English examples and returns the lesson corrected. A failed or
+    unusable review keeps the first lesson (the video is still made); the issues found are logged."""
+    request = GenerationRequest(prompt=grammar_lesson.review_prompt(lesson.model_dump_json(), lang),
+                                json_schema=grammar_lesson.LessonReview.model_json_schema(),
+                                deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="grammar_review")
+    try:
+        result = await _call_router(db, job_id, router, request, section_index=None, is_repair=False, adapter=_REVIEW_ADAPTER)
+        review = parse_and_validate(result.text, _REVIEW_ADAPTER)
+    except (ProviderError, SchemaValidationError) as exc:
+        logger.warning("grammar_review_failed job_id=%s reason=%s", job_id, str(exc)[:200])
+        return lesson
+    if review.issues:
+        logger.info("grammar_review_fixed job_id=%s issues=%s", job_id, review.issues)
+    return grammar_lesson.with_clean_text(review.lesson)
+
+
+async def _run_grammar_job(db, job: dict, project: dict, router: "AIRouter") -> None:
+    """Phase 88: an easy-grammar Short is built from one schema-checked lesson, checked by a second pass, in the
+    narration language of its audience (like the word-roots Short)."""
+    from backend.content import audience as audience_settings
+
+    job_id, project_id = job["id"], project["id"]
+    async with read_transaction():
+        lang = "en" if await audience_settings.resolve(db, project_id) == "international" else "vi"
+    await _update_progress(db, job_id, "lesson", 20)
+    request = GenerationRequest(prompt=grammar_lesson.grammar_prompt(project["topic"], project["cefr_level"], lang),
+                                json_schema=grammar_lesson.GrammarLesson.model_json_schema(),
+                                deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="grammar_lesson")
+    try:
+        result = await _call_router(db, job_id, router, request, section_index=None, is_repair=False, adapter=_LESSON_ADAPTER)
+        lesson = grammar_lesson.with_clean_text(parse_and_validate(result.text, _LESSON_ADAPTER))
+    except ProviderError as exc:
+        await _fail_provider(db, job_id, exc)
+        return
+    except SchemaValidationError as exc:
+        await _fail(db, job_id, "grammar_lesson_invalid", [str(exc)[:300]])
+        return
+    await _update_progress(db, job_id, "review", 60)
+    reviewed = await _reviewed_lesson(db, job_id, router, lesson, lang)
+    try:
+        beats = grammar_lesson.build_beats(reviewed, lang)
+    except ValueError:
+        try:  # the review dropped too much: the first lesson is still a lesson
+            beats = grammar_lesson.build_beats(lesson, lang)
+        except ValueError as exc:
+            await _fail(db, job_id, "grammar_lesson_invalid", [str(exc)[:300]])
+            return
+    speaker_id = project["speakers"][0]["id"]
+    server_lines = [{"speaker_id": speaker_id, "text": text,
+                     "language_notes": LanguageNotesOut(grammar=card).model_dump()} for text, card in beats]
+    async with write_transaction(db):
+        final_project = await project_service.get_project(db, project_id)
+        if _job_project_hash(final_project, job) != job["config_hash"]:
+            await ai_job_service.mark_stale(db, job_id, commit=False)
+            return
+        if await _is_cancelled(db, job_id, project_id):
+            await ai_job_service.transition_status(db, job_id, "cancelled", commit=False)
+            return
+        await ai_job_service.transition_status(db, job_id, "validating", commit=False)
+        await _set_narrator_engine(db, final_project, speaker_id, lang)
+        await script_service.save_script(db, project_id, server_lines, {speaker_id}, commit=False)
+        await project_service.mark_script_changed(db, project_id, commit=False)
+        await ai_job_service.transition_status(db, job_id, "complete", commit=False)
+    from backend.content import export_service
+    await export_service.sync_quietly(db, project_id)
+
+
 class _Translations(BaseModel):
     translations: list[str] = Field(min_length=1, max_length=200)
 
@@ -1482,6 +1556,9 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         return
     if project.get("explainer_style") == "roots":  # Phase 87: a word family, not prose
         await _run_roots_job(db, job, project, router)
+        return
+    if project.get("explainer_style") == "grammar":  # Phase 88: a grammar lesson, not prose
+        await _run_grammar_job(db, job, project, router)
         return
 
     known_speaker_ids = {speaker["id"] for speaker in project["speakers"]}

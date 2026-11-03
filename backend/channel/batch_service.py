@@ -45,8 +45,12 @@ TEMPLATES = {
     # Phase 87 (D125): one word family per Short, explained in Vietnamese for Vietnamese learners
     "roots": ("Word roots, prefixes and suffixes",
               "one English root, prefix or suffix (e.g. PRESS, un-, -tion) and five to seven common words built with it"),
+    # Phase 88: one grammar point per Short, explained by its essence
+    "grammar": ("Easy grammar",
+                "one grammar point explained by its essence (e.g. the passive voice, the present perfect) or one mistake "
+                "Vietnamese speakers make (e.g. I very like)"),
 }
-TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "chat", "wyr",
+TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr",
                         "conversation", "presenter", "vox"]
 TWO_CHARACTERS = (*CONVERSATION_SHORT_STYLES, "conversation")
 

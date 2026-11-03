@@ -5,7 +5,7 @@ Task cards written and committed before code; self-implemented in this session.
 
 | Task | Scope | Status |
 |---|---|---|
-| 88.1 | `grammar` template: data and script | in_progress |
-| 88.2 | `GrammarScene` renderer | pending |
+| 88.1 | `grammar` template: data and script | done — lesson model, second-pass review (kept when it fails), beats vi/en with cumulative cards, narrator switched to VieNeu, Step 2 keeps the cards, batch kind; 7 tests |
+| 88.2 | `GrammarScene` renderer | in_progress |
 | 88.3 | UI wiring | pending |
 | 88.4 | Verify | pending |

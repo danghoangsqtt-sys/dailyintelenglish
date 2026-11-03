@@ -468,6 +468,11 @@ async def _build_input_props(
             if key in drawn:
                 card["pictureUrl"] = f"remotion-render/visuals/{project_id}/roots/{drawn[key].name}"
             line["roots"] = card
+    if project.get("explainer_style") == "grammar":  # Phase 88: each line's scene header and the cards shown so far
+        cursor = await db.execute("SELECT language_notes FROM script_lines WHERE project_id = ? ORDER BY line_index", (project_id,))
+        notes = [json.loads(row[0] or "{}") or {} for row in await cursor.fetchall()]
+        for index, line in enumerate(lines):
+            line["grammar"] = (notes[index] if index < len(notes) else {}).get("grammar") or {}
     # Phase 44 (D123): the drawn-shot ("illustrated") video is gone; an old request for it gets talking characters
     visual_mode = "podcast_sprites" if visual_mode == "illustrated" else visual_mode
     still_plate = await _resolve_still_plate(db, project_id, still_scene_id) if visual_mode == "podcast_still" else None

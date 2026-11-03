@@ -30,6 +30,8 @@ class LanguageNotesOut(BaseModel):
     translation_vi: str = ""
     # Phase 87: a word-roots Short's beat card (hook, split, example, quiz...), drawn by the renderer from its line
     roots: dict | None = None
+    # Phase 88: an easy-grammar Short's beat (scene header and the cards shown so far)
+    grammar: dict | None = None
 
 
 class ScriptLineOut(BaseModel):
