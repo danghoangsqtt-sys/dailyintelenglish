@@ -2,7 +2,7 @@
 
 ## Phase 92 — Example clips for every kind of video (2026-11-03)
 
-Status: planned. A short muted example clip on every kind card in Step 1 and the Shorts batch page (plays on hover, "Xem ví dụ" for a larger one, "Ví dụ minh hoạ" and "Phù hợp cho…"), made by the app's renderer from the sample props in Vietnamese and English; the three 16:9 kinds cut from the owner's own videos. Defaults D134–D137. [Plan](phases/92-template-samples/PLAN.md).
+Status: in_progress (owner: "Chạy Phase 92", defaults). A short muted example clip on every kind card in Step 1 and the Shorts batch page (plays on hover, "Xem ví dụ" for a larger one, "Ví dụ minh hoạ" and "Phù hợp cho…"), made by the app's renderer from the sample props in Vietnamese and English; the three 16:9 kinds cut from the owner's own videos. Defaults D134–D137. [Plan](phases/92-template-samples/PLAN.md).
 
 ## Phase 91 — Edit every kind of video on its video (2026-11-03)
 
