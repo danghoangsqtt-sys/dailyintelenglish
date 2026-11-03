@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng D · Thân thiện</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="base.css">
+<style>
+/* Direction D (owner 2026-11-03: worst = layout and type; likes Canva, Notion/Linear, Duolingo; keep Lina).
+   Canva: labelled left nav, a big search band, picture cards. Notion/Linear: one clear type scale on an 8 px grid.
+   Duolingo: a round bold face (Nunito), chunky buttons with a solid bottom edge, the character inside the content. */
+:root {
+  --bg: #ffffff; --soft: #f5f7f4; --line: #e8ece6; --ink: #1c2a22; --ink-2: #4b5a50; --ink-3: #8a968e;
+  --green: #22a45d; --green-d: #17834a; --green-l: #e7f6ec; --yellow: #ffc800; --yellow-d: #e0a800; --yellow-l: #fff6d6;
+  --blue: #1cb0f6; --blue-d: #1899d6; --red: #ff4b4b; --red-l: #ffecec; --purple: #ce82ff; --orange: #ff9600;
+  --r: 16px; --head: "Nunito", "Inter", sans-serif;
+}
+body { background: var(--bg); color: var(--ink); font-size: 17px; display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100vh; }
+h1, h2, h3 { font-family: var(--head); letter-spacing: -.01em; }
+
+/* left nav, Canva-like */
+.nav { position: sticky; top: 0; height: 100vh; border-right: 2px solid var(--line); padding: 20px 16px; display: flex; flex-direction: column; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 12px; padding: 4px 10px 18px; font: 900 19px/1.1 var(--head); color: var(--green-d); }
+.brand img { width: 44px; height: 44px; border-radius: 50%; }
+.nav a { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 14px; border-radius: 14px; font: 800 17px var(--head); color: var(--ink-2); border: 2px solid transparent; }
+.nav a:hover { background: var(--soft); }
+.nav a[aria-current="page"] { background: #ddf4ff; border-color: #84d8ff; color: #1899d6; }
+.nav a .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: #fff; }
+.nav a .n { margin-left: auto; min-width: 26px; height: 26px; border-radius: 13px; background: var(--red); color: #fff; font: 800 14px var(--head); display: grid; place-items: center; }
+.nav .create { margin: 8px 0 14px; }
+
+/* Duolingo buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 14px; font: 800 16px var(--head);
+  letter-spacing: .02em; text-transform: uppercase; border: 2px solid var(--line); border-bottom-width: 4px; background: #fff; color: var(--ink-2); cursor: pointer; }
+.btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+.btn.g { background: var(--green); border-color: var(--green-d); color: #fff; }
+.btn.y { background: var(--yellow); border-color: var(--yellow-d); color: #4b3800; }
+.btn.b { background: var(--blue); border-color: var(--blue-d); color: #fff; }
+.btn.sm { height: 40px; padding: 0 16px; font-size: 14px; border-radius: 12px; }
+.btn.full { width: 100%; }
+
+main { padding: 28px 40px 48px; display: grid; gap: 36px; align-content: start; max-width: 1640px; width: 100%; }
+.top { display: flex; align-items: center; gap: 16px; }
+.top h1 { font-size: 34px; font-weight: 900; }
+.top .date { color: var(--ink-3); font-weight: 700; font-size: 17px; }
+.top .streak { margin-left: auto; display: flex; gap: 22px; font: 900 18px var(--head); }
+.top .streak span { display: flex; align-items: center; gap: 6px; }
+
+/* hero: search band + Lina inside it */
+.hero { position: relative; border-radius: 28px; padding: 36px 44px; min-height: 260px; display: grid; grid-template-columns: minmax(0, 1fr) 290px 300px; gap: 8px; align-items: center;
+  background: linear-gradient(120deg, #22a45d 0%, #1fb48a 55%, #1cb0f6 100%); color: #fff; overflow: visible; }
+.hero h2 { font-size: 36px; font-weight: 900; line-height: 1.15; }
+.hero .search { margin-top: 20px; height: 60px; max-width: 720px; border-radius: 18px; background: #fff; color: var(--ink-3); display: flex; align-items: center; gap: 12px; padding: 0 20px;
+  font-size: 18px; font-weight: 600; box-shadow: 0 6px 0 rgba(0, 0, 0, .12); }
+.hero .search .i { width: 24px; height: 24px; color: var(--ink-2); }
+.cats { display: flex; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+.cats a { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 18px 0 8px; border-radius: 24px; background: rgba(255, 255, 255, .18); font: 800 16px var(--head); }
+.cats a:hover { background: rgba(255, 255, 255, .3); }
+.cats a .th { width: 34px; border-radius: 17px; aspect-ratio: 1; }
+.hero .lina { position: relative; align-self: end; height: 300px; margin: -76px -10px -36px 0; }
+.hero .lina img { position: absolute; right: 0; bottom: 0; height: 100%; }
+.hero .say { position: relative; align-self: center; background: #fff; color: var(--ink); border-radius: 20px 20px 4px 20px; padding: 16px 18px;
+  font-size: 17px; font-weight: 600; line-height: 1.45; box-shadow: 0 6px 0 rgba(0, 0, 0, .1); border: 2px solid var(--line); }
+.hero .say b { color: var(--green-d); }
+
+/* section heads, Notion-like */
+.sh { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+.sh h2 { font-size: 26px; font-weight: 900; }
+.sh .c { font: 900 16px var(--head); background: var(--red); color: #fff; border-radius: 12px; padding: 1px 10px; }
+.sh a { margin-left: auto; font: 800 16px var(--head); color: var(--blue-d); text-transform: uppercase; letter-spacing: .03em; }
+
+/* review cards, Canva design cards */
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.card { border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 22px; padding: 14px; display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 16px; }
+.card .th { border-radius: 14px; }
+.card .body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.card .tag { align-self: start; font: 800 14px var(--head); padding: 3px 12px; border-radius: 10px; }
+.tag.y { background: var(--yellow-l); color: #a07800; } .tag.r { background: var(--red-l); color: #d33; } .tag.b { background: #ddf4ff; color: #1899d6; }
+.card h3 { font-size: 20px; font-weight: 900; line-height: 1.2; }
+.card p { color: var(--ink-3); font-size: 15.5px; font-weight: 600; }
+.card .acts { margin-top: auto; display: grid; gap: 8px; }
+.card.new { border-style: dashed; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; color: var(--ink-3); }
+.card.new .plus { width: 64px; height: 64px; border-radius: 20px; background: var(--green-l); color: var(--green-d); display: grid; place-items: center; font: 900 36px var(--head); }
+.card.new b { font: 900 19px var(--head); color: var(--ink); }
+
+.two { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; }
+.panel { border: 2px solid var(--line); border-radius: 22px; padding: 22px 24px; }
+.job { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 12px 0; }
+.job + .job { border-top: 2px solid var(--line); }
+.job b { font: 900 18px var(--head); }
+.job span { display: block; color: var(--ink-3); font-weight: 600; font-size: 15.5px; }
+.prog { height: 16px; border-radius: 8px; background: var(--soft); margin-top: 8px; overflow: hidden; }
+.prog i { display: block; height: 100%; border-radius: 8px; background: var(--green); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .1); }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.day { text-align: center; font: 800 15px var(--head); color: var(--ink-3); }
+.day .th { margin-top: 8px; border-radius: 12px; border: 3px solid transparent; }
+.day.today { color: var(--green-d); }
+.day.today .th { border-color: var(--green); }
+.day .th.wait { border-color: var(--yellow); }
+.day .th.plan { opacity: .35; }
+.day .none { margin-top: 8px; aspect-ratio: 9 / 16; border-radius: 12px; border: 2px dashed var(--line); }
+.legend { display: flex; gap: 18px; margin-top: 16px; font-weight: 700; font-size: 15px; color: var(--ink-3); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; }
+@media (max-width: 1500px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hero { grid-template-columns: minmax(0, 1fr) 230px 230px; padding: 32px 32px; }
+  .hero .say { font-size: 15.5px; } .hero .lina { height: 260px; } }
+</style></head>
+<body>
+<nav class="nav">
+  <a class="brand" href="#"><img src="../../../frontend/static/brand/logo-64.png" alt="">Daily Beyond<br>English</a>
+  <a class="btn g create" href="#"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#plus"/></svg>Tạo video</a>
+  <a href="#" aria-current="page"><span class="ic" style="background:#1cb0f6"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#home"/></svg></span>Hôm nay<span class="n">3</span></a>
+  <a href="#"><span class="ic" style="background:#ff9600"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#calendar"/></svg></span>Kênh</a>
+  <a href="#"><span class="ic" style="background:#ce82ff"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#film"/></svg></span>Video của tôi</a>
+  <a href="#"><span class="ic" style="background:#22a45d"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#library"/></svg></span>Thư viện</a>
+  <a href="#" style="margin-top:auto"><span class="ic" style="background:#8a968e"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#settings"/></svg></span>Cài đặt</a>
+</nav>
+
+<main>
+  <div class="top"><h1>Hôm nay</h1><span class="date">Thứ Ba, 3 tháng 11</span>
+    <div class="streak"><span style="color:#ff9600">🔥 12 ngày đăng liên tục</span><span style="color:#1899d6">▶ 14 video tháng này</span></div></div>
+
+  <section class="hero">
+    <div>
+      <h2>Hôm nay mình làm video gì?</h2>
+      <div class="search"><svg class="i"><use href="../session-2026-11-03-ia/icons.svg#search"/></svg>Nhập một chủ đề: câu bị động, gốc từ SPECT, tin tuần…</div>
+      <div class="cats">
+        <a href="#"><span class="th"><img src="../../../frontend/static/samples/grammar-vi.jpg" alt=""></span>Ngữ pháp</a>
+        <a href="#"><span class="th"><img src="../../../frontend/static/samples/roots-vi.jpg" alt=""></span>Gốc từ</a>
+        <a href="#"><span class="th"><img src="../../../frontend/static/samples/conversation_short.jpg" alt=""></span>Hội thoại</a>
+        <a href="#"><span class="th"><img src="../../../frontend/static/samples/wordday-vi.jpg" alt=""></span>Từ của ngày</a>
+        <a href="#"><span class="th"><img src="../../../frontend/static/samples/news-vi.jpg" alt=""></span>Tin tức</a>
+        <a href="#">Tất cả mẫu →</a>
+      </div>
+    </div>
+    <div class="say">Chào buổi chiều! Đêm qua mình làm xong <b>3 video</b>. Bạn duyệt giúp mình nhé!</div>
+    <div class="lina"><img src="../session-2026-11-03-ia/mascot/lina/front/gesture-wave.webp" alt="Lina"></div>
+  </section>
+
+  <section>
+    <div class="sh"><h2>Chờ bạn duyệt</h2><span class="c">3</span><a href="#">Xem tất cả</a></div>
+    <div class="cards">
+      <div class="card"><div class="th"><img src="../../../frontend/static/samples/grammar-vi.jpg" alt=""></div><div class="body"><span class="tag y">Chờ duyệt</span><h3>Câu bị động: hiểu bản chất</h3><p>Ngữ pháp · 0:58</p>
+        <div class="acts"><a class="btn g sm" href="#">Duyệt</a><a class="btn sm" href="#">Xem</a></div></div></div>
+      <div class="card"><div class="th"><img src="../../../frontend/static/samples/roots-vi.jpg" alt=""></div><div class="body"><span class="tag r">Thiếu 3 hình</span><h3>Hậu tố -MENT</h3><p>Gốc từ · 1:45</p>
+        <div class="acts"><a class="btn y sm" href="#">Vẽ lại hình</a></div></div></div>
+      <div class="card"><div class="th"><img src="../../../frontend/static/samples/news-vi.jpg" alt=""></div><div class="body"><span class="tag y">Chờ duyệt</span><h3>Cities plant more trees</h3><p>Tin tức · AI sửa 1 câu</p>
+        <div class="acts"><a class="btn g sm" href="#">Duyệt</a><a class="btn sm" href="#">Xem</a></div></div></div>
+      <a class="card new" href="#"><span class="plus">+</span><b>Làm thêm Short</b><span style="font-weight:600">Lina đề xuất 5–10 ý tưởng</span></a>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="panel">
+      <div class="sh"><h2>Đang làm</h2></div>
+      <div class="job"><div class="th"><img src="../../../frontend/static/samples/mistakes-vi.jpg" alt=""></div><div><b>Lỗi "I very like"</b><span>Đang dựng video · cảnh 5/6</span><div class="prog"><i style="width:84%"></i></div></div><span style="font:900 18px var(--head);color:var(--green-d)">84%</span></div>
+      <div class="job"><div class="th"><img src="../../../frontend/static/samples/grammar-vi.jpg" alt=""></div><div><b>Thì hiện tại hoàn thành</b><span>Chờ tạo giọng · Tự động 23:00</span><div class="prog"><i style="width:6%"></i></div></div><span style="font:900 18px var(--head);color:var(--ink-3)">Đêm nay</span></div>
+    </section>
+    <section class="panel">
+      <div class="sh"><h2>Tuần này</h2><a href="#">Mở lịch</a></div>
+      <div class="week" id="week"></div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Sẵn sàng</span><span><i style="background:var(--yellow)"></i>Chờ duyệt</span><span><i style="background:#d6ddd6"></i>Kế hoạch</span></div>
+    </section>
+  </div>
+</main>
+<nav class="switch"><a href="a-board.html">A</a><a href="b-studio.html">B</a><a href="c-bento.html">C</a><a href="d-friendly.html" aria-current="page">D · Thân thiện</a></nav>
+<script>
+const S = (img) => `../../../frontend/static/samples/${img}.jpg`;
+const W = [["T2", "roots-vi"], ["T3", "roots-vi", "today"], ["T4", "grammar-vi", "", "wait"], ["T5", "chat-vi"], ["T6", "roots-vi", "", "plan"], ["T7", "wordday-vi"], ["CN"]];
+document.getElementById("week").innerHTML = W.map(([d, img, today, k]) => `<div class="day ${today || ""}">${d}${img ? `<div class="th ${k || ""}"><img src="${S(img)}" alt=""></div>` : '<div class="none"></div>'}</div>`).join("");
+</script></body></html>

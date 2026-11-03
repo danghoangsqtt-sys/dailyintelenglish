@@ -16,6 +16,18 @@ A switcher at the bottom moves between them. Serve the repo root (`python -m htt
 
 Content kept from the earlier work: the five areas, the 7 steps in 3 stages, no repeated numbers, Lina as the mascot.
 
+## Owner's answers after A–C ("vẫn rất xấu", 2026-11-03)
+
+- Worst: **layout and type size** (not the colours, covers or mascot).
+- Likes: **Canva, Notion / Linear, Duolingo**.
+- Mascot: **Lina**.
+
+Direction D (`d-friendly.html`) follows those: Canva's labelled left nav with coloured icons, a big gradient search band
+with template chips; Notion/Linear's one clear type scale (34/26/20/17 px, Nunito for headings) on an 8 px grid;
+Duolingo's round bold face, chunky buttons with a solid bottom edge, a red count badge, a streak line, Lina inside the
+band with her own speech column. Checked at 1920×1080 and 1366×768. Nunito comes from Google Fonts in the prototype
+(the app would ship the font file).
+
 ## Pages inventory
 
 | File | Purpose |
@@ -24,6 +36,7 @@ Content kept from the earlier work: the five areas, the 7 steps in 3 stages, no 
 | `a-board.html` | direction A, Home |
 | `b-studio.html` | direction B, Home |
 | `c-bento.html` | direction C, Home |
+| `d-friendly.html` | direction D, Home (Canva + Notion + Duolingo) |
 
 ## Open question for the owner
 
