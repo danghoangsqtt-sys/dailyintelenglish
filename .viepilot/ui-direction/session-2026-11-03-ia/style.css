@@ -4,22 +4,13 @@
 @font-face { font-family: "Montserrat"; src: url("../../../frontend/static/fonts/Montserrat-Variable.ttf"); font-weight: 100 900; }
 @font-face { font-family: "Inter"; src: url("../../../frontend/static/fonts/Inter-Variable.ttf"); font-weight: 100 900; }
 :root {
-  /* "light" (default): a neutral, slightly green-grey page so the pictures carry the colour */
+  /* v3, owner picked "Sáng" (2026-11-03): a neutral, slightly green-grey page so the pictures carry the colour */
   --page: #f4f6f3; --card: #ffffff; --soft: #eef1ec; --line: #e2e7e0; --field: #fbfcfa; --ink: #15211a; --ink-2: #3f4b43; --muted: #758078;
   --green: #1d7a3a; --green-deep: #0f4d2a; --green-soft: #e3f1e1; --lime: #9bd13c; --yellow: #ffd60a; --yellow-soft: #fff5c2;
   --red: #e5483d; --red-soft: #fde6e3; --blue: #2b6cb0; --blue-soft: #e5effa; --rail: #ffffff; --on-yellow: #3d3000;
   --shadow: 0 1px 2px rgba(21, 33, 26, .05), 0 10px 30px rgba(21, 33, 26, .07);
   --r: 18px; --head: "Montserrat", "Segoe UI", sans-serif; --body: "Inter", "Segoe UI", sans-serif;
 }
-/* "dark": a CapCut-like studio, the covers glow on charcoal */
-:root[data-theme="dark"] {
-  --page: #0f1311; --card: #181d1a; --soft: #222925; --line: #2a322d; --field: #121614; --ink: #eef3ef; --ink-2: #c3ccc5; --muted: #8b958e;
-  --green: #2fa557; --green-deep: #1d7a3a; --green-soft: rgba(47, 165, 87, .16); --yellow-soft: rgba(255, 214, 10, .14);
-  --red-soft: rgba(229, 72, 61, .18); --blue-soft: rgba(43, 108, 176, .2); --rail: #141816;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
-}
-/* "cream": the channel banner's warm paper (v2) */
-:root[data-theme="cream"] { --page: #f6f3ea; --soft: #f1eee4; --line: #e7e2d4; --field: #fffdf8; }
 * { box-sizing: border-box; }
 body { margin: 0; font: 15px/1.5 var(--body); color: var(--ink); background: var(--page); }
 a { color: inherit; text-decoration: none; }
@@ -40,7 +31,7 @@ h1, h2, h3 { font-family: var(--head); letter-spacing: -.01em; margin: 0; }
   font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 4px; }
 .rail .create { width: 52px; height: 52px; border-radius: 16px; background: var(--green); color: #fff; display: grid; place-items: center; padding: 0;
   margin: 4px 0 10px; box-shadow: 0 6px 16px rgba(29, 122, 58, .35); }
-.rail .create:hover { background: var(--green-deep); }
+.rail .create:hover, .rail .create[aria-current="page"] { background: var(--green-deep); color: #fff; }
 .rail .create svg.i { width: 26px; height: 26px; }
 .rail .bottom { margin-top: auto; }
 .main { padding: 26px 34px 70px; max-width: 1440px; width: 100%; }
@@ -122,13 +113,6 @@ h1, h2, h3 { font-family: var(--head); letter-spacing: -.01em; margin: 0; }
 .row .grow { flex: 1; min-width: 0; } .row .t { font-weight: 700; font-size: 14px; } .row .s { font-size: 12.5px; color: var(--muted); }
 .row .when { font: 700 12.5px var(--head); color: var(--green); text-align: right; white-space: nowrap; }
 
-/* theme switcher (prototype only) */
-.themes { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; gap: 4px; padding: 5px; border-radius: 16px; background: var(--card);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .18); border: 1px solid var(--line); font-size: 12.5px; align-items: center; }
-.themes span { padding: 0 8px; color: var(--muted); font-weight: 600; }
-.themes button { border: 0; height: 32px; padding: 0 12px; border-radius: 11px; background: transparent; color: var(--ink-2); font: 600 12.5px var(--body); cursor: pointer; }
-.themes button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
-
 /* poster cards: the main visual unit (Canva "designs") */
 .posters { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 18px; }
 .poster { display: grid; gap: 8px; }
@@ -177,12 +161,12 @@ h1, h2, h3 { font-family: var(--head); letter-spacing: -.01em; margin: 0; }
 /* calendar */
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
 .cal .dow { font: 700 12px var(--head); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding-left: 4px; }
-.day { min-height: 150px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); padding: 10px; display: grid; align-content: start; gap: 8px; }
+.day { min-height: 190px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); padding: 10px; display: grid; align-content: start; gap: 8px; }
 .day .n { font: 800 15px var(--head); color: var(--ink-2); display: flex; justify-content: space-between; }
 .day.today { box-shadow: 0 0 0 2px var(--green), var(--shadow); }
 .day.today .n { color: var(--green); }
 .day .ep { display: flex; gap: 8px; align-items: center; }
-.day .ep img { width: 34px; height: 60px; border-radius: 8px; object-fit: cover; flex: none; }
+.day .ep img { width: 42px; height: 74px; border-radius: 8px; object-fit: cover; flex: none; }
 .day .ep span { font-size: 12px; font-weight: 600; line-height: 1.25; }
 .day .ep.planned img { opacity: .45; filter: grayscale(.5); }
 .day .ep.planned span { color: var(--muted); }
@@ -228,3 +212,12 @@ h1, h2, h3 { font-family: var(--head); letter-spacing: -.01em; margin: 0; }
 .check .ok { color: var(--green); } .check .warn { color: #b88400; }
 .check .grow { flex: 1; }
 @media (max-width: 1100px) { .split, .studio { grid-template-columns: 1fr; } .modes { grid-template-columns: 1fr; } .searchbar { min-width: 0; flex: 1; } }
+
+/* create: a search band like Canva's home, then smaller posters so a row holds 6-7 templates */
+.band { position: relative; border-radius: 26px; padding: 34px 40px 30px; text-align: center; overflow: hidden;
+  background: radial-gradient(circle at 12% 20%, rgba(155, 209, 60, .35), transparent 35%), radial-gradient(circle at 90% 80%, rgba(255, 214, 10, .35), transparent 35%), linear-gradient(120deg, #e3f1e1, #d9efe8 55%, #fff5c2); }
+.band h1 { font-size: 32px; font-weight: 800; color: var(--green-deep); }
+.band .searchbar { max-width: 620px; margin: 18px auto 0; height: 52px; border-radius: 26px; box-shadow: var(--shadow); border: 0; font-size: 15px; }
+.band .quick { justify-content: center; margin-top: 22px; }
+.posters.small { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+.posters.small .name { font-size: 14px; }

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tạo video — bản mẫu</title><link rel="stylesheet" href="../style.css"><script src="../theme.js"></script></head>
+<title>Tạo video — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
 <body><div class="app">
 <nav class="rail" aria-label="Điều hướng">
   <img class="logo" src="../../../../frontend/static/brand/logo-64.png" alt="Daily Beyond English">
@@ -12,34 +12,42 @@
   <a class="bottom" href="#"><svg class="i"><use href="../icons.svg#settings"/></svg>Cài đặt</a>
 </nav>
 <main class="main">
-  <div class="top"><div class="grow"><h1>Bạn muốn làm video gì?</h1><p>Chọn một mẫu. Rê chuột lên mẫu để xem video ví dụ.</p></div>
-    <div class="searchbar"><svg class="i"><use href="../icons.svg#search"/></svg>Tìm mẫu: ngữ pháp, tin tức, flashcard…</div></div>
+  <section class="band">
+    <h1>Hôm nay bạn muốn làm video gì?</h1>
+    <div class="searchbar"><svg class="i"><use href="../icons.svg#search"/></svg>Tìm mẫu: ngữ pháp, tin tức, flashcard…</div>
+    <div class="quick">
+      <a href="#academic"><span style="background:linear-gradient(135deg,#1d7a3a,#47b05e)"><svg class="i"><use href="../icons.svg#layers"/></svg></span>Học thuật</a>
+      <a href="#people"><span style="background:linear-gradient(135deg,#e5483d,#ff8a65)"><svg class="i"><use href="../icons.svg#user"/></svg></span>Nhân vật, người dẫn</a>
+      <a href="#quick"><span style="background:linear-gradient(135deg,#d99a00,#ffd60a)"><svg class="i"><use href="../icons.svg#brand"/></svg></span>Mẫu chữ nhanh</a>
+      <a href="#quick"><span style="background:linear-gradient(135deg,#7c3aed,#b088f9)"><svg class="i"><use href="../icons.svg#spark"/></svg></span>Tương tác</a>
+      <a href="#"><span style="background:linear-gradient(135deg,#2b6cb0,#5aa0e6)"><svg class="i"><use href="../icons.svg#film"/></svg></span>Video dài 16:9</a>
+    </div>
+  </section>
 
-  <div class="modes">
-    <a class="mode" href="#" aria-current="false"><div class="stack"><img src="../../../../frontend/static/samples/conversation.jpg" alt="" style="width:112px;height:63px;top:28px;border-radius:10px"></div>
-      <div><h3>Một video</h3><p>Video dài 16:9 hoặc một Short. Đi qua 3 chặng: nội dung, sản xuất, đăng.</p></div></a>
-    <a class="mode" href="#" aria-current="true"><div class="stack"><img src="../../../../frontend/static/samples/news-vi.jpg" alt="" style="left:0;top:8px;transform:rotate(-6deg)"><img src="../../../../frontend/static/samples/wordday-vi.jpg" alt="" style="left:26px;top:2px;z-index:1"><img src="../../../../frontend/static/samples/chat-vi.jpg" alt="" style="left:52px;top:8px;transform:rotate(6deg);z-index:2"></div>
-      <div><h3>Nhiều Short cùng lúc</h3><p>AI đề xuất 5–10 ý tưởng. Duyệt danh sách rồi làm một lần, hoặc để Tự động làm theo lịch.</p></div></a>
+  <div class="modes section">
+    <a class="mode" href="#"><div class="stack"><img src="../../../../frontend/static/samples/conversation.jpg" alt="" style="width:112px;height:63px;top:28px;border-radius:10px"></div>
+      <div><h3>Một video</h3><p>Chọn một mẫu bên dưới. Đi qua 3 chặng: nội dung, sản xuất, đăng.</p></div></a>
+    <a class="mode" href="#"><div class="stack"><img src="../../../../frontend/static/samples/news-vi.jpg" alt="" style="left:0;top:8px;transform:rotate(-6deg)"><img src="../../../../frontend/static/samples/wordday-vi.jpg" alt="" style="left:26px;top:2px;z-index:1"><img src="../../../../frontend/static/samples/chat-vi.jpg" alt="" style="left:52px;top:8px;transform:rotate(6deg);z-index:2"></div>
+      <div><h3>Nhiều Short cùng lúc</h3><p>AI đề xuất 5–10 ý tưởng. Duyệt danh sách rồi làm một lần, hoặc để Tự động làm theo lịch.</p></div>
+      <svg class="i" style="margin-left:auto;color:var(--green)"><use href="../icons.svg#arrow"/></svg></a>
   </div>
 
-  <div class="filters"><span class="chip" aria-pressed="true">Tất cả</span><span class="chip">Học thuật</span><span class="chip">Nhân vật và người dẫn</span><span class="chip">Mẫu chữ nhanh</span><span class="chip">Tương tác</span></div>
-
-  <div class="section-head"><h2>Học thuật</h2><span class="muted">tiếng Việt · 1–3 phút</span></div>
-  <div class="posters">
+  <div class="section-head" id="academic"><h2>Học thuật</h2><span class="muted">tiếng Việt · 1–3 phút</span></div>
+  <div class="posters small">
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><span class="tl chip yellow">Mới</span><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Ngữ pháp dễ hiểu</div><div class="meta">Một điểm ngữ pháp, giảng theo bản chất</div></a>
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><span class="tl chip yellow">Mới</span><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Gốc từ, tiền tố, hậu tố</div><div class="meta">Một gốc và cả họ từ</div></a>
   </div>
 
-  <div class="section-head section"><h2>Nhân vật và người dẫn</h2><span class="muted">dọc 9:16</span></div>
-  <div class="posters">
+  <div class="section-head section" id="people"><h2>Nhân vật và người dẫn</h2><span class="muted">dọc 9:16</span></div>
+  <div class="posters small">
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/conversation_short.jpg" alt=""><span class="tl chip dark">2 nhân vật</span><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Hội thoại</div><div class="meta">Hai nhân vật nói chuyện</div></a>
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/presenter_short.jpg" alt=""><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Người dẫn</div><div class="meta">Giải thích một ý trước máy quay</div></a>
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/vox_short.jpg" alt=""><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">VOX</div><div class="meta">Giọng kể trên nền hình ảnh</div></a>
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/chat-vi.jpg" alt=""><span class="tl chip dark">2 nhân vật</span><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Chat</div><div class="meta">Tin nhắn giữa hai người</div></a>
   </div>
 
-  <div class="section-head section"><h2>Mẫu chữ nhanh</h2><span class="muted">dưới 1 phút</span><a class="more" href="#">Xem cả 8 <svg class="i" style="width:16px"><use href="../icons.svg#arrow"/></svg></a></div>
-  <div class="posters">
+  <div class="section-head section" id="quick"><h2>Mẫu chữ nhanh</h2><span class="muted">dưới 1 phút</span><a class="more" href="#">Xem cả 8 <svg class="i" style="width:16px"><use href="../icons.svg#arrow"/></svg></a></div>
+  <div class="posters small">
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/wordday-vi.jpg" alt=""><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Từ của ngày</div><div class="meta">Nghĩa, cách đọc, ví dụ</div></a>
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/mistakes-vi.jpg" alt=""><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Đừng nói / Hãy nói</div><div class="meta">Một lỗi hay gặp</div></a>
     <a class="poster" href="#"><div class="art"><img src="../../../../frontend/static/samples/news-vi.jpg" alt=""><div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div><div class="name">Tin tức</div><div class="meta">Một tin bằng tiếng Anh dễ hiểu</div></a>
