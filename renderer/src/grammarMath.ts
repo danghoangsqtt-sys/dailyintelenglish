@@ -31,7 +31,9 @@ export function pillColour(beat: string, scene: number): string {
 
 /** "PHÂN CẢNH 2 • BẢN CHẤT CỐT LÕI" for a scene, the label alone for the hook / summary / quiz. */
 export function pillText(beat: string, scene: number, label: string, vietnamese: boolean): string {
-  return beat === "scene" ? `${vietnamese ? "PHÂN CẢNH" : "SCENE"} ${scene} • ${label}` : label;
+  if (beat !== "scene") return label;
+  const lead = `${vietnamese ? "PHÂN CẢNH" : "SCENE"} ${scene}`;
+  return label.trim() ? `${lead} • ${label}` : lead;
 }
 
 type GrammarLine = Pick<EpisodeLine, "startSec" | "grammar">;

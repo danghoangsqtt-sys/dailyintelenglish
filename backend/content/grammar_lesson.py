@@ -121,12 +121,31 @@ def _english(text: str) -> str:
     return "" if _VI_LETTERS.search(text or "") else " ".join((text or "").split())
 
 
-def usable_card(card: GrammarCard | None) -> dict | None:
-    """The card as drawn, or None when it lacks what its kind needs."""
+_ENGLISH_WORDS = {"the", "a", "an", "is", "are", "was", "were", "it", "its", "never", "always", "for", "of", "to", "and",
+                  "with", "in", "on", "not", "be", "has", "have", "you", "this", "that", "when", "use", "only"}
+
+
+def looks_english(text: str) -> bool:
+    """A sentence in English: no Vietnamese letters, three words or more, two of them common English words. (Owner
+    2026-11-03: a Vietnamese video showed the rule card "Past Participle (V3) is an adjective; it never changes for
+    tense.")"""
+    words = re.findall(r"[A-Za-z']+", text or "")
+    if _VI_LETTERS.search(text or "") or len(words) < 3:
+        return False
+    return sum(word.lower() in _ENGLISH_WORDS for word in words) >= 2
+
+
+def usable_card(card: GrammarCard | None, lang: str = "en") -> dict | None:
+    """The card as drawn, or None when it lacks what its kind needs. In a Vietnamese lesson the Vietnamese texts (rule,
+    stamp, the note under a formula or a comparison) must not be English sentences."""
     if card is None:
         return None
     kind = card.kind
     text = " ".join(card.text.split())
+    if lang == "vi" and looks_english(text):
+        if kind in ("rule", "stamp"):
+            return None
+        text = "" if kind in ("formula", "compare") else text
     if kind == "formula":
         chips = [chip.model_dump() for chip in card.chips if chip.text.strip()]
         return {"kind": kind, "chips": chips, **({"text": text} if text else {})} if len(chips) >= 2 else None
@@ -151,7 +170,10 @@ def usable_card(card: GrammarCard | None) -> dict | None:
             return None
         marks = [mark.model_dump() for mark in card.marks if mark.text.strip() and mark.text.lower() in en.lower()]
         return {"kind": kind, "en": en, "vi": card.vi, "marks": marks}
-    # rule, sticker, stamp: a short text
+    # rule, sticker, stamp: a short text; a sticker or stamp written as a sentence is drawn as a rule (sandbox run
+    # 2026-11-03: a 150-character sticker)
+    if kind in ("sticker", "stamp") and len(text) > 28:
+        kind = "rule"
     return {"kind": kind, "text": text} if text else None
 
 
@@ -197,7 +219,7 @@ def build_beats(lesson: GrammarLesson, lang: str) -> list[tuple[str, dict]]:
         cards: list[dict] = []
         steps = []
         for step in scene.steps:
-            card = usable_card(step.card)
+            card = usable_card(step.card, lang)
             if card:
                 cards = [*cards, card][-4:]  # at most four cards on screen; the oldest goes
             steps.append((_sentence(step.say), list(cards)))
@@ -208,7 +230,11 @@ def build_beats(lesson: GrammarLesson, lang: str) -> list[tuple[str, dict]]:
         first = next(shown for _, shown in steps if shown)
         steps = [(say, shown or [first[0]]) for say, shown in steps]
         number += 1
-        header = _header("scene", number, scene.label.upper(), scene.title, scene.subtitle)
+        label, subtitle = scene.label, scene.subtitle
+        if lang == "vi":  # an English label or subtitle in a Vietnamese video is left out (the pill keeps "PHÂN CẢNH N")
+            label = "" if looks_english(label) else label
+            subtitle = "" if looks_english(subtitle) else subtitle
+        header = _header("scene", number, label.upper(), scene.title, subtitle)
         beats.extend((say, {**header, "cards": shown}) for say, shown in steps)
         if number == SCENES_MAX:
             break
@@ -219,12 +245,14 @@ def build_beats(lesson: GrammarLesson, lang: str) -> list[tuple[str, dict]]:
     width = len(lesson.summary.columns)
     rows = [row for row in lesson.summary.rows if len(row.cells) == width]
     table = {"kind": "table", "columns": lesson.summary.columns}
-    beats.append((_SUMMARY_INTRO[lang], {**summary, "cards": [{**table, "rows": []}]}))
-    for count, row in enumerate(rows, start=1):
-        beats.append((_sentence(row.say), {**summary, "cards": [{**table, "rows": [r.cells for r in rows[:count]]}]}))
     full = {**table, "rows": [r.cells for r in rows]}
+    if rows:  # sandbox run 2026-11-03: no row fitted the columns and an empty table was read out; then it is left out
+        beats.append((_SUMMARY_INTRO[lang], {**summary, "cards": [{**table, "rows": []}]}))
+        for count, row in enumerate(rows, start=1):
+            beats.append((_sentence(row.say), {**summary, "cards": [{**table, "rows": [r.cells for r in rows[:count]]}]}))
     core = _header("core", number + 1, _CORE_LABEL[lang], lesson.point.upper())
-    beats.append((_sentence(lesson.core_rule), {**core, "cards": [full, {"kind": "core", "text": _sentence(lesson.core_rule)}]}))
+    core_card = {"kind": "core", "text": _sentence(lesson.core_rule)}
+    beats.append((_sentence(lesson.core_rule), {**core, "cards": [full, core_card] if rows else [core_card]}))
 
     quiz = lesson.quiz
     if quiz and _english(quiz.question) and all(_english(option) for option in quiz.options):
@@ -233,7 +261,7 @@ def build_beats(lesson: GrammarLesson, lang: str) -> list[tuple[str, dict]]:
         beats.append((_QUIZ_LEAD[lang] + _english(quiz.question), {**quiz_header, "cards": [card]}))
         beats.append((GRAMMAR_FOLLOW[lang], {**quiz_header, "beat": "follow", "cards": [card]}))
     else:
-        beats.append((GRAMMAR_FOLLOW[lang], {**core, "beat": "follow", "cards": [full]}))
+        beats.append((GRAMMAR_FOLLOW[lang], {**core, "beat": "follow", "cards": [full] if rows else [core_card]}))
     return beats
 
 
@@ -291,6 +319,41 @@ _EXAMPLE = {
     "core_rule": "TO BE gánh thời gian, V3 là chiếc nhãn dán đứng im.",
     "quiz": {"question": "The letter ___ yesterday.", "options": ["was sent", "is sent"], "answer": "was sent"},
 }
+# Sandbox run 2026-11-03: with only the passive model, the "I very like" lesson borrowed its "missing TO BE" idea and was
+# wrong; a mistake lesson has its own model.
+_ERROR_EXAMPLE = {
+    "point": "Lỗi 'I very like'", "kind": "vietnamese_error",
+    "hook": {"pain": "Bạn vẫn hay nói I very like it, vì tiếng Việt nói tôi rất thích?",
+             "formulas": ["rất đẹp = very beautiful ✓", "rất nhanh = very fast ✓", "rất thích = very like ✗"],
+             "promise": "Một quy tắc nhỏ để không bao giờ nói sai nữa!"},
+    "scenes": [
+        {"label": "Gốc của lỗi", "title": "Chữ 'rất' của tiếng Việt", "subtitle": "Một chữ Việt, hai cách nói tiếng Anh", "steps": [
+            {"say": "Tiếng Việt dùng chữ rất cho mọi thứ: rất đẹp, rất thích.",
+             "card": {"kind": "compare", "left_en": "She is very beautiful.", "left_vi": "Cô ấy rất đẹp.",
+                      "right_en": "I really like it.", "right_vi": "Tôi rất thích nó."}},
+            {"say": "Nhưng trong tiếng Anh, very chỉ đi với tính từ hoặc trạng từ, không đi với động từ.",
+             "card": {"kind": "rule", "text": "VERY + tính từ / trạng từ, KHÔNG + động từ"}}]},
+        {"label": "Động từ cần really", "title": "Really đứng trước động từ", "steps": [
+            {"say": "Muốn nói rất thích, hãy đặt really ngay trước động từ.",
+             "card": {"kind": "formula", "chips": [{"text": "S", "role": "s"}, {"text": "REALLY", "role": "plain"},
+                                                   {"text": "V", "role": "v"}]}},
+            {"say": "I really like this song: tôi rất thích bài hát này.",
+             "card": {"kind": "example", "en": "I really like this song.", "vi": "Tôi rất thích bài hát này.",
+                      "marks": [{"text": "really", "role": "plain"}, {"text": "like", "role": "v"}]}}]},
+        {"label": "Hoặc very much", "title": "Very much đứng cuối câu", "steps": [
+            {"say": "Cách thứ hai: giữ very, nhưng thêm much và đưa xuống cuối câu.",
+             "card": {"kind": "example", "en": "I like this song very much.", "vi": "Tôi rất thích bài hát này.",
+                      "marks": [{"text": "like", "role": "v"}, {"text": "very much", "role": "plain"}]}},
+            {"say": "Very much không bao giờ chen giữa chủ ngữ và động từ.",
+             "card": {"kind": "stamp", "text": "I VERY LIKE ✗"}}]},
+    ],
+    "summary": {"columns": ["Đi với", "Dùng", "Ví dụ"], "rows": [
+        {"cells": ["Tính từ", "very", "very happy"], "say": "Với tính từ, dùng very: very happy."},
+        {"cells": ["Động từ", "really", "really like"], "say": "Với động từ, dùng really trước nó: really like."},
+        {"cells": ["Cuối câu", "very much", "like it very much"], "say": "Hoặc very much ở cuối câu: like it very much."}]},
+    "core_rule": "Very đi với tính từ; với động từ, dùng really hoặc very much ở cuối câu.",
+    "quiz": {"question": "I ___ like this song.", "options": ["very", "really"], "answer": "really"},
+}
 
 
 def grammar_prompt(topic: str, cefr: str, lang: str) -> str:
@@ -300,6 +363,7 @@ def grammar_prompt(topic: str, cefr: str, lang: str) -> str:
         f"You prepare one grammar lesson for a short English-learning video (about two minutes) for {learners} at CEFR "
         f"{cefr}. It explains the point by its essence instead of rote formulas.\n"
         f"Topic: {topic}\n"
+        "The lesson MUST be about exactly this topic; never switch to another grammar point.\n"
         "Kinds: 'essence' explains one grammar point by one idea that makes every formula obvious (e.g. the passive is "
         "a sentence describing a state: S + BE + V3 like S + BE + adjective; TO BE carries the tense, V3 never changes). "
         "'vietnamese_error' explains a mistake Vietnamese speakers make because of Vietnamese (I very like, a missing "
@@ -313,8 +377,11 @@ def grammar_prompt(topic: str, cefr: str, lang: str) -> str:
         "of those rote formulas as short text (e.g. 'S + am/is/are + V3', 'S + has/have + been + V3'); hook.promise: one "
         "short sentence (at most 15 words) promising to understand the point's essence in a minute.\n"
         f"- scenes: {SCENES_MIN} to {SCENES_MAX} scenes, ONE idea each, in teaching order, each with one easy memory "
-        "image (a sticker that never moves, the one who carries the time, Lego pieces). label: two or three words "
-        "(e.g. 'BẢN CHẤT CỐT LÕI'); title: a short punchy line; subtitle: optional.\n"
+        "image (a sticker that never moves, the one who carries the time, Lego pieces). label: two to four plain, "
+        "everyday words that name the scene's idea (e.g. 'BẢN CHẤT CỐT LÕI', 'BẺ KHOÁ V3', 'VAI TRÒ CỦA TO BE'), never "
+        "a made-up or rare phrase; title: a short punchy line; subtitle: optional.\n"
+        "- Never present a shortcut as a fact: V3 in the passive works LIKE an adjective that describes a state, it is "
+        "not an adjective; say what really happens.\n"
         "- steps: two to four per scene; say is ONE spoken sentence (at most 28 words) and card is the card shown with "
         "it -- never leave the card out.\n"
         "- summary: a table (columns two to four, rows two to five) that sums up the whole point; every cell is one to "
@@ -326,8 +393,14 @@ def grammar_prompt(topic: str, cefr: str, lang: str) -> str:
         "Every English sentence must be natural and grammatically correct, and every rule must be true. Every memory "
         "image must fit the grammar exactly (a sticker that stays on, a carrier of time); never an image that does not "
         "explain anything. When you quote an English form inside a Vietnamese sentence, quote it correctly.\n"
-        "A model lesson (the shape and level expected; for another topic write your own content, never copy it):\n"
-        f"{json.dumps(_EXAMPLE, ensure_ascii=False)}\n"
+        # sandbox run 2026-11-03: asked for the passive and told never to copy the (passive) model, the AI wrote about
+        # "I very like" instead
+        "Two model lessons, one per kind (the shape and level expected). When the topic is a model's own topic, follow "
+        "it closely and improve it; for any other topic write your own content in the shape of the model of the same "
+        "kind, and never borrow the other model's idea.\n"
+        f"Model of kind 'essence': {json.dumps(_EXAMPLE, ensure_ascii=False)}\n"
+        f"Model of kind 'vietnamese_error': {json.dumps(_ERROR_EXAMPLE, ensure_ascii=False)}\n"
+        f"Remember: the lesson is about {topic}.\n"
         "Return ONLY a JSON object that validates against the schema."
     )
 
@@ -342,6 +415,9 @@ def review_prompt(lesson_json: str, lang: str) -> str:
         f"{language} fields only {language}.\n"
         "Rewrite any explanation or memory image that is vague, illogical or does not really explain the grammar, and "
         "any quoted English form that is wrong (e.g. 'đã được puts'). "
+        f"Labels, titles and subtitles must be plain, natural {language} a teacher would write; rewrite any made-up, odd "
+        "or meaningless phrase (e.g. 'TÒI THẦM CỦA TO BE', 'LỪNG LỘT NGÔN NGỮ'). Rewrite any rule stated as a fact "
+        "that is only a shortcut (e.g. 'V3 is an adjective': in the passive it works like one). "
         "Fix what is wrong and keep everything else exactly as it is. List each fix in issues (empty when nothing was "
         "wrong).\n"
         f"Lesson:\n{lesson_json}\n"

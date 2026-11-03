@@ -18,6 +18,7 @@ describe("Phase 88: the easy-grammar Short", () => {
     expect(pillText("scene", 2, "BẺ KHOÁ V3", true)).toBe("PHÂN CẢNH 2 • BẺ KHOÁ V3");
     expect(pillText("scene", 2, "THE V3 STICKER", false)).toBe("SCENE 2 • THE V3 STICKER");
     expect(pillText("summary", 4, "TỔNG KẾT BẢN CHẤT", true)).toBe("TỔNG KẾT BẢN CHẤT");
+    expect(pillText("scene", 3, "", true)).toBe("PHÂN CẢNH 3");
   });
 
   it("animates only the cards and rows that are new on a line", () => {

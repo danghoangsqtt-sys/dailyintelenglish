@@ -23,3 +23,19 @@ cả" for V3). Frame sheets: `docs/operations/phase88-screens/`.
 
 Tests: full pytest 2285 passed + 3 browser tests that failed only while a video was rendering and pass alone (16/16);
 vitest 203; tsc and ruff clean.
+
+## Owner report after install (2026-11-03, "những lỗi tồn đọng")
+
+The owner sent two frames of the v2 passive video: made-up scene labels ("TÒI THẦM CỦA TO BE", "LỪNG LỘT NGÔN NGỮ") and
+an English rule card ("Past Participle (V3) is an adjective; it never changes for tense.") in a Vietnamese video, which
+is also a false shortcut. Fixed:
+
+- An English sentence is never drawn as a rule or stamp in a Vietnamese lesson, and an English label or subtitle is left
+  out (the pill keeps "PHÂN CẢNH N"); `looks_english` checks for Vietnamese letters and common English words.
+- The prompt asks for plain, everyday labels and forbids shortcuts stated as facts ("V3 works like an adjective"); the
+  review rewrites made-up phrases and such shortcuts.
+- Script runs v5–v7 (scripts only, sandbox, Gemini 3.1 Flash-Lite): v5 wrote "I very like" for the passive topic (told
+  never to copy the passive model) → the topic is required and repeated, and a model's own topic may follow it; v6 got
+  the "I very like" lesson wrong by borrowing the passive model's "missing TO BE" idea → a second model lesson for the
+  `vietnamese_error` kind; a whole sentence as a sticker → drawn as a rule; a table with no fitting row → no summary
+  lines. v7: passive, present perfect and "I very like" all on topic, correct, with natural Vietnamese labels.

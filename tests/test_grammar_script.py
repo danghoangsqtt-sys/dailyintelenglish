@@ -206,3 +206,40 @@ def test_real_run_markdown_bold_is_removed():
     cleaned = with_clean_text(GrammarLesson.model_validate(lesson))
     assert cleaned.scenes[0].steps[0].card.left_en == "The letter IS on the desk."
     assert cleaned.quiz.question == "The letter ___ yesterday."  # the blank stays
+
+
+def test_owner_report_english_texts_are_kept_out_of_a_vietnamese_lesson():
+    """Owner 2026-11-03: a Vietnamese video showed "Past Participle (V3) is an adjective; it never changes for tense."
+    as a rule card; an English label or subtitle is left out the same way."""
+    from backend.content.grammar_lesson import looks_english, review_prompt
+
+    assert looks_english("Past Participle (V3) is an adjective; it never changes for tense.")
+    assert not looks_english("V3 đứng im, KHÔNG chia thì")
+    assert not looks_english("BE + V3")
+    assert not looks_english("CLEANED")
+    lesson = json.loads(json.dumps(PASSIVE))
+    lesson["scenes"][1]["label"] = "The sticker of the result"
+    lesson["scenes"][1]["steps"][1]["card"] = {"kind": "rule", "text": "Past Participle (V3) is an adjective; it never changes for tense."}
+    beats = build_beats(GrammarLesson.model_validate(lesson), "vi")
+    scene_two = [card for _, card in beats if card["beat"] == "scene" and card["scene"] == 2]
+    assert scene_two[0]["label"] == "" and all(c["kind"] != "rule" for card in scene_two for c in card["cards"])
+    english = build_beats(GrammarLesson.model_validate(lesson), "en")  # an English lesson keeps it
+    assert any(c["kind"] == "rule" for _, card in english for c in card["cards"])
+    assert "LỪNG LỘT NGÔN NGỮ" in review_prompt("{}", "vi")
+
+
+def test_real_run_the_error_lesson_has_its_own_model_long_stickers_become_rules_and_an_empty_table_is_skipped():
+    """Sandbox run 2026-11-03: "I very like" borrowed the passive model's idea, a sticker was a whole sentence, and a
+    table with no fitting row was read out empty."""
+    from backend.content.grammar_lesson import _ERROR_EXAMPLE, GrammarCard
+
+    prompt = grammar_prompt("Lỗi người Việt hay mắc: I very like", "B1", "vi")
+    assert "vietnamese_error" in prompt and "I really like this song." in prompt
+    assert build_beats(GrammarLesson.model_validate(_ERROR_EXAMPLE), "vi")[-2][0] == "Câu hỏi nhanh: I ___ like this song."
+    assert usable_card(GrammarCard(kind="sticker", text="LIKE sau very phải là tính từ, không phải động từ"))["kind"] == "rule"
+    assert usable_card(GrammarCard(kind="sticker", text="CLEANED"))["kind"] == "sticker"
+    lesson = json.loads(json.dumps(PASSIVE))
+    lesson["summary"]["rows"] = [{"cells": ["chỉ một ô"], "say": "Một dòng thiếu ô"}] * 2
+    beats = build_beats(GrammarLesson.model_validate(lesson), "vi")
+    assert not any(card["beat"] == "summary" for _, card in beats)
+    assert next(card for _, card in beats if card["beat"] == "core")["cards"][0]["kind"] == "core"
