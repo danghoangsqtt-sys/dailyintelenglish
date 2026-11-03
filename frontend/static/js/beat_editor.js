@@ -46,10 +46,22 @@ const BeatEditor = (() => {
     function props() {
       const base = clone(state.view.props);
       base.lines.forEach((line, index) => {
-        const picture = line[key()]?.pictureUrl;
-        line[key()] = { ...clone(state.lines[index].card), ...(picture ? { pictureUrl: picture } : {}) };
+        const c = state.lines[index].card;
+        if (key() === "grammar" || key() === "roots") {
+          const picture = line[key()]?.pictureUrl;
+          line[key()] = { ...clone(c), ...(picture ? { pictureUrl: picture } : {}) };
+        } else if (key() === "slowpod") line.translation = c.translation_vi || "";  // Phase 91
         line.text = state.lines[index].text;
       });
+      if (key() === "flashcards" && base.learning) {  // Phase 91: a card's fields are the lesson's vocabulary item
+        const norm = (text) => String(text || "").toLowerCase().replace(/^to\s+/, "").replace(/[^\p{L}\p{N}' ]/gu, " ").replace(/\s+/g, " ").trim();
+        for (const { card: c } of state.lines) {
+          if (!c.word) continue;
+          let item = base.learning.vocab.find((entry) => norm(entry.word) === norm(c.word));
+          if (!item) { item = { word: c.word, partOfSpeech: "", ipa: "", definitionEn: "", definitionVi: "", exampleSentence: "" }; base.learning.vocab.push(item); }
+          Object.assign(item, { partOfSpeech: c.part_of_speech || "", ipa: c.ipa || "", definitionVi: c.definition_vi || "" });
+        }
+      }
       return base;
     }
     function refreshPlayer(seek = false) {
@@ -107,7 +119,7 @@ const BeatEditor = (() => {
       if (state.history.length > 100) state.history.shift();
       mutate(card(index));
       if (key() === "grammar") applyGrammar(index, before, card(index));
-      else applyRoots(index, before, card(index));
+      else if (key() === "roots") applyRoots(index, before, card(index));
       state.dirty.add(index);
       refreshPlayer(); renderList(); scheduleSave();
     }
@@ -138,7 +150,10 @@ const BeatEditor = (() => {
     function renderList() {
       const list = $(".beat-list");
       list.innerHTML = state.lines.map((line, at) => {
-        const c = line.card, label = BEAT_NAMES[c.beat] || c.beat || "Beat";
+        const c = line.card;
+        // Phase 91: a slow podcast / flashcards / chat line is named by what it is, a chat message by its speaker
+        const label = ["chat", "wyr"].includes(key()) ? line.speaker : key() === "flashcards" ? (c.word ? "Card" : "Line")
+          : key() === "slowpod" ? "Line" : BEAT_NAMES[c.beat] || c.beat || "Beat";
         const sub = key() === "grammar" ? (c.beat === "scene" ? ` ${c.scene}` : "") : (c.word ? ` · ${c.word}` : "");
         return `<li><button type="button" class="beat-item${at === state.selected ? " selected" : ""}" data-beat="${at}">
           <span class="beat-no">${at + 1}</span><span class="beat-kind"><span>${escape(label)}</span><span translate="no">${escape(sub)}</span></span>
@@ -213,9 +228,21 @@ const BeatEditor = (() => {
       if (!line) { form.innerHTML = ""; return; }
       const c = line.card;
       const header = key() === "grammar" ? field("label", c.label, "Scene label") + field("title", c.title, "Title") + field("subtitle", c.subtitle, "Subtitle") : "";
-      const cards = key() === "grammar" ? (c.cards || []).map((item, at) => itemForm(item, at, c.cards.length)).join("")
-        + `<div class="beat-add"><select data-act="kind" aria-label="Card kind">${KINDS.map(([value, name]) => `<option value="${value}">${name}</option>`).join("")}</select>
-          <button type="button" class="btn btn-ghost btn-sm" data-act="card-add">+ Add card</button></div>` : rootsForm(c);
+      const forms = {
+        grammar: () => (c.cards || []).map((item, at) => itemForm(item, at, c.cards.length)).join("")
+          + `<div class="beat-add"><select data-act="kind" aria-label="Card kind">${KINDS.map(([value, name]) => `<option value="${value}">${name}</option>`).join("")}</select>
+            <button type="button" class="btn btn-ghost btn-sm" data-act="card-add">+ Add card</button></div>`,
+        roots: () => rootsForm(c),
+        // Phase 91: the kinds drawn from their lines show what their line puts on screen
+        slowpod: () => field("translation_vi", c.translation_vi, "Vietnamese translation (under the line)"),
+        flashcards: () => (c.word ? `<p class="section-hint">The card of “${escape(c.word)}” (from the lesson's vocabulary).</p>`
+          + field("part_of_speech", c.part_of_speech, "Part of speech") + field("ipa", c.ipa, "IPA")
+          + field("definition_vi", c.definition_vi, "Vietnamese meaning")
+          : '<p class="section-hint">This line has no card: edit what it says.</p>'),
+        chat: () => `<p class="section-hint">${escape(line.speaker)}'s message: the bubble shows the spoken line.</p>`,
+        wyr: () => '<p class="section-hint">The bubble shows the spoken line; an asking line\'s two options are its "A or B" text.</p>',
+      };
+      const cards = (forms[key()] || (() => ""))();
       form.innerHTML = `<h3>Beat ${state.selected + 1}</h3>
         <label class="beat-field">Spoken line<textarea data-act="text" rows="3">${escape(line.text)}</textarea></label>
         <button type="button" class="btn btn-ghost btn-sm" data-act="text-save" disabled>Save the spoken line</button>

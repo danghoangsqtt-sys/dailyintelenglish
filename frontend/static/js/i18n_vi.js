@@ -701,6 +701,16 @@ window.I18N_VI = {
     "Short · easy grammar": "Short · ngữ pháp",
     "Easy grammar Short": "Short ngữ pháp dễ hiểu",
     // Phase 90: edit a word-roots or grammar Short on its video
+    // Phase 91: the other kinds
+    "Card": "Thẻ",
+    "Vietnamese translation (under the line)": "Bản dịch tiếng Việt (dưới câu)",
+    "Part of speech": "Từ loại",
+    "IPA": "Phiên âm IPA",
+    "Vietnamese meaning": "Nghĩa tiếng Việt",
+    "This line has no card: edit what it says.": "Câu này không có thẻ: hãy sửa lời đọc.",
+    "The bubble shows the spoken line; an asking line's two options are its \"A or B\" text.": "Bong bóng hiện đúng câu đọc; câu hỏi \"A hay B\" chính là hai lựa chọn.",
+    "Spoken lines": "Các câu đọc",
+    "Edit a line and save it: only the lines you change get a new voice. Then generate the video.": "Sửa một câu rồi lưu: chỉ những câu đã sửa mới cần tạo lại giọng. Sau đó tạo video.",
     "Edit on the video": "Sửa trên video",
     "Click a beat, change its cards on the right and see it on the video at once. Cards keep their voice; a changed spoken line needs its voice made again. Generate the video once when you are done.": "Bấm vào một nhịp, sửa thẻ ở bên phải và xem ngay trên video. Sửa thẻ không ảnh hưởng giọng; câu đọc nào đổi lời thì cần tạo lại giọng cho câu đó. Sửa xong thì bấm Tạo video một lần.",
     "↶ Undo": "↶ Hoàn tác",
@@ -2057,4 +2067,9 @@ window.I18N_VI.patterns.push(
   [/^Not saved: (.+)$/, "Chưa lưu được: $1"],
   [/^The voice could not be made: (.+)$/, "Không tạo được giọng: $1"],
   [/^The editor could not open: (.+)$/, "Không mở được trình sửa: $1"],
+);
+// Phase 91: the spoken lines panel and the flashcard card
+window.I18N_VI.patterns.push(
+  [/^The card of “(.+)” \(from the lesson's vocabulary\)\.$/, "Thẻ của “$1” (lấy từ từ vựng của bài học)."],
+  [/^(.+)'s message: the bubble shows the spoken line\.$/, "Tin nhắn của $1: bong bóng hiện đúng câu đọc."],
 );

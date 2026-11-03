@@ -876,8 +876,8 @@
         Object.assign(document.createElement("h2"), { textContent: LINE_DRAWN[state.project.explainer_style] }),
         Object.assign(document.createElement("p"), { className: "section-hint",
           textContent: "This Short is drawn from the script lines themselves (vertical 9:16). No visual plan is needed: render the video." }));
-      if (["roots", "grammar"].includes(state.project.explainer_style) && window.BeatEditor) {
-        // Phase 90 (D128): edit the beats' cards on the video before the one render
+      if (window.BeatEditor) {  // Phase 90 / 91: every Short drawn from its lines
+        // Phase 90 (D128) / 91 (D131): edit what each line puts on screen, on the video, before the one render
         const editorBox = document.createElement("div");
         byId("solo-explainer-section").append(editorBox);
         try { await window.BeatEditor.mount(editorBox, state.projectId); }

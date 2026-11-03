@@ -114,3 +114,68 @@ def test_after_a_text_edit_only_that_line_needs_its_voice(client, monkeypatch): 
     data(client.put(f"/api/projects/{project['id']}/beats/{lines[2]['id']}/text", json={"text": "Một phút là đủ!"}))
     view = data(client.get(f"/api/projects/{project['id']}/beats"))
     assert [line["audio_ok"] for line in view["lines"]] == [True, True, False, True, True, True]
+
+
+def _project(client, style, num=1):  # noqa: F811
+    speakers = [{"name": "Huyền", "gender": "female", "accent": "american"}, {"name": "Jack", "gender": "male", "accent": "american"}]
+    return data(client.post("/api/projects", json={
+        "name": style, "topic": "Kitchen", "cefr_level": "B1", "duration_minutes": 0.75, "num_speakers": num,
+        "genre": "small_talk" if num == 2 else "informational", "accent": "american",
+        "presentation_mode": "classic" if num == 2 else "solo_explainer", "explainer_style": style, "speakers": speakers[:num]}))
+
+
+def test_a_slow_podcast_line_edits_its_translation(client):  # noqa: F811
+    project = _project(client, "slowpod")
+    speaker = project["speakers"][0]["id"]
+    lines = data(client.put(f"/api/projects/{project['id']}/script", json={"lines": [
+        {"speaker_id": speaker, "text": "I wake up early.", "language_notes": {"translation_vi": "Tôi dậy sớm."}}]}))
+    view = data(client.get(f"/api/projects/{project['id']}/beats"))
+    assert view["lines"][0]["card"] == {"translation_vi": "Tôi dậy sớm."} and view["props"]["lines"][0]["translation"] == "Tôi dậy sớm."
+    data(client.put(f"/api/projects/{project['id']}/beats", json={"lines": [
+        {"line_id": lines[0]["id"], "card": {"translation_vi": "Tôi thức dậy sớm."}}]}))
+    saved = data(client.get(f"/api/projects/{project['id']}/script"))
+    assert saved[0]["language_notes"]["translation_vi"] == "Tôi thức dậy sớm." and saved[0]["text"] == "I wake up early."
+
+
+def test_a_flashcard_edits_its_word_in_the_lesson(client):  # noqa: F811
+    project = _project(client, "flashcards")
+    speaker = project["speakers"][0]["id"]
+    lines = data(client.put(f"/api/projects/{project['id']}/script", json={"lines": [
+        {"speaker_id": speaker, "text": text} for text in ("Vocabulary: kitchen.", "fry. fry.", "Follow us.")]}))
+    item = {"word": "fry", "part_of_speech": "verb", "ipa": "/fraɪ/", "definition_en": "cook in oil",
+            "definition_vi": "chiên", "example_sentence": "Fry the eggs."}
+    from backend.content import learning_service
+    from backend.core.config import settings
+    import asyncio
+    import aiosqlite
+
+    async def seed():
+        async with aiosqlite.connect(settings.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            await learning_service.save_learning_content(db, project["id"], {
+                "vocabulary": [item], "idioms": [], "grammar": [], "questions": []})
+    asyncio.run(seed())
+    view = data(client.get(f"/api/projects/{project['id']}/beats"))
+    assert view["lines"][0]["card"] == {} and view["lines"][1]["card"]["definition_vi"] == "chiên"
+    assert view["props"]["learning"]["vocab"][0]["definitionVi"] == "chiên"
+    data(client.put(f"/api/projects/{project['id']}/beats", json={"lines": [
+        {"line_id": lines[1]["id"], "card": {"part_of_speech": "verb", "ipa": "/fraɪ/", "definition_vi": "chiên, rán"}}]}))
+    lesson = data(client.get(f"/api/projects/{project['id']}/learning"))
+    assert lesson["vocabulary"][0]["definition_vi"] == "chiên, rán" and lesson["vocabulary"][0]["definition_en"] == "cook in oil"
+    bad = client.put(f"/api/projects/{project['id']}/beats", json={"lines": [{"line_id": lines[0]["id"], "card": {}}]})
+    assert bad.status_code in (400, 422)  # the deck name line has no card
+
+
+def test_chat_messages_are_edited_as_spoken_lines(client):  # noqa: F811
+    project = _project(client, "chat", num=2)
+    lina, jack = (speaker["id"] for speaker in project["speakers"])
+    lines = data(client.put(f"/api/projects/{project['id']}/script", json={"lines": [
+        {"speaker_id": lina, "text": "Free tonight?"}, {"speaker_id": jack, "text": "Yes!"}]}))
+    view = data(client.get(f"/api/projects/{project['id']}/beats"))
+    assert [line["speaker"] for line in view["lines"]] == ["Huyền", "Jack"]
+    assert view["props"]["lines"][1]["speakerId"] == jack
+    bad = client.put(f"/api/projects/{project['id']}/beats", json={"lines": [{"line_id": lines[0]["id"], "card": {}}]})
+    assert bad.status_code in (400, 422)
+    data(client.put(f"/api/projects/{project['id']}/beats/{lines[1]['id']}/text", json={"text": "Yes, sure!"}))
+    spoken = data(client.get(f"/api/projects/{project['id']}/beats/lines"))
+    assert [line["text"] for line in spoken] == ["Free tonight?", "Yes, sure!"]

@@ -37,6 +37,13 @@ async def get_beats(project_id: str, db: aiosqlite.Connection = Depends(get_db))
         return ok(await beats_service.load(db, project_id))
 
 
+@router.get("/lines")
+async def get_lines(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 91.3: the spoken lines of any kind of video, with whether each voice still matches."""
+    async with read_transaction():
+        return ok(await beats_service.spoken_lines(db, project_id))
+
+
 @router.put("")
 async def save_cards(project_id: str, payload: CardsUpdate, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     async with write_transaction(db):
