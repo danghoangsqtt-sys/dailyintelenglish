@@ -28,6 +28,23 @@ the video renderer need no change. Edge stays the default; nothing else changes 
 - Tests: `tests/test_vieneu_service.py` (worker contract with a fake interpreter, caps normalisation, alignment mapping,
   missing-environment error, cache fingerprint), updates to the existing tests that assert Edge is the only engine.
 
+## Implementation notes (2026-11-03, before code)
+
+- Measured on this machine: loading VieNeu takes 8.9 s and Whisper `small` 2.0 s; one line then takes ~3 s on CPU.
+  So the worker is a **persistent line-delimited process** (the `.venv-image` worker pattern: handshake, one JSON request
+  per line, one JSON reply), started on the first VieNeu line and closed after `VIENEU_IDLE_SECONDS` without work. CPU
+  only (no torch in `.venv-vieneu`), so it never competes with Qwen for the GPU.
+- The worker returns the WAV path and Whisper's words with times; **alignment runs in the app** (`vieneu_service.align_words`,
+  pure and unit-tested): script words are matched to recognised words with `difflib` on accent-folded lower-case
+  tokens; matched words take Whisper's times, the rest are spread over the gap between neighbours by length. One
+  boundary per script word, text without surrounding punctuation (as Edge's).
+- A take whose match ratio is below `VIENEU_MIN_WORD_MATCH` is synthesized once more; the better take is kept.
+- Speed: VieNeu has no rate control, so the speaker's speed is applied with ffmpeg `atempo` and timings are scaled;
+  volume as a gain; pitch is ignored for VieNeu.
+- Default presets: Ngọc Huyền (female / neutral), Thiện Minh (male). Model files live under
+  `backend/ai/models/vieneu` (`HF_HOME`), already gitignored with the other local models.
+- The SDK default temperature is kept (the owner chose from samples made with it).
+
 ## Best practices
 
 - Never import `vieneu` or `torch` in the app process; the app venv stays unchanged (Phase 75 pattern).
