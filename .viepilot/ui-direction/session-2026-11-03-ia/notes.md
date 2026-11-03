@@ -4,6 +4,9 @@ Owner (2026-11-03): "Các tính năng Bảng điều khiển + Kế hoạch kên
 khoa học … Các loại thư viện tách rời như hiện tại thì sao? có gộp được không? … dễ dùng hơn nữa, rõ ràng và không rối
 mắt, cân đối giữa kỹ thuật và mỹ thuật, giữa SEO và trải nghiệm người dùng", then "Làm bản mẫu".
 
+**Status: approved for now (owner 2026-11-03, "okey tạm thời chốt giao diện hiện tại").** The current pages (v4 look, v5
+decluttering, v6 Lina mascot) are the direction for the next UI phase; the open questions below are still to settle.
+
 Static prototype (sample data, buttons do nothing). Serve the repo root (`python -m http.server 8040`) and open
 `/.viepilot/ui-direction/session-2026-11-03-ia/index.html`; images come from `frontend/static`.
 
@@ -100,7 +103,6 @@ were moved to the Windows Recycle Bin; no database row pointed at them; the 57 p
 | `pages/flow-7-youtube.html` | One video · 7 YouTube | Step 7 YouTube package, SEO score |
 
 ## Open questions for the owner
-
 - The mascot's name, and whether she reads her lines aloud by default or only when asked.
 
 - Keep "Tự động" as its own item in the sidebar (some owners like a big on/off), or only inside Kênh as proposed?
