@@ -1,19 +1,25 @@
 {
   "phase87_academic_roots": {
-    "status": "planned",
+    "status": "implemented_verified",
     "plan": ".viepilot/phases/87-academic-roots/PLAN.md",
     "decisions": [
       "D125 VieNeu voice for roots/grammar only",
       "D126 academic Shorts up to 3 min",
       "D127 brand colours"
     ],
-    "next_task": "87.1 VieNeu engine (isolated worker)",
+    "next_task": "owner: listen to D:\\Videos\\Kiểm tra Gốc từ 2026-11-03\\Gốc từ v3; then build/install, then Phase 88",
     "following_phases": [
       ".viepilot/phases/88-academic-grammar/PLAN.md",
       ".viepilot/phases/89-academic-long-series/PLAN.md"
     ],
     "research": "docs/brainstorm/vietnamese-voice-research-2026-11-03.md",
-    "pushed": false
+    "pushed": false,
+    "test_videos": "D:\\Videos\\Kiểm tra Gốc từ 2026-11-03 (Gốc từ v1, v2, v3)",
+    "full_pytest": "2277 passed",
+    "vitest": "198 passed",
+    "installed": false,
+    "summary": ".viepilot/phases/87-academic-roots/SUMMARY.md",
+    "vieneu_setup": "scripts/setup_vieneu.ps1 (done on this machine: .venv-vieneu, backend/ai/models/vieneu)"
   },
   "phase86_vox_formula": {
     "status": "implemented_verified",

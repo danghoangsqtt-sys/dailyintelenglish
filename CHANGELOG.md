@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Word roots Short and a Vietnamese VieNeu voice (Phase 87, 2026-11-03)
+
+- A new Short, "Word roots, prefixes & suffixes": one root, prefix or suffix and its word family, each word split (COM + PRESS) and explained in Vietnamese, with an example, a line-art picture and a closing quiz; up to three minutes.
+- A local Vietnamese voice (VieNeu-TTS, 25 voices) for these Shorts: one voice reads the Vietnamese explanation and the English words. Install it once with `scripts/setup_vieneu.ps1`; Step 4 lets you choose the voice. Other videos keep their English Edge voices.
+
 ### Changed — VOX videos on the viral explainer formula (Phase 86, 2026-10-29)
 
 - A VOX video opens cold on an English example and a question (no intro slide or greeting), shows the evidence as highlighted quotes with a new picture every few seconds, and ends on the answer instead of a "Thanks for watching" card.

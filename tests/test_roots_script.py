@@ -233,3 +233,11 @@ def test_word_cards_carry_the_family_kind_and_combined_heads_match_the_checked_l
     assert with_checked_facts(suffix, "Hậu tố -tion: action, education", "vi").origin_form == "-tio"
     with pytest.raises(PydanticValidationError):  # every word needs a picture description
         WordFamily.model_validate({**PRESS, "quiz": {**PRESS["quiz"], "picture": ""}})
+
+
+def test_stray_chinese_characters_are_removed():
+    from backend.content.word_family import with_checked_facts
+
+    bad = {**PRESS, "words": [{**PRESS["words"][0], "logic": "DE là xuống: ấn xuống thì tâm trạng也跟着 đi xuống."}] + PRESS["words"][1:]}
+    clean = with_checked_facts(WordFamily.model_validate(bad), "Gốc PRESS", "vi")
+    assert clean.words[0].logic == "DE là xuống: ấn xuống thì tâm trạng đi xuống."

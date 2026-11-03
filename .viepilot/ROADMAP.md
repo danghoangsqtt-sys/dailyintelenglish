@@ -10,7 +10,7 @@ Status: planned. Short style `grammar`: break rote formulas, one rule, scene car
 
 ## Phase 87 — Vietnamese VieNeu voice and the "Word roots, prefixes and suffixes" Short (2026-11-03)
 
-Status: planned (D125–D127). VieNeu v3 Turbo in an isolated worker for the academic templates only (one voice reads Vietnamese and English; word timings by alignment); Short style `roots` (word family split into prefix + root + suffix, line art, quiz), up to 3 minutes, brand colours. [Plan](phases/87-academic-roots/PLAN.md).
+Status: implemented_verified (sandbox from source: Gốc từ v3 — Gốc PRESS 82.2 s and Hậu tố -tion 122.6 s, 1080x1920, VieNeu voice Ngọc Huyền, Qwen line art for every word, into D:\Videos\Kiểm tra Gốc từ 2026-11-03; 8 real-run problems fixed; full pytest 2277 passed, vitest 198; not built, installed or pushed; the owner has not listened yet). VieNeu v3 Turbo in an isolated worker for the academic templates only (one voice reads Vietnamese and English; word timings by alignment); Short style `roots` (word family split into prefix + root + suffix, line art, quiz), up to 3 minutes, brand colours. [Plan](phases/87-academic-roots/PLAN.md).
 
 ## Phase 86 — VOX videos on the viral explainer formula (2026-10-28)
 

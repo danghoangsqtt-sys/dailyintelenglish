@@ -146,9 +146,25 @@ def usable_words(family: WordFamily) -> list[FamilyWord]:
     return kept[:FAMILY_MAX_WORDS]
 
 
+# Real run 2026-11-03: one Vietnamese sentence came back with Chinese characters in it ("tâm trạng也跟着 đi xuống")
+_CJK = re.compile(r"[　-〿぀-ヿ㐀-䶿一-鿿가-힯＀-￯]+")
+
+
+def _clean_text(value):
+    if isinstance(value, str):
+        return " ".join(_CJK.sub(" ", value).split())
+    if isinstance(value, list):
+        return [_clean_text(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _clean_text(item) for key, item in value.items()}
+    return value
+
+
 def with_checked_facts(family: WordFamily, topic: str, lang: str) -> WordFamily:
     """Real run 2026-11-03: the AI left the origin empty although it was given; a listed head keeps its checked origin
-    and meaning whatever the AI wrote, and the quiz word's parts are fitted like the others."""
+    and meaning whatever the AI wrote, and the quiz word's parts are fitted like the others. Stray Chinese / Japanese /
+    Korean characters are removed from every text."""
+    family = WordFamily.model_validate(_clean_text(family.model_dump()))
     update: dict = {}
     quiz = fit_parts(family.quiz)
     if quiz:
