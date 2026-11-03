@@ -100,3 +100,17 @@ def test_a_word_roots_card_is_saved_with_its_parts(client):  # noqa: F811
     assert view["key"] == "roots" and view["lines"][0]["card"]["meaning"] == "nén, ép lại"
     assert view["lines"][0]["card"]["parts"][1] == {"text": "press", "role": "root", "meaning": "ép"}
     assert view["props"]["lines"][0]["roots"]["picture"] == "a zipped folder on a screen"
+
+
+def test_after_a_text_edit_only_that_line_needs_its_voice(client, monkeypatch):  # noqa: F811
+    """Phase 90.3: the editor makes the voice of the lines whose audio no longer matches, and only those."""
+    from backend.ai.tts import tts_service
+
+    monkeypatch.setattr(tts_service, "cache_matches", lambda project, line, **_: bool(line.get("audio_cache_path")))
+    project, lines = _grammar_project(client)
+    with _db() as db:
+        db.execute("UPDATE script_lines SET audio_cache_path = 'x.mp3' WHERE project_id = ?", (project["id"],))
+    assert all(line["audio_ok"] for line in data(client.get(f"/api/projects/{project['id']}/beats"))["lines"])
+    data(client.put(f"/api/projects/{project['id']}/beats/{lines[2]['id']}/text", json={"text": "Một phút là đủ!"}))
+    view = data(client.get(f"/api/projects/{project['id']}/beats"))
+    assert [line["audio_ok"] for line in view["lines"]] == [True, True, False, True, True, True]

@@ -85,6 +85,21 @@ const BeatEditor = (() => {
       }
     }
 
+    // word roots: a word's meaning, split, picture... edited on one beat go to its other beats (hook / whole / split /
+    // example / quiz) wherever they still hold the old value
+    const WORD_FIELDS = ["word", "meaning", "parts", "breakdown", "picture", "icons", "example_en", "example_vi", "answer"];
+    function applyRoots(index, before, after) {
+      if (!before.word) return;
+      state.lines.forEach((line, at) => {
+        if (at === index || line.card.word !== before.word) return;
+        for (const name of WORD_FIELDS) {
+          if (name in after && same(line.card[name], before[name]) && !same(before[name], after[name])) {
+            line.card[name] = clone(after[name]); state.dirty.add(at);
+          }
+        }
+      });
+    }
+
     function change(mutate) {
       const index = state.selected;
       const before = clone(card(index));
@@ -92,6 +107,7 @@ const BeatEditor = (() => {
       if (state.history.length > 100) state.history.shift();
       mutate(card(index));
       if (key() === "grammar") applyGrammar(index, before, card(index));
+      else applyRoots(index, before, card(index));
       state.dirty.add(index);
       refreshPlayer(); renderList(); scheduleSave();
     }

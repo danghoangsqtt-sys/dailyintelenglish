@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": 88,
+  "current_phase": 90,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1096,5 +1096,13 @@
     "installed_backup": "data/backups/desktop-20261103-144553-097",
     "package_directory": "dist/2.0-phase88-20261103",
     "full_zip_sha256": "de284e353f1d58d985cf80437476d438f4bf152b8228355773985738add762be"
+  },
+  "phase90_edit_on_video": {
+    "status": "implemented_verified",
+    "date": "2026-11-03",
+    "branch": "owner-runs/20261001-r9",
+    "installed": false,
+    "pushed": false,
+    "next_task": "Phase 91: the same editing for the other video kinds (owner 2026-11-03)"
   }
 }

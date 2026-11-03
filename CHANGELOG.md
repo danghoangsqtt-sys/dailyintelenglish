@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Edit a word-roots or grammar Short on its video (Phase 90, 2026-11-03)
+
+- Step 5 of these Shorts shows the beats, the vertical video playing beside them and the selected beat's cards: edit a label, a title, a formula chip and its colour, a table cell, an example, a word's meaning or split, and see it on the video at once; undo / redo; a word's picture can be drawn again.
+- Editing a card keeps the voice; editing a spoken line re-makes only that line's voice, so a fix takes about a minute (voice + one render) instead of making the Short again.
+
 ### Added — Easy grammar Short (Phase 88, 2026-11-03)
 
 - A new Short, "Easy grammar": one grammar point explained by its essence instead of rote formulas — the formulas are stamped "forget them", then three to six scenes of colour-coded cards (S/V/O, BE, -ing, V3, modal) stack up with the narration, a summary table fills row by row and the video ends on the one core rule and a quick quiz; up to three minutes, in Vietnamese with the VieNeu voice (English for the international audience).

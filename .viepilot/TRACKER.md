@@ -2,7 +2,7 @@
 
 ## Phase 90 — Edit a word-roots or grammar Short on its video (2026-11-03)
 
-Status: in_progress (owner: "Chạy Phase 90", defaults). A video-editor-like "Sửa trên video" in Step 5: beat list, the 9:16 video beside it, a form for the selected beat; every card edit shows at once, spoken text edits re-make only those lines' audio, one render at the end. Defaults D128–D130. [Plan](phases/90-edit-on-video/PLAN.md).
+Status: implemented_verified (sandbox: grammar Short edited — one rule card and one spoken line — voice for that line 9 s, render ~52 s, both edits in the video; word-roots meaning edited once reached all its beats; not built, installed or pushed). [Summary](phases/90-edit-on-video/SUMMARY.md). A video-editor-like "Sửa trên video" in Step 5: beat list, the 9:16 video beside it, a form for the selected beat; every card edit shows at once, spoken text edits re-make only those lines' audio, one render at the end. Defaults D128–D130. [Plan](phases/90-edit-on-video/PLAN.md).
 
 ## Phase 88 — "Easy grammar" Short (2026-11-03)
 
