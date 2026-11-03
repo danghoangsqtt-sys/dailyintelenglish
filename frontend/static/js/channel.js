@@ -191,7 +191,7 @@
     const STYLES = {classic:["classic","presenter"],solo_explainer:["solo_explainer","presenter"],vox:["solo_explainer","vox"],
       news:["solo_explainer","news"],blur:["solo_explainer","blur"],mistakes:["solo_explainer","mistakes"],
       wordday:["solo_explainer","wordday"],top5:["solo_explainer","top5"],quiz:["solo_explainer","quiz"],listen:["solo_explainer","listen"],
-      slowpod:["solo_explainer","slowpod"],flashcards:["solo_explainer","flashcards"],roots:["solo_explainer","roots"],
+      slowpod:["solo_explainer","slowpod"],flashcards:["solo_explainer","flashcards"],roots:["solo_explainer","roots"],grammar:["solo_explainer","grammar"],
       chat:["classic","chat"],wyr:["classic","wyr"]};
     const mode = el("select", {"aria-label":"Series presentation mode", onchange:event=>{const [presentation,style]=STYLES[event.target.value];
       act(()=>Api.updateChannelSeries(series.id,{presentation_mode:presentation,explainer_style:style,
@@ -203,6 +203,7 @@
         el("option",{value:"quiz",textContent:"Short: countdown quiz"}),el("option",{value:"listen",textContent:"Short: listening challenge"}),
         el("option",{value:"slowpod",textContent:"Short: slow English podcast"}),el("option",{value:"flashcards",textContent:"Short: vocabulary flashcards"}),
         el("option",{value:"roots",textContent:"Short: word roots, prefixes & suffixes"}),
+        el("option",{value:"grammar",textContent:"Short: easy grammar"}),
         el("option",{value:"chat",textContent:"Short: chat (2 characters)"}),el("option",{value:"wyr",textContent:"Short: would you rather (2 characters)"})]);
     mode.value=series.presentation_mode==="solo_explainer"?(series.explainer_style&&series.explainer_style!=="presenter"?series.explainer_style:"solo_explainer")
       :["chat","wyr"].includes(series.explainer_style)?series.explainer_style:"classic";

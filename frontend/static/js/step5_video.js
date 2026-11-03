@@ -57,10 +57,10 @@
   const byId = (id) => document.getElementById(id);
 
   // a Short of these styles renders its main video in 9:16 (backend/schemas/project.py SHORT_STYLES)
-  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "chat", "wyr"];
+  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr"];
   // drawn from their script lines (backend LINE_DRAWN_STYLES): nothing to plan on this page
   const LINE_DRAWN = { chat: "Chat Short", wyr: "Would you rather Short", slowpod: "Slow English podcast Short", flashcards: "Vocabulary flashcards Short",
-    roots: "Word roots Short" };
+    roots: "Word roots Short", grammar: "Easy grammar Short" };
 
   function showError(message) {
     const banner = byId("error-banner");

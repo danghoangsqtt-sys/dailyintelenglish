@@ -690,6 +690,16 @@ window.I18N_VI = {
     "Short: word roots, prefixes & suffixes": "Short: gốc từ, tiền tố, hậu tố",
     "Short · word roots": "Short · gốc từ",
     "Word roots Short": "Short gốc từ",
+    // Phase 88: the easy-grammar Short
+    "🧩 Easy grammar": "🧩 Ngữ pháp dễ hiểu",
+    "One grammar point explained by its essence, scene by scene, with colour-coded cards and a summary table, in Vietnamese with a Vietnamese voice; up to 3 minutes":
+      "Một điểm ngữ pháp giảng theo bản chất, từng cảnh, có thẻ tô màu và bảng tổng kết, bằng tiếng Việt, giọng Việt; tối đa 3 phút",
+    "Easy grammar": "Ngữ pháp dễ hiểu",
+    "One grammar point per Short, explained by its essence in Vietnamese, with a summary table.":
+      "Mỗi Short một điểm ngữ pháp, giảng theo bản chất bằng tiếng Việt, có bảng tổng kết.",
+    "Short: easy grammar": "Short: ngữ pháp dễ hiểu",
+    "Short · easy grammar": "Short · ngữ pháp",
+    "Easy grammar Short": "Short ngữ pháp dễ hiểu",
     "VieNeu voice": "Giọng VieNeu",
     "Save voice": "Lưu giọng",
     "Local Vietnamese voice: Vietnamese explanation and English words in one voice.": "Giọng Việt chạy trên máy: một giọng đọc cả lời giảng tiếng Việt và từ tiếng Anh.",

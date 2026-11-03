@@ -76,7 +76,7 @@ async def test_the_learning_templates_make_their_shorts(page, base_url):
     }))
     await page.goto(base_url + "/step1")
     await page.locator(".type-card[data-mode='shorts']").click()
-    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(12)  # Phase 81: + slow podcast, flashcards; Phase 87: + word roots
+    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(13)  # Phase 81: + slow podcast, flashcards; Phase 87: + word roots; Phase 88: + easy grammar
     await page.locator("[data-template='top5']").click()
     await expect(page.locator("[data-template='top5']")).to_have_attribute("aria-checked", "true")
     await expect(page.locator("input[name=content_source][value=material]")).to_be_hidden()
@@ -100,7 +100,7 @@ async def test_the_chat_template_makes_a_two_character_conversation_short(page, 
     })))["id"] for name in ("Chat One", "Chat Two")]
     await page.goto(base_url + "/step1")
     await page.locator(".type-card[data-mode='shorts']").click()
-    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(12)  # Phase 81: + slow podcast, flashcards; Phase 87: + word roots
+    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(13)  # Phase 81: + slow podcast, flashcards; Phase 87: + word roots; Phase 88: + easy grammar
     await page.locator("[data-template='chat']").click()
     await expect(page.locator(".speaker-slot")).to_have_count(2)
     await expect(page.locator("#num-speakers")).to_be_disabled()

@@ -43,7 +43,7 @@
   // Phase 59 (ENH-041): a VOX narrator is a character's voice only
   // Phase 63 (ENH-045): VOX and the news / blur Shorts are voice-only (a narrator's voice, nobody on screen)
   // Phase 64/65: + the quick-learning and the interactive Shorts; chat / would-you-rather are two-character conversations
-  const SOLO_SHORTS = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots"];  // Phase 81, 87
+  const SOLO_SHORTS = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar"];  // Phase 81, 87, 88
   const CONVERSATION_SHORTS = ["chat", "wyr"];
   const SHORTS = [...SOLO_SHORTS, ...CONVERSATION_SHORTS];
   const VOICE_ONLY = ["vox", ...SOLO_SHORTS];
@@ -54,7 +54,7 @@
   const DURATION_PRESETS = [5, 10, 15, 20];
   const SHORT_PRESETS = [0.5, 0.75, 0.95];  // Phase 82: 57 s leaves room for the 2 s end card under a minute
   // Phase 87 (D126): an academic Short may run up to three minutes
-  const ACADEMIC_SHORTS = ["roots"];
+  const ACADEMIC_SHORTS = ["roots", "grammar"];
   const ACADEMIC_PRESETS = [1.5, 2, 2.5];
   // knowledge / news Shorts are written for a full minute (backend MESSAGE_SHORT_STYLES)
   const MESSAGE_SHORTS = ["news", "blur", "mistakes", "top5"];
