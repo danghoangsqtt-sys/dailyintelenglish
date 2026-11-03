@@ -42,6 +42,21 @@ still has many problems and much extra data".
   per-section counts, the "đang bật" tab label, the Series and Tự động panels under the calendar (they have tabs),
   Step 1's second copy of the example clip, and Step 5's "instant preview" note.
 
+## Lina as the mascot (v6, owner 2026-11-03)
+
+Owner: use Lina from the character library, half body like a VTuber, moving between the front view and the turned view;
+then "delete every picture of Lina in the high-neck dress" (87 orphan files of an old front set and its generation run
+were moved to the Windows Recycle Bin; no database row pointed at them; the 57 pictures the app uses are intact).
+
+- `mascot/build_lina.py` cuts her current front set (calm, blink, 8 gestures, mouth closed/open) and three-quarter set
+  (7 expressions, blink, 7 gestures, mouth closed/open) to a half-body frame, scaled by the eye-to-chin distance so the
+  head keeps its size when she turns. The frames (`mascot/lina/`, 1.7 MB) are not committed: run the script to rebuild.
+- `shell.js`: mouth and blink swap frames at once; a pose or a turn cross-fades with a slight squash. She blinks every
+  2.5–6 s (sometimes twice), breathes and sways; while talking she faces you, makes the page's gesture (`data-pose`),
+  flaps her mouth with the words and nods; afterwards she turns three-quarter toward the page, sometimes smiles or listens.
+  The bubble steps aside 9 s after she stops.
+- Still to make for full VTuber smoothness: more mouth shapes and in-between head angles (the Characters page slots).
+
 ## Why (checked in the app)
 
 - The schedule is shown three times (Dashboard "next two weeks", Automation "14 days", Channel plan episode dates).
