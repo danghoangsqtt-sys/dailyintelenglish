@@ -184,7 +184,47 @@
     box.append(text, dismiss);
   }
 
+  /** Phase 87 (D125): a Vietnamese-narrated academic Short speaks with a local VieNeu voice -- one of its presets. */
+  function mountVieneuVoice(card, speaker) {
+    const id = speaker.id;
+    const actual = document.createElement("p");
+    actual.className = "speaker-actual-voice"; actual.dataset.speakerId = id;
+    actual.textContent = "Vietnamese voice (VieNeu): " + voiceCaption(speaker);
+    const status = document.createElement("p"); status.className = "library-hint"; status.dataset.vieneuStatus = "true";
+    const select = document.createElement("select"); select.className = "vieneu-voice"; select.setAttribute("aria-label", "VieNeu voice");
+    const save = document.createElement("button"); save.type = "button"; save.className = "btn btn-ghost btn-sm"; save.textContent = "Save voice";
+    const row = document.createElement("div"); row.className = "voice-choice"; row.append(select, save);
+    card.append(actual, status, row);
+    const GENDER = {female: "Female", male: "Male"};
+    Api.listTtsEngines().then(engines => {
+      const engine = (engines || []).find(item => item.id === "vieneu");
+      if (!engine) return;
+      status.textContent = engine.available
+        ? "Local Vietnamese voice: Vietnamese explanation and English words in one voice."
+        : `The Vietnamese voice is not installed on this computer. Run ${engine.setup} once, then generate the audio.`;
+      engine.voices.forEach(voice => {
+        const option = document.createElement("option"); option.value = voice.id;
+        option.textContent = `${voice.id} — ${GENDER[voice.gender] || voice.gender} · ${voice.region} · ${voice.style}`;
+        select.append(option);
+      });
+      select.value = speaker.voice_id || speaker.resolved_voice_id || "";
+    }).catch(() => { status.textContent = "Could not read the VieNeu voices. Reload the page."; });
+    select.addEventListener("change", () => { state.voiceDirty.add(id); applyLocks(); });
+    save.addEventListener("click", async () => {
+      state.voiceSaving.add(id); applyLocks(); clearError();
+      try {
+        const updated = await persistSpeaker(id, {tts_engine: "vieneu", voice_id: select.value, expected_voice_revision: speakerById(id).voice_revision});
+        const current = updated.speakers.find(item => item.id === id);
+        actual.textContent = "Vietnamese voice (VieNeu): " + voiceCaption(current);
+        state.voiceDirty.delete(id);
+        invalidateSpeakerPlayback(id);
+      } catch (error) { showError(error.message || "The voice could not be saved. Reload and try again."); }
+      finally { state.voiceSaving.delete(id); applyLocks(); }
+    });
+  }
+
   function mountSpeakerVoice(card, speaker) {
+    if (speaker.tts_engine === "vieneu") { mountVieneuVoice(card, speaker); return; }
     const actual = document.createElement("p");
     actual.className = "speaker-actual-voice"; actual.dataset.speakerId = speaker.id;
     actual.textContent = "Project voice: " + voiceCaption(speaker);

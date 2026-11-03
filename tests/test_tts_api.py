@@ -112,5 +112,9 @@ def test_engines_endpoint_only_reports_real_dispatchable_engines(client: TestCli
     assert response.status_code == 200
     engines = {engine["id"]: engine for engine in response.json()["data"]}
 
-    assert set(engines) == {"edge_tts"}
+    assert set(engines) == {"edge_tts", "vieneu"}
     assert engines["edge_tts"]["available"] is True
+    # Phase 87: VieNeu is reported available only when its own interpreter exists, with its 25 presets
+    from backend.ai.tts import vieneu_service
+    assert engines["vieneu"]["available"] is vieneu_service.is_available()
+    assert len(engines["vieneu"]["voices"]) == 25 and engines["vieneu"]["voices"][0]["id"] == "Adam bựa"

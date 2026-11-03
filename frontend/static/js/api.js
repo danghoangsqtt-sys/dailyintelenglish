@@ -168,6 +168,7 @@ const Api = (() => {
         body: JSON.stringify(patch),
       }),
     listTtsVoices: (refresh = false) => request(`/api/tts/voices${refresh ? "?refresh=true" : ""}`),
+    listTtsEngines: () => request("/api/tts/engines"),  // Phase 87: Edge and the local VieNeu voice (its presets)
     previewTtsVoice: (payload, options = {}) => request("/api/tts/voices/preview", {...json("POST", payload), ...options}),
     previewTtsLine: (projectId, lineId, options = {}) =>
       request(`/api/projects/${projectId}/tts/preview`, {

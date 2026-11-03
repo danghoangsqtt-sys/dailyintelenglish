@@ -191,3 +191,16 @@ async def test_missing_pictures_are_drawn_once_kept_in_the_library_and_reused(db
     assert sorted(again) == ["compress", "suppress"] and len(FakeImageEngine.qwen_calls) == 1
     monkeypatch.setattr(settings, "AI_VISUALS_ENABLED", False)  # without the image model the video is still made
     assert await roots_pictures.ensure_pictures(db, "p2", cards) == {}
+
+
+def test_the_shorts_batch_makes_roots_shorts_of_two_minutes(client):  # noqa: F811
+    from tests.test_visuals_project_api import data
+
+    narrator = locked_character("Narrator", "red")
+    result = data(client.post("/api/shorts-batch/create", json={
+        "topic_name": "Shorts", "series_name": "Gốc từ", "template": "roots", "cast": [narrator], "cefr_level": "B1",
+        "start_date": "2026-11-04", "every_days": 1, "make_projects": True, "items": [{"title": "Gốc PRESS", "brief": ""}]}))
+    tree = data(client.get("/api/channel"))
+    series = next(s for topic in tree["topics"] for s in topic["series"] if s["id"] == result["series_id"])
+    project = data(client.get(f"/api/projects/{series['episodes'][0]['project_id']}"))
+    assert project["explainer_style"] == "roots" and is_short_video(project) and project["duration_minutes"] == 2.0

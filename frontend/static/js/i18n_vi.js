@@ -681,6 +681,20 @@ window.I18N_VI = {
     "Slow English podcast Short": "Short podcast tiếng Anh nói chậm",
     "Vocabulary flashcards Short": "Short flashcard từ vựng",
     "Vietnamese translation": "Bản dịch tiếng Việt",
+    // Phase 87: the word-roots Short and the VieNeu Vietnamese voice
+    "🌱 Word roots, prefixes & suffixes": "🌱 Gốc từ, tiền tố, hậu tố",
+    "One root, prefix or suffix and its word family, each word split and explained in Vietnamese with a Vietnamese voice; up to 3 minutes":
+      "Một gốc từ, tiền tố hoặc hậu tố và cả họ từ của nó; mỗi từ được tách và giải thích bằng tiếng Việt, giọng Việt; tối đa 3 phút",
+    "Word roots, prefixes & suffixes": "Gốc từ, tiền tố, hậu tố",
+    "One root, prefix or suffix and its word family, explained in Vietnamese.": "Một gốc từ, tiền tố hoặc hậu tố và cả họ từ, giải thích bằng tiếng Việt.",
+    "Short: word roots, prefixes & suffixes": "Short: gốc từ, tiền tố, hậu tố",
+    "Short · word roots": "Short · gốc từ",
+    "Word roots Short": "Short gốc từ",
+    "VieNeu voice": "Giọng VieNeu",
+    "Save voice": "Lưu giọng",
+    "Local Vietnamese voice: Vietnamese explanation and English words in one voice.": "Giọng Việt chạy trên máy: một giọng đọc cả lời giảng tiếng Việt và từ tiếng Anh.",
+    "Could not read the VieNeu voices. Reload the page.": "Không đọc được danh sách giọng VieNeu. Hãy tải lại trang.",
+    "The voice could not be saved. Reload and try again.": "Không lưu được giọng. Hãy tải lại trang rồi thử lại.",
     // Phase 80: the Shorts batch page
     "Make 5–10 vertical Shorts (at most a minute each) in one go: choose the kind of video, let the AI propose ideas from a topic or today's news, review them, then make the videos now or let": "Làm 5–10 Short dọc (mỗi video tối đa một phút) trong một lần: chọn loại video, để AI đề xuất ý tưởng từ một chủ đề hoặc tin hôm nay, duyệt lại, rồi làm video ngay hoặc để",
     "make them by their dates. Each Short is saved in its own folder under the main save folder.": "làm theo ngày đăng. Mỗi Short được lưu trong thư mục riêng dưới thư mục lưu chính.",
@@ -1933,4 +1947,12 @@ window.I18N_VI.patterns.push(
   [/^Video folder: (.+)$/, "Thư mục video: $1"],
   [/^Saved (\d+) file\(s\) in (.+)\.$/, "Đã lưu $1 tệp vào $2."],
   [/^Folder ready at (.+); selected files will be added as they are made\.$/, "Đã sẵn sàng thư mục $1; các tệp đã chọn sẽ được thêm khi hoàn tất."],
+);
+// Phase 87: the VieNeu Vietnamese voice in Step 4
+window.I18N_VI.patterns.push(
+  [/^Vietnamese voice \(VieNeu\): (.+)$/, "Giọng Việt (VieNeu): $1"],
+  [/^The Vietnamese voice is not installed on this computer\. Run (.+) once, then generate the audio\.$/,
+    "Máy này chưa cài giọng Việt. Hãy chạy $1 một lần, rồi tạo âm thanh."],
+  [/^(.+) — Female · (.+)$/, "$1 — Nữ · $2"],
+  [/^(.+) — Male · (.+)$/, "$1 — Nam · $2"],
 );

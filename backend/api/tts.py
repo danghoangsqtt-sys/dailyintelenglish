@@ -15,7 +15,8 @@ from backend.core.voice import line_fingerprint
 from backend.db.database import get_db
 from backend.schemas.tts import PreviewLineRequest, VoiceCatalog, VoicePreviewRequest, VoicePreviewResult
 from backend.content import project_service, script_service
-from backend.ai.tts import tts_service, voice_catalog_service, voice_preview_service
+from backend.ai.tts import tts_service, vieneu_service, voice_catalog_service, voice_preview_service
+from backend.core.constants import VIENEU_PRESETS
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 preview_router = APIRouter(prefix="/api/projects/{project_id}/tts", tags=["tts"])
@@ -51,10 +52,13 @@ async def voice_preview_media(preview_id: str) -> Response:
 
 @router.get("/engines")
 async def list_engines() -> dict:
-    """Report the supported plain-speech engine."""
+    """Report the speech engines: Edge, and (Phase 87, D125) the local VieNeu Vietnamese voice with its presets."""
     started_at = time.perf_counter()
     engines = [
         {"id": "edge_tts", "available": True, "kind": "online_free"},
+        {"id": "vieneu", "available": vieneu_service.is_available(), "kind": "local", "setup": "scripts/setup_vieneu.ps1",
+         "voices": [{"id": voice_id, "gender": gender, "region": region, "style": style}
+                    for voice_id, (gender, region, style) in VIENEU_PRESETS.items()]},
     ]
     return ok(engines, started_at=started_at)
 

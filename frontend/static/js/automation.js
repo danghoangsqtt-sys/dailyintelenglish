@@ -5,7 +5,7 @@
   const STATUS = { running: "Working", waiting_review: "Waiting for review", needs_attention: "Needs your attention", error: "Error" };
   const KIND = { classic: "Conversation", presenter: "Solo", vox: "VOX", news: "Short · news", blur: "Short · blur",
     mistakes: "Short · don't say", wordday: "Short · word", top5: "Short · top 5", quiz: "Short · quiz", listen: "Short · listening",
-    slowpod: "Short · slow podcast", flashcards: "Short · flashcards", chat: "Short · chat", wyr: "Short · would you rather" };
+    slowpod: "Short · slow podcast", flashcards: "Short · flashcards", roots: "Short · word roots", chat: "Short · chat", wyr: "Short · would you rather" };
   const RUN = { running: "Running", done: "Finished", stopped: "Stopped", error: "Could not start" };
   let view = null;
   let timer = null;
