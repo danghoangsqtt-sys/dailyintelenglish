@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tạo video — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
+<body><div class="app">
+<aside class="side">
+  <div class="brand"><img src="../../../../frontend/static/brand/logo-64.png" alt=""><span>Daily Beyond<small>ENGLISH</small></span></div>
+  <nav class="nav">
+    <a href="home.html">🏠 <span>Hôm nay</span><b class="count">3</b></a>
+    <a href="create.html" aria-current="page">➕ <span>Tạo video</span></a>
+    <a href="channel.html">📅 <span>Kênh</span></a>
+    <a href="videos.html">🎬 <span>Video của tôi</span></a>
+    <hr>
+    <a href="library.html">🗂️ <span>Thư viện</span></a>
+    <a href="#">⚙️ <span>Cài đặt</span></a>
+  </nav>
+  <div class="foot">Tự động: bật · đêm nay 23:00</div>
+</aside>
+<main class="main">
+  <div class="head"><div><h1>Tạo video</h1><p>Chọn làm một video, hoặc nhiều Short cùng lúc. Hai cách dùng chung một danh sách loại video.</p></div></div>
+
+  <div class="switch" role="tablist">
+    <a href="#" aria-current="false">Một video<small>dài 16:9 hoặc một Short, đi qua 3 chặng</small></a>
+    <a href="#" aria-current="true">Nhiều Short cùng lúc<small>AI đề xuất 5–10 ý tưởng, làm một lần</small></a>
+  </div>
+
+  <section class="card">
+    <h2>1 · Loại video</h2>
+    <div class="kinds">
+      <p class="kgroup">Short có nhân vật, người dẫn hoặc hình ảnh (dọc 9:16)</p>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/conversation_short.jpg" alt=""><b>Hội thoại</b><span>Hai nhân vật nói chuyện về một tình huống hằng ngày.</span><span class="pill">2 nhân vật</span></div>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/presenter_short.jpg" alt=""><b>Người dẫn</b><span>Một người dẫn giải thích một ý trước máy quay.</span><span class="pill">người dẫn</span></div>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/vox_short.jpg" alt=""><b>VOX</b><span>Giọng kể trên nền hình ảnh và chữ.</span><span class="pill">người kể</span></div>
+      <p class="kgroup">Học thuật (tiếng Việt, 1–3 phút)</p>
+      <div class="kind" aria-checked="true"><img class="thumb" src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><b>Ngữ pháp dễ hiểu</b><span>Một điểm ngữ pháp giảng theo bản chất, có bảng tổng kết.</span><span class="pill">người kể</span></div>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><b>Gốc từ, tiền tố, hậu tố</b><span>Một gốc và cả họ từ, tách từng từ.</span><span class="pill">người kể</span></div>
+      <p class="kgroup">Mẫu chữ nhanh (dưới 1 phút)</p>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/wordday-vi.jpg" alt=""><b>Từ của ngày</b><span>Một từ: nghĩa, cách đọc, ví dụ.</span><span class="pill">người kể</span></div>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/mistakes-vi.jpg" alt=""><b>Đừng nói / Hãy nói</b><span>Một lỗi hay gặp và cách nói tự nhiên.</span><span class="pill">người kể</span></div>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/news-vi.jpg" alt=""><b>Tin tức</b><span>Một tin bằng tiếng Anh dễ hiểu.</span><span class="pill">người kể</span></div>
+      <div class="kind"><img class="thumb" src="../../../../frontend/static/samples/chat-vi.jpg" alt=""><b>Chat</b><span>Đoạn chat tin nhắn giữa hai người.</span><span class="pill">2 nhân vật</span></div>
+    </div>
+    <p class="hint" style="margin:10px 0 0">Nhóm theo mục đích thay vì theo kỹ thuật · rê chuột lên một thẻ để xem clip ví dụ · còn 7 loại nữa (Top 5, Quiz, Nghe, Nền mờ, Podcast chậm, Flashcard, Bạn chọn gì).</p>
+  </section>
+
+  <div class="grid cols-2" style="margin-top:16px">
+    <section class="card">
+      <h2>2 · Ý tưởng</h2>
+      <div class="filters"><input placeholder="Chủ đề, ví dụ: các thì hay nhầm"><select><option>7 Short</option></select><select><option>B1</option></select><select><option>Khán giả: Việt Nam</option></select></div>
+      <button class="btn primary">✨ Đề xuất ý tưởng</button>
+      <div class="empty" style="margin-top:14px">AI sẽ đề xuất 7 ý tưởng; bạn sửa, bỏ, sắp xếp lại trước khi làm.</div>
+    </section>
+    <section class="card">
+      <h2>Xem trước</h2>
+      <img src="../../../../frontend/static/samples/grammar-vi.jpg" alt="" style="width:100%;max-width:260px;display:block;margin:0 auto;border-radius:12px">
+      <p class="hint">Ví dụ minh hoạ. Khi có ý tưởng, khung này hiện bản xem trước theo ý tưởng đang chọn.</p>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>3 · Lịch và làm video</h2>
+    <div class="filters"><select><option>Series: Ngữ pháp bản chất (mới)</option></select><select><option>Người kể: Lina</option></select><input type="date" value="2026-11-04" style="flex:0 0 180px"><select><option>Mỗi 1 ngày</option></select></div>
+    <button class="btn primary">Làm video ngay</button> <button class="btn">Để Tự động làm theo lịch</button>
+    <p class="hint">Video lưu vào D:\Videos\Ngữ pháp bản chất · sau đó xem ở Hôm nay → Cần bạn.</p>
+  </section>
+</main></div></body></html>
