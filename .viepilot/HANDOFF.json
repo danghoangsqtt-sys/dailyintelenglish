@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": 92,
+  "current_phase": 93,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1119,5 +1119,31 @@
     "installed": false,
     "pushed": false,
     "next_task": "owner looks at Step 1 / Shorts batch; install Phases 88 fixes + 90 + 91 + 92"
+  },
+  "phase93_studio_ui_frame": {
+    "status": "planned",
+    "plan": ".viepilot/phases/93-studio-ui-frame/PLAN.md",
+    "decisions": [
+      "D138 five areas + Settings, old addresses redirect",
+      "D139 direction E tokens, Baloo 2 + Be Vietnam Pro local",
+      "D140 one shared rail, phone tab bar",
+      "D141 Home only what needs you or is moving",
+      "D142 Video table by default"
+    ],
+    "design": ".viepilot/ui-direction/session-2026-11-03-alt/e/",
+    "next_task": "93.1 when the owner says to run it",
+    "pushed": false
+  },
+  "phase94_studio_ui_steps_lina": {
+    "status": "planned",
+    "plan": ".viepilot/phases/94-studio-ui-steps-lina/PLAN.md",
+    "decisions": [
+      "D143 one frame for every step",
+      "D144 Lina is the assistant character (setting)",
+      "D145 lines from app state",
+      "D146 reading aloud off by default, frames cut on the server"
+    ],
+    "after": "phase93_studio_ui_frame",
+    "pushed": false
   }
 }

@@ -1,5 +1,13 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 94 — The new studio look: the seven steps and Lina (2026-11-04)
+
+Status: planned. One frame for every step (title, 3 stages of 7 steps, sticky Back / Next), each step laid out as drawn in direction E with its IDs and behaviour kept; Lina as the assistant (band on Home, a one-line note elsewhere, lines from the app's state, reading aloud off by default). Defaults D143–D146. [Plan](phases/94-studio-ui-steps-lina/PLAN.md).
+
+## Phase 93 — The new studio look: frame and main areas (2026-11-04)
+
+Status: planned. Direction E (`.viepilot/ui-direction/session-2026-11-03-alt/e/`, self-scored 91/100) in the real app: tokens (light / dark, one accent, Baloo 2 + Be Vietnam Pro shipped locally), one rail that becomes a phone tab bar, five areas (Hôm nay, Tạo video, Kênh with Lịch đăng · Series · Tự động, Video, Thư viện with tabs), old addresses redirect, no feature removed. Defaults D138–D142. [Plan](phases/93-studio-ui-frame/PLAN.md).
+
 ## Phase 92 — Example clips for every kind of video (2026-11-03)
 
 Status: implemented_verified (16 kinds, 1.82 MB of clips, on every kind card of Step 1 and the Shorts batch page; sandbox checked; not built, installed or pushed; the owner has not looked yet). [Summary](phases/92-template-samples/SUMMARY.md). A short muted example clip on every kind card in Step 1 and the Shorts batch page (plays on hover, "Xem ví dụ" for a larger one, "Ví dụ minh hoạ" and "Phù hợp cho…"), made by the app's renderer from the sample props in Vietnamese and English; the three 16:9 kinds cut from the owner's own videos. Defaults D134–D137. [Plan](phases/92-template-samples/PLAN.md).
