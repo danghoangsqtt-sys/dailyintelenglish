@@ -1,0 +1,24 @@
+{
+  "_comment": "Phase 92 (D134-D136): the example clip of every kind of video. Templates are rendered from renderer/src/sampleShort.ts (from / seconds = the window shown); the 16:9 kinds are cut from the owner's own finished videos (change file / from to use another one). Run: npm run render:samples",
+  "seconds": 5,
+  "templates": {
+    "news": {"idea": {"title": "Cities plant more trees to cool hot summers", "brief": "Today's story, told in simple English."}, "from": 0.4},
+    "blur": {"idea": {"title": "Small habits change your whole day", "brief": "One calm idea on a blurred background."}, "from": 0.4},
+    "mistakes": {"idea": {"title": "Don't say 'I very like it'", "brief": "Say 'I really like it'."}, "from": 0.4},
+    "wordday": {"idea": {"title": "Word of the day: 'cozy'", "brief": "warm, comfortable and relaxing", "vi": "ấm cúng"}, "from": 0.4},
+    "top5": {"idea": {"title": "Top 5 phrases for small talk", "brief": "Easy phrases to start a chat.", "vi": "câu nói mở đầu"}, "from": 0.4},
+    "quiz": {"idea": {"title": "Which is correct?", "brief": "A quick countdown quiz."}, "from": 0.4},
+    "listen": {"idea": {"title": "Can you catch this sentence?", "brief": "A listening challenge."}, "from": 0.4},
+    "slowpod": {"idea": {"title": "My morning routine", "brief": "A calm, slow story."}, "from": 0.4},
+    "flashcards": {"idea": {"title": "Kitchen words", "brief": ""}, "from": 1.5},
+    "roots": {"idea": {"title": "Gốc PRESS", "brief": ""}, "from": 7.5, "vi_only": true},
+    "grammar": {"idea": {"title": "Câu bị động", "brief": ""}, "from": 9.5, "vi_only": true},
+    "chat": {"idea": {"title": "Want to go for coffee this weekend?", "brief": "Let's meet at ten near the park."}, "from": 0.4},
+    "wyr": {"idea": {"title": "Would you rather 'travel by train' or by plane?", "brief": ""}, "from": 1.0}
+  },
+  "sources": {
+    "conversation": {"file": "D:/Videos/Tự động 2026-10-28/Auto — Conversation 16 9/Ep 01 - Talking about weekend plans/video.mp4", "from": 20},
+    "presenter": {"file": "D:/Videos/Kiểm tra 16 9 2026-10-28/Presenter why v2/Ep 01 - Why small talk matters at work/video.mp4", "from": 20},
+    "vox": {"file": "D:/Videos/Kiểm tra VOX 2026-10-28/VOX why v2/Ep 01 - Why English has so many silent letters/video.mp4", "from": 20}
+  }
+}

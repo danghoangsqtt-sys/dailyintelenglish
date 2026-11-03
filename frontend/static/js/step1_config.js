@@ -907,6 +907,8 @@
       collapseBtn: document.getElementById("sidebar-collapse-btn"),
     });
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
+    // Phase 92: an example clip on every video type and Short template card, in the channel audience's language
+    Api.getChannelAudience().catch(() => ({})).then((data) => window.TemplateSamples?.attach(document, { audience: data?.audience }));
     const form = document.getElementById("config-form");
     form.hidden = true;
 

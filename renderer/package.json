@@ -10,7 +10,8 @@
   "scripts": {
     "build:preview": "node scripts/build-preview.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "render:samples": "node scripts/render-samples.mjs"
   },
   "dependencies": {
     "@remotion/captions": "^4.0.529",

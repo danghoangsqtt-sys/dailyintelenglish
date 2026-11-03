@@ -10,7 +10,7 @@ import type { SoloPayload, Visual } from "./soloTypes";
 export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards"
   | "roots"
   | "grammar";
-export type SampleIdea = { title: string; brief?: string };
+export type SampleIdea = { title: string; brief?: string; vi?: string };  // vi: Phase 92, the example clips' Vietnamese meaning
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
 const WORD_SEC = 0.34, LINE_GAP = 0.3, SEGMENT_GAP = 0.2, FPS = 30, GAP = 0.015;
 
@@ -101,7 +101,7 @@ function geometry() {
 
 /** Phase 72 (ENH-054): a sample learning pack, so the preview shows the cards of the chosen audience. */
 function sampleLearning(template: SampleTemplate, idea: SampleIdea, audience: string) {
-  const vietnamese = "nghĩa tiếng Việt";
+  const vietnamese = idea.vi || "nghĩa tiếng Việt";
   const word = template === "wordday" ? (quoted(idea.title) ?? idea.title.split(/\s+/).slice(-1)[0].replace(/[^\p{L}'-]/gu, "") ?? "word") : "";
   const vocab = word ? [{ word, partOfSpeech: "noun", ipa: "", definitionEn: idea.brief || "", definitionVi: vietnamese, exampleSentence: "" }] : [];
   const idioms = template === "top5" ? [5, 4, 3, 2, 1].map((n) => ({ phrase: `Phrase number ${n}`, meaningEn: "", meaningVi: vietnamese, exampleSentence: "" })) : [];

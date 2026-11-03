@@ -1,0 +1,162 @@
+{
+  "news": {
+    "kind": "news",
+    "aspect": "9:16",
+    "vi": "news-vi.mp4",
+    "poster_vi": "news-vi.jpg",
+    "seconds": 5,
+    "poster_en": "news-vi.jpg",
+    "en": "news-vi.mp4",
+    "bytes": 101026
+  },
+  "grammar": {
+    "kind": "grammar",
+    "aspect": "9:16",
+    "vi": "grammar-vi.mp4",
+    "poster_vi": "grammar-vi.jpg",
+    "seconds": 5,
+    "en": "grammar-vi.mp4",
+    "poster_en": "grammar-vi.jpg",
+    "bytes": 138697
+  },
+  "blur": {
+    "kind": "blur",
+    "aspect": "9:16",
+    "vi": "blur-vi.mp4",
+    "poster_vi": "blur-vi.jpg",
+    "seconds": 5,
+    "poster_en": "blur-vi.jpg",
+    "en": "blur-vi.mp4",
+    "bytes": 123100
+  },
+  "mistakes": {
+    "kind": "mistakes",
+    "aspect": "9:16",
+    "vi": "mistakes-vi.mp4",
+    "poster_vi": "mistakes-vi.jpg",
+    "seconds": 5,
+    "poster_en": "mistakes-vi.jpg",
+    "en": "mistakes-vi.mp4",
+    "bytes": 90251
+  },
+  "wordday": {
+    "kind": "wordday",
+    "aspect": "9:16",
+    "vi": "wordday-vi.mp4",
+    "poster_vi": "wordday-vi.jpg",
+    "seconds": 5,
+    "en": "wordday-en.mp4",
+    "poster_en": "wordday-en.jpg",
+    "bytes": 197330
+  },
+  "top5": {
+    "kind": "top5",
+    "aspect": "9:16",
+    "vi": "top5-vi.mp4",
+    "poster_vi": "top5-vi.jpg",
+    "seconds": 5,
+    "en": "top5-en.mp4",
+    "poster_en": "top5-en.jpg",
+    "bytes": 202382
+  },
+  "quiz": {
+    "kind": "quiz",
+    "aspect": "9:16",
+    "vi": "quiz-vi.mp4",
+    "poster_vi": "quiz-vi.jpg",
+    "seconds": 5,
+    "poster_en": "quiz-vi.jpg",
+    "en": "quiz-vi.mp4",
+    "bytes": 107097
+  },
+  "listen": {
+    "kind": "listen",
+    "aspect": "9:16",
+    "vi": "listen-vi.mp4",
+    "poster_vi": "listen-vi.jpg",
+    "seconds": 5,
+    "poster_en": "listen-vi.jpg",
+    "en": "listen-vi.mp4",
+    "bytes": 77550
+  },
+  "slowpod": {
+    "kind": "slowpod",
+    "aspect": "9:16",
+    "vi": "slowpod-vi.mp4",
+    "poster_vi": "slowpod-vi.jpg",
+    "seconds": 5,
+    "poster_en": "slowpod-vi.jpg",
+    "en": "slowpod-vi.mp4",
+    "bytes": 133884
+  },
+  "flashcards": {
+    "kind": "flashcards",
+    "aspect": "9:16",
+    "vi": "flashcards-vi.mp4",
+    "poster_vi": "flashcards-vi.jpg",
+    "seconds": 5,
+    "poster_en": "flashcards-vi.jpg",
+    "en": "flashcards-vi.mp4",
+    "bytes": 109899
+  },
+  "roots": {
+    "kind": "roots",
+    "aspect": "9:16",
+    "vi": "roots-vi.mp4",
+    "poster_vi": "roots-vi.jpg",
+    "seconds": 5,
+    "en": "roots-vi.mp4",
+    "poster_en": "roots-vi.jpg",
+    "bytes": 75733
+  },
+  "chat": {
+    "kind": "chat",
+    "aspect": "9:16",
+    "vi": "chat-vi.mp4",
+    "poster_vi": "chat-vi.jpg",
+    "seconds": 5,
+    "poster_en": "chat-vi.jpg",
+    "en": "chat-vi.mp4",
+    "bytes": 69340
+  },
+  "wyr": {
+    "kind": "wyr",
+    "aspect": "9:16",
+    "vi": "wyr-vi.mp4",
+    "poster_vi": "wyr-vi.jpg",
+    "seconds": 5,
+    "poster_en": "wyr-vi.jpg",
+    "en": "wyr-vi.mp4",
+    "bytes": 73540
+  },
+  "conversation": {
+    "kind": "conversation",
+    "aspect": "16:9",
+    "vi": "conversation.mp4",
+    "en": "conversation.mp4",
+    "poster_vi": "conversation.jpg",
+    "poster_en": "conversation.jpg",
+    "seconds": 5,
+    "bytes": 194790
+  },
+  "presenter": {
+    "kind": "presenter",
+    "aspect": "16:9",
+    "vi": "presenter.mp4",
+    "en": "presenter.mp4",
+    "poster_vi": "presenter.jpg",
+    "poster_en": "presenter.jpg",
+    "seconds": 5,
+    "bytes": 100049
+  },
+  "vox": {
+    "kind": "vox",
+    "aspect": "16:9",
+    "vi": "vox.mp4",
+    "en": "vox.mp4",
+    "poster_vi": "vox.jpg",
+    "poster_en": "vox.jpg",
+    "seconds": 5,
+    "bytes": 116891
+  }
+}

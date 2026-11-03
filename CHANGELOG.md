@@ -8,6 +8,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Example clips for every kind of video (Phase 92, 2026-11-03)
+
+- Every kind card in Step 1 and on the Shorts batch page shows a short muted example clip that plays when you point at or choose it; the corner ⤢ opens a larger example with what the kind is best for. Clips follow the channel audience's language.
+
 ### Added — Edit every kind of video on its video (Phase 91, 2026-11-03)
 
 - Slow podcast, flashcards, chat and would-you-rather Shorts open the same "Edit on the video" editor with their own fields (translation; part of speech, IPA, meaning; messages) and the live video.

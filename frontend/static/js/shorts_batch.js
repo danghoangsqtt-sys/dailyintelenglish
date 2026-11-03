@@ -132,6 +132,8 @@
       nodes.push(card);
     });
     grid.replaceChildren(...nodes);
+    // Phase 92: an example clip on every kind card
+    window.TemplateSamples?.attach(grid, { audience: $("batch-audience").value || state.channelAudience });
   }
 
   function setTemplate(key) {
@@ -350,7 +352,9 @@
   });
   $("batch-level").addEventListener("change", refreshPreview);
   $("batch-audience").addEventListener("change", refreshPreview);  // Phase 72 (ENH-054)
-  Api.getChannelAudience().then((data) => { state.channelAudience = data.audience; refreshPreview(); }).catch(() => {});
+  $("batch-audience").addEventListener("change", () => window.TemplateSamples?.setAudience($("batch-audience").value || state.channelAudience));
+  Api.getChannelAudience().then((data) => { state.channelAudience = data.audience; refreshPreview();
+    window.TemplateSamples?.setAudience($("batch-audience").value || data.audience); }).catch(() => {});
   $("news-level").addEventListener("change", refreshPreview);
   $("batch-topic").addEventListener("input", () => { if (!state.items.length) refreshPreview(); });
   $("news-load").addEventListener("click", loadNews);

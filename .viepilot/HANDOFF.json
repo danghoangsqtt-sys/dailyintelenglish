@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": 91,
+  "current_phase": 92,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1112,5 +1112,12 @@
     "installed": false,
     "pushed": false,
     "next_task": "owner review; install Phases 88 fixes + 90 + 91 together"
+  },
+  "phase92_template_samples": {
+    "status": "implemented_verified",
+    "date": "2026-11-03",
+    "installed": false,
+    "pushed": false,
+    "next_task": "owner looks at Step 1 / Shorts batch; install Phases 88 fixes + 90 + 91 + 92"
   }
 }
