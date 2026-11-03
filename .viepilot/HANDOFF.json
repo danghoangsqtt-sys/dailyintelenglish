@@ -7,7 +7,7 @@
       "D126 academic Shorts up to 3 min",
       "D127 brand colours"
     ],
-    "next_task": "owner: listen to D:\\Videos\\Kiểm tra Gốc từ 2026-11-03\\Gốc từ v3; then build/install, then Phase 88",
+    "next_task": "Phase 88 (grammar Short) when the owner asks",
     "following_phases": [
       ".viepilot/phases/88-academic-grammar/PLAN.md",
       ".viepilot/phases/89-academic-long-series/PLAN.md"
@@ -17,9 +17,13 @@
     "test_videos": "D:\\Videos\\Kiểm tra Gốc từ 2026-11-03 (Gốc từ v1, v2, v3)",
     "full_pytest": "2277 passed",
     "vitest": "198 passed",
-    "installed": false,
+    "installed": true,
     "summary": ".viepilot/phases/87-academic-roots/SUMMARY.md",
-    "vieneu_setup": "scripts/setup_vieneu.ps1 (done on this machine: .venv-vieneu, backend/ai/models/vieneu)"
+    "vieneu_setup": "scripts/setup_vieneu.ps1 (done on this machine: .venv-vieneu, backend/ai/models/vieneu)",
+    "installed_from_commit": "b820d22",
+    "installed_backup": "data/backups/desktop-20261103-110605-034",
+    "package_directory": "dist/2.0-phase87-20261103",
+    "full_zip_sha256": "830f817db28ffd48eca5506847ca73203f1daf66e14d5541a7383f0f9d54147a"
   },
   "phase86_vox_formula": {
     "status": "implemented_verified",

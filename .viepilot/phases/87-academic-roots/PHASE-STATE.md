@@ -1,6 +1,6 @@
 # Phase 87 state
 
-Status: implemented_verified (2026-11-03, sandbox runs; not built, installed or pushed). Plan committed before implementation; the owner said "Chạy Phase 87", self-implemented in this session.
+Status: implemented_verified and installed (2026-11-03). Installed (owner: "Nghe xong, cài đi", 2026-11-03): Full 2.0.0 from b820d22 (source_dirty false), package dist/2.0-phase87-20261103 (Full ZIP SHA256 830f817db28ffd48eca5506847ca73203f1daf66e14d5541a7383f0f9d54147a), backup data/backups/desktop-20261103-110605-034; the running app reports commit b820d22 and the same data instance; VieNeu available with 25 voices; the word-roots template, batch kind and preview are served. Found before building: backend/content/data was not in the PyInstaller spec (fixed in b820d22). Not pushed. Plan committed before implementation; the owner said "Chạy Phase 87", self-implemented in this session.
 
 | Task | Scope | Status |
 |---|---|---|

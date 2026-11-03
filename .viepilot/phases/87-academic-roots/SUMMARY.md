@@ -1,6 +1,8 @@
 # Phase 87 summary — Vietnamese VieNeu voice and the "Word roots, prefixes and suffixes" Short
 
-Done 2026-11-03 on `owner-runs/20261001-r9` (not pushed, not installed). Decisions D125–D127.
+Done 2026-11-03 on `owner-runs/20261001-r9` (not pushed). Decisions D125–D127.
+
+Installed (owner: "Nghe xong, cài đi", 2026-11-03): Full 2.0.0 from b820d22 (source_dirty false), package dist/2.0-phase87-20261103 (Full ZIP SHA256 830f817db28ffd48eca5506847ca73203f1daf66e14d5541a7383f0f9d54147a), backup data/backups/desktop-20261103-110605-034; the running app reports commit b820d22 and the same data instance; VieNeu available with 25 voices; the word-roots template, batch kind and preview are served. Found before building: backend/content/data was not in the PyInstaller spec (fixed in b820d22). Not pushed.
 
 ## What changed
 
