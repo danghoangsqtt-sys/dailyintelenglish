@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hôm nay — bản mẫu</title><link rel="stylesheet" href="../style.css"></head>
+<title>Hôm nay — bản mẫu</title><link rel="stylesheet" href="../style.css"><script src="../theme.js"></script></head>
 <body><div class="app">
 <nav class="rail" aria-label="Điều hướng">
   <img class="logo" src="../../../../frontend/static/brand/logo-64.png" alt="Daily Beyond English">
@@ -12,55 +12,64 @@
   <a class="bottom" href="#"><svg class="i"><use href="../icons.svg#settings"/></svg>Cài đặt</a>
 </nav>
 <main class="main">
-  <section class="hero" style="background-image:url('../../../../data/channels4_banner.jpg')">
+  <div class="top" style="margin-bottom:0"><div class="grow"><p style="margin:0">Thứ Ba, 3 tháng 11</p></div>
+    <div class="searchbar"><svg class="i"><use href="../icons.svg#search"/></svg>Tìm video, mẫu, nhân vật…</div></div>
+
+  <section class="hero">
     <div class="inner">
-      <span class="chip green"><svg class="i" style="width:14px;height:14px"><use href="../icons.svg#moon"/></svg>Đêm qua làm xong 3 video</span>
-      <h1 style="margin-top:12px">Chào buổi chiều!<br>Có 3 video đang chờ bạn.</h1>
-      <p>Duyệt xong là chúng lên lịch đăng. Tuần này kênh có 5 video sắp ra mắt.</p>
+      <span class="chip" style="background:rgba(255,255,255,.14);color:#fff"><svg class="i" style="width:14px;height:14px"><use href="../icons.svg#moon"/></svg>Đêm qua làm xong 3 video</span>
+      <h1 style="margin-top:14px">Chào buổi chiều!<br>Có <em>3 video</em> đang chờ bạn duyệt.</h1>
+      <p>Duyệt xong là chúng tự lên lịch. Tuần này kênh có 5 video sắp ra mắt.</p>
       <div class="actions">
-        <a class="btn primary" href="#needs"><svg class="i"><use href="../icons.svg#check"/></svg>Duyệt ngay</a>
-        <a class="btn" href="create.html"><svg class="i"><use href="../icons.svg#plus"/></svg>Tạo video</a>
+        <a class="btn yellow" href="#needs"><svg class="i"><use href="../icons.svg#check"/></svg>Duyệt ngay</a>
+        <a class="btn glass" href="create.html"><svg class="i"><use href="../icons.svg#plus"/></svg>Tạo video mới</a>
       </div>
     </div>
+    <div class="bubble">Hôm nay học gì nhỉ?</div>
+    <img class="person" src="../../../../data/library/sprites/eba10f99-494c-47d6-ae8a-d52a3832f162/gesture-wave.png" alt="">
   </section>
 
-  <section class="section" id="needs">
-    <div class="section-head"><h2>Cần bạn</h2><span class="count">3</span><a class="more" href="videos.html">Xem tất cả <svg class="i" style="width:16px"><use href="../icons.svg#arrow"/></svg></a></div>
-    <div class="posters">
-      <div class="poster needs"><div class="art"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><span class="tl chip yellow">Chờ duyệt</span><span class="br chip dark">0:58</span>
-        <div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div>
-        <div class="name">Câu bị động: hiểu bản chất</div><div class="meta">Ngữ pháp · làm xong đêm qua</div>
-        <div class="act"><a class="btn sm primary" href="project.html">Duyệt</a><a class="btn sm" href="project.html">Sửa</a></div></div>
-      <div class="poster needs"><div class="art"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><span class="tl chip red">Thiếu 3 hình</span><span class="br chip dark">1:45</span>
-        <div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div>
-        <div class="name">Hậu tố -MENT</div><div class="meta">Gốc từ · cần vẽ lại hình</div>
-        <div class="act"><a class="btn sm primary" href="project.html">Vẽ lại hình</a></div></div>
-      <div class="poster needs"><div class="art"><img src="../../../../frontend/static/samples/news-vi.jpg" alt=""><span class="tl chip yellow">Chờ duyệt</span><span class="br chip dark">0:57</span>
-        <div class="play"><span><svg class="i fill"><use href="../icons.svg#play"/></svg></span></div></div>
-        <div class="name">Cities plant more trees</div><div class="meta">Tin tức · đã sửa 1 câu</div>
-        <div class="act"><a class="btn sm primary" href="project.html">Duyệt</a><a class="btn sm" href="project.html">Sửa</a></div></div>
-      <div class="poster"><div class="art" style="background:var(--soft);box-shadow:none;border:2px dashed var(--line);display:grid;place-items:center;text-align:center;color:var(--muted)">
-        <div style="padding:16px"><svg class="i" style="width:34px;height:34px;color:var(--green)"><use href="../icons.svg#spark"/></svg><div style="font-weight:700;margin-top:8px;color:var(--ink)">Thêm Short</div><div style="font-size:13px">AI đề xuất 5–10 ý tưởng</div></div></div>
-        <div class="name">&nbsp;</div></div>
-    </div>
-  </section>
+  <div class="quick">
+    <a href="create.html"><span style="background:linear-gradient(135deg,#1d7a3a,#47b05e)"><svg class="i"><use href="../icons.svg#layers"/></svg></span>Ngữ pháp</a>
+    <a href="create.html"><span style="background:linear-gradient(135deg,#0f766e,#2bb3a3)"><svg class="i"><use href="../icons.svg#spark"/></svg></span>Gốc từ</a>
+    <a href="create.html"><span style="background:linear-gradient(135deg,#e5483d,#ff8a65)"><svg class="i"><use href="../icons.svg#user"/></svg></span>Hội thoại</a>
+    <a href="create.html"><span style="background:linear-gradient(135deg,#2b6cb0,#5aa0e6)"><svg class="i"><use href="../icons.svg#mic"/></svg></span>Người dẫn</a>
+    <a href="create.html"><span style="background:linear-gradient(135deg,#d99a00,#ffd60a)"><svg class="i"><use href="../icons.svg#brand"/></svg></span>Từ của ngày</a>
+    <a href="create.html"><span style="background:linear-gradient(135deg,#7c3aed,#b088f9)"><svg class="i"><use href="../icons.svg#grid"/></svg></span>Flashcard</a>
+    <a href="create.html"><span style="background:linear-gradient(135deg,#334155,#64748b)"><svg class="i"><use href="../icons.svg#film"/></svg></span>Nhiều Short<br>cùng lúc</a>
+    <a href="create.html"><span style="background:var(--card);color:var(--ink-2)"><svg class="i"><use href="../icons.svg#arrow"/></svg></span>Tất cả mẫu</a>
+  </div>
 
   <div class="split section">
-    <section>
-      <div class="section-head"><h2>Sắp đăng</h2><span class="count">5</span><a class="more" href="channel.html">Mở lịch <svg class="i" style="width:16px"><use href="../icons.svg#arrow"/></svg></a></div>
-      <div class="posters" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
-        <div class="poster"><div class="art"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><span class="tl chip green">Hôm nay 19:00</span></div><div class="name">Gốc SPECT</div><div class="meta">Một gốc – cả họ từ · Tập 4</div></div>
-        <div class="poster"><div class="art"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><span class="tl chip">Thứ Tư</span></div><div class="name">Câu bị động</div><div class="meta">Ngữ pháp bản chất · Tập 1</div></div>
-        <div class="poster"><div class="art"><img src="../../../../frontend/static/samples/chat-vi.jpg" alt=""><span class="tl chip">Thứ Năm</span></div><div class="name">Planning a picnic</div><div class="meta">Chat · Tập 1</div></div>
-        <div class="poster"><div class="art"><img src="../../../../frontend/static/samples/wordday-vi.jpg" alt=""><span class="tl chip">Thứ Bảy</span></div><div class="name">Word of the day: cozy</div><div class="meta">Từ của ngày · Tập 9</div></div>
+    <section id="needs">
+      <div class="section-head"><h2>Cần bạn</h2><span class="count">3</span><a class="more" href="videos.html">Xem tất cả <svg class="i" style="width:16px"><use href="../icons.svg#arrow"/></svg></a></div>
+      <div class="needs3">
+        <div class="need"><div class="cover"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><b>0:58</b></div>
+          <div class="body"><span class="chip yellow" style="align-self:start">Chờ duyệt</span><h3>Câu bị động: hiểu bản chất</h3><div class="why">Ngữ pháp · làm xong đêm qua</div>
+            <div class="act"><a class="btn sm primary" href="project.html">Duyệt</a><a class="btn sm" href="project.html">Xem và sửa</a></div></div></div>
+        <div class="need"><div class="cover"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><b>1:45</b></div>
+          <div class="body"><span class="chip red" style="align-self:start">Thiếu 3 hình</span><h3>Hậu tố -MENT</h3><div class="why">Gốc từ · 3 từ chưa có hình minh họa</div>
+            <div class="act"><a class="btn sm primary" href="project.html">Vẽ lại hình</a></div></div></div>
+        <div class="need"><div class="cover"><img src="../../../../frontend/static/samples/news-vi.jpg" alt=""><b>0:57</b></div>
+          <div class="body"><span class="chip yellow" style="align-self:start">Chờ duyệt</span><h3>Cities plant more trees</h3><div class="why">Tin tức · AI đã sửa 1 câu, xem lại</div>
+            <div class="act"><a class="btn sm primary" href="project.html">Duyệt</a><a class="btn sm" href="project.html">Xem và sửa</a></div></div></div>
+        <div class="need"><div class="cover"><img src="../../../../frontend/static/samples/mistakes-vi.jpg" alt=""></div>
+          <div class="body"><span class="chip blue" style="align-self:start">Đang dựng 90%</span><h3>Lỗi "I very like"</h3><div class="why">Đừng nói / Hãy nói · xong trong khoảng 1 phút</div>
+            <div class="bar" style="margin-top:auto"><i style="width:90%"></i></div></div></div>
       </div>
     </section>
+
     <aside class="card">
-      <h2 style="font-size:17px;margin-bottom:14px">Tuần này</h2>
-      <div class="stats"><div class="stat g"><b>5</b><span>sắp đăng</span></div><div class="stat y"><b>3</b><span>cần bạn</span></div><div class="stat"><b>12</b><span>đã xong</span></div></div>
-      <div class="task"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><div class="grow"><div class="t">Thì hiện tại hoàn thành</div><div class="s">Đang tạo giọng · còn ~2 phút</div><div class="bar"><i style="width:68%"></i></div></div></div>
-      <div class="task"><img src="../../../../frontend/static/samples/mistakes-vi.jpg" alt=""><div class="grow"><div class="t">Lỗi "I very like"</div><div class="s">Đang dựng video</div><div class="bar"><i style="width:90%"></i></div></div></div>
-      <div class="task"><span class="chip green"><svg class="i" style="width:14px;height:14px"><use href="../icons.svg#moon"/></svg>Đêm nay 23:00</span><div class="grow s" style="font-size:12.5px;color:var(--muted)">Tự động làm 2 video</div><a class="btn sm ghost" href="channel.html">Đổi</a></div>
+      <div class="section-head"><h2>Tuần này</h2><a class="more" href="channel.html">Mở lịch <svg class="i" style="width:16px"><use href="../icons.svg#arrow"/></svg></a></div>
+      <div class="week">
+        <div>T2<b>2</b><i></i></div><div class="today">T3<b>3</b><i></i><i></i></div><div>T4<b>4</b><i class="y"></i><i></i></div><div>T5<b>5</b><i class="o"></i></div>
+        <div>T6<b>6</b><i class="o"></i></div><div>T7<b>7</b><i class="o"></i><i class="o"></i></div><div>CN<b>8</b><i class="o"></i></div>
+      </div>
+      <div class="row"><img src="../../../../frontend/static/samples/roots-vi.jpg" alt=""><div class="grow"><div class="t">Gốc SPECT</div><div class="s">Một gốc – cả họ từ · Tập 4</div></div><div class="when">Hôm nay<br>19:00</div></div>
+      <div class="row"><img src="../../../../frontend/static/samples/grammar-vi.jpg" alt=""><div class="grow"><div class="t">Câu bị động</div><div class="s">Ngữ pháp bản chất · Tập 1</div></div><div class="when">Thứ Tư</div></div>
+      <div class="row"><img src="../../../../frontend/static/samples/conversation.jpg" alt=""><div class="grow"><div class="t">The Office · Tập 6</div><div class="s">Hội thoại 16:9</div></div><div class="when">Thứ Tư</div></div>
+      <div class="row"><img src="../../../../frontend/static/samples/wordday-vi.jpg" alt=""><div class="grow"><div class="t">Word of the day: cozy</div><div class="s">Từ của ngày · Tập 9</div></div><div class="when">Thứ Bảy</div></div>
+      <div class="row" style="margin-top:6px;padding:12px 14px;border:0;border-radius:14px;background:var(--green-soft)"><svg class="i" style="color:var(--green)"><use href="../icons.svg#moon"/></svg><div class="grow"><div class="t">Đêm nay 23:00</div><div class="s">Tự động làm 2 video</div></div><a class="btn sm ghost" href="channel.html">Đổi</a></div>
     </aside>
   </div>
 </main></div></body></html>

@@ -15,6 +15,14 @@ video covers as 9:16 posters, the template gallery shows the real example clips'
 characters, scenes and pictures. Home opens with the channel banner (the teacher on the right, the lettering covered
 by a cream wash). Green marks the place you are and the one primary action; yellow only marks "needs you".
 
+## Look (v3, after a second "chưa đẹp")
+
+v2 was all beige (page, covers, stats) and its banner crop showed a lone giant face; the 9:16 posters were too big and
+their tiny in-video text looked busy. v3: Home opens with a brand-green hero and a waving presenter cut-out from the
+character library, a round quick-create row (Canva's "what will you make"), "Cần bạn" as cards with a small cover
+beside the reason and the actions, and a week strip. A switcher (bottom right) compares three colour directions on
+every page: **Sáng** (neutral light, default), **Tối** (CapCut-like dark), **Kem** (v2's cream).
+
 ## Why (checked in the app)
 
 - The schedule is shown three times (Dashboard "next two weeks", Automation "14 days", Channel plan episode dates).
@@ -42,7 +50,7 @@ by a cream wash). Green marks the place you are and the one primary action; yell
 | File | Area | Replaces / gathers |
 |---|---|---|
 | `index.html` | hub | — |
-| `style.css`, `icons.svg` | shared look, line icons | — |
+| `style.css`, `icons.svg`, `theme.js` | shared look, line icons, colour switcher | — |
 | `pages/home.html` | Hôm nay | Dashboard top, Automation review |
 | `pages/create.html` | Tạo video | Step 1 type cards, Shorts batch |
 | `pages/channel.html` | Kênh | Channel plan, Automation, Dashboard schedule |
@@ -51,6 +59,8 @@ by a cream wash). Green marks the place you are and the one primary action; yell
 | `pages/project.html` | One video | Steps 1–7 as 3 stages, SEO in Đăng |
 
 ## Open questions for the owner
+
+- Which colour direction: Sáng, Tối or Kem?
 
 - Keep "Tự động" as its own item in the sidebar (some owners like a big on/off), or only inside Kênh as proposed?
 - "Video của tôi": v2 shows a poster grid (with a list toggle); keep the grid as default, or the dense table?
