@@ -8,6 +8,7 @@ the cards shown so far in `language_notes.grammar`, which the renderer draws.
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Literal
 
@@ -64,7 +65,8 @@ class GrammarCard(BaseModel):
 
 class Step(BaseModel):
     say: str = Field(min_length=3, max_length=240)
-    card: GrammarCard | None = None
+    # required (sandbox run 2026-11-03: left optional, the AI gave no card at all and the video had nothing to show)
+    card: GrammarCard
 
 
 class Scene(BaseModel):
@@ -81,6 +83,7 @@ class Hook(BaseModel):
 
 
 class SummaryRow(BaseModel):
+    # short cells (sandbox run 2026-11-03: sentence-long cells made the table taller than the screen)
     cells: list[str] = Field(min_length=1, max_length=4)  # a row that does not fit the columns is dropped
     say: str = Field(min_length=3, max_length=200)
 
@@ -97,7 +100,7 @@ class Quiz(BaseModel):
 
 
 class GrammarLesson(BaseModel):
-    point: str = Field(min_length=2, max_length=60)
+    point: str = Field(min_length=2, max_length=60)  # a plain name: the hook and summary title
     kind: Literal["essence", "vietnamese_error"] = "essence"
     hook: Hook
     scenes: list[Scene] = Field(min_length=SCENES_MIN, max_length=SCENES_MAX + 2)
@@ -152,9 +155,20 @@ def usable_card(card: GrammarCard | None) -> dict | None:
     return {"kind": kind, "text": text} if text else None
 
 
+def _no_markdown(value):
+    if isinstance(value, str):
+        return value.replace("**", "").replace("`", "")
+    if isinstance(value, list):
+        return [_no_markdown(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _no_markdown(item) for key, item in value.items()}
+    return value
+
+
 def with_clean_text(lesson: GrammarLesson) -> GrammarLesson:
-    """Stray Chinese / Japanese / Korean characters are removed from every text (as for the word family)."""
-    return GrammarLesson.model_validate(_clean_text(lesson.model_dump()))
+    """Stray Chinese / Japanese / Korean characters are removed from every text (as for the word family), and so is
+    Markdown bold (sandbox run 2026-11-03: "The letter **IS** on the desk" was drawn with its asterisks)."""
+    return GrammarLesson.model_validate(_no_markdown(_clean_text(lesson.model_dump())))
 
 
 def _sentence(text: str) -> str:
@@ -189,6 +203,10 @@ def build_beats(lesson: GrammarLesson, lang: str) -> list[tuple[str, dict]]:
             steps.append((_sentence(step.say), list(cards)))
         if not any(shown for _, shown in steps):
             continue  # a scene with no card to show is left out
+        # sandbox run 2026-11-03: a scene whose first card was unusable opened on an empty screen; its first card shows
+        # from the scene's first line instead
+        first = next(shown for _, shown in steps if shown)
+        steps = [(say, shown or [first[0]]) for say, shown in steps]
         number += 1
         header = _header("scene", number, scene.label.upper(), scene.title, scene.subtitle)
         beats.extend((say, {**header, "cards": shown}) for say, shown in steps)
@@ -220,7 +238,7 @@ def build_beats(lesson: GrammarLesson, lang: str) -> list[tuple[str, dict]]:
 
 
 _RULES = (
-    "Card kinds (one card per step, or none when the step only talks about the cards already shown):\n"
+    "Card kinds (EVERY step has exactly one card: what the screen adds while that sentence is spoken):\n"
     "- formula: chips that spell a structure, each with a colour role (S + BE + V3 → chips S/s, BE/be, V3/v3).\n"
     "- compare: two English sentences side by side (left_en/right_en) with their translations (left_vi/right_vi); text: "
     "what they share.\n"
@@ -234,6 +252,45 @@ _RULES = (
     "Colour roles: s (subject), v (main verb), o (object), be (any form of to be), ing (-ing form), v3 (past participle), "
     "modal (can, must, will...), have (have / has / had), adj (adjective), plain (anything else).\n"
 )
+
+
+# Sandbox run 2026-11-03: without a model lesson the AI wrote vague or wrong images ("V3 stands still like an air
+# conditioner", "đã được puts"); this worked lesson (the owner's sample B) shows the shape and the level expected.
+_EXAMPLE = {
+    "point": "Câu bị động", "kind": "essence",
+    "hook": {"pain": "Bạn đang phải học thuộc cả một nùi công thức câu bị động?",
+             "formulas": ["S + am/is/are + V3", "S + was/were + V3", "S + am/is/are + being + V3", "S + has/have + been + V3",
+                          "S + modal + be + V3"],
+             "promise": "Hiểu đúng bản chất câu bị động trong một nốt nhạc!"},
+    "scenes": [
+        {"label": "Bản chất cốt lõi", "title": "Câu bị động = câu miêu tả trạng thái!", "subtitle": "So sánh hai câu", "steps": [
+            {"say": "Nhìn hai câu này: She is beautiful, và The classroom is cleaned.",
+             "card": {"kind": "compare", "left_en": "She is beautiful.", "left_vi": "Cô ấy đẹp.",
+                      "right_en": "The classroom is cleaned.", "right_vi": "Lớp học đã được dọn sạch."}},
+            {"say": "Cả hai đều là chủ ngữ, động từ to be, rồi một từ miêu tả trạng thái.",
+             "card": {"kind": "formula", "chips": [{"text": "S", "role": "s"}, {"text": "BE", "role": "be"},
+                                                   {"text": "ADJ / V3", "role": "v3"}], "text": "Giống hệt nhau 100%"}}]},
+        {"label": "Bẻ khoá V3", "title": "Chiếc nhãn dán kết quả!", "steps": [
+            {"say": "V3 giống một chiếc nhãn dán: căn phòng đã mang nhãn đã được dọn.",
+             "card": {"kind": "sticker", "text": "CLEANED"}},
+            {"say": "Chiếc nhãn dán đứng im, không bao giờ tham gia chia thì.",
+             "card": {"kind": "rule", "text": "V3 đứng im, KHÔNG chia thì"}}]},
+        {"label": "Vai trò của to be", "title": "Kẻ duy nhất gánh thời gian!", "steps": [
+            {"say": "Muốn đổi sang quá khứ, chỉ cần đổi to be: is thành was.",
+             "card": {"kind": "example", "en": "The classroom was cleaned yesterday.", "vi": "Lớp học đã được dọn hôm qua.",
+                      "marks": [{"text": "was", "role": "be"}, {"text": "cleaned", "role": "v3"}]}},
+            {"say": "Tiếp diễn thì sao? Ghép to be với đuôi ing, ta được being.",
+             "card": {"kind": "lego", "chips": [{"text": "BE", "role": "be"}, {"text": "-ING", "role": "ing"}],
+                      "result": {"text": "BEING", "role": "be"}}}]},
+    ],
+    "summary": {"columns": ["Thì", "TO BE gánh thì", "Nhãn"], "rows": [
+        {"cells": ["Đơn", "is / was", "cleaned"], "say": "Thì đơn: is hoặc was, cộng nhãn cleaned."},
+        {"cells": ["Tiếp diễn", "is being", "cleaned"], "say": "Tiếp diễn: is being, cộng nhãn cleaned."},
+        {"cells": ["Hoàn thành", "has been", "cleaned"], "say": "Hoàn thành: has been, cộng nhãn cleaned."},
+        {"cells": ["Khiếm khuyết", "must be", "cleaned"], "say": "Khiếm khuyết: must be, cộng nhãn cleaned."}]},
+    "core_rule": "TO BE gánh thời gian, V3 là chiếc nhãn dán đứng im.",
+    "quiz": {"question": "The letter ___ yesterday.", "options": ["was sent", "is sent"], "answer": "was sent"},
+}
 
 
 def grammar_prompt(topic: str, cefr: str, lang: str) -> str:
@@ -250,20 +307,27 @@ def grammar_prompt(topic: str, cefr: str, lang: str) -> str:
         f"Write every spoken sentence (say, pain, promise, core_rule), labels, titles, subtitles, Vietnamese fields "
         f"(*_vi, vi) and rule/stamp texts in {language}; English examples and formula chips are English.\n"
         "Structure:\n"
+        "- point: the grammar point's plain name, two to five words (e.g. 'Câu bị động', 'Thì hiện tại hoàn thành'); it "
+        "is the title of the hook and the summary.\n"
         "- hook.pain: one sentence about the pain of memorising many formulas for this point; hook.formulas: two to six "
         "of those rote formulas as short text (e.g. 'S + am/is/are + V3', 'S + has/have + been + V3'); hook.promise: one "
-        "sentence promising to understand the point's essence in a minute.\n"
+        "short sentence (at most 15 words) promising to understand the point's essence in a minute.\n"
         f"- scenes: {SCENES_MIN} to {SCENES_MAX} scenes, ONE idea each, in teaching order, each with one easy memory "
         "image (a sticker that never moves, the one who carries the time, Lego pieces). label: two or three words "
         "(e.g. 'BẢN CHẤT CỐT LÕI'); title: a short punchy line; subtitle: optional.\n"
-        "- steps: two to four per scene; say is ONE spoken sentence (at most 28 words) that goes with its card.\n"
-        "- summary: a table (columns two to four, rows two to five) that sums up the whole point; each row's say reads "
-        "the row as one sentence.\n"
+        "- steps: two to four per scene; say is ONE spoken sentence (at most 28 words) and card is the card shown with "
+        "it -- never leave the card out.\n"
+        "- summary: a table (columns two to four, rows two to five) that sums up the whole point; every cell is one to "
+        "four words (a form like 'has been', never a sentence); each row's say reads the row as one sentence.\n"
         "- core_rule: the one rule to remember, one sentence.\n"
         "- quiz (optional): one English sentence with a blank (___) and two or three English options; answer is the "
         "right option.\n"
         f"{_RULES}"
-        "Every English sentence must be natural and grammatically correct, and every rule must be true.\n"
+        "Every English sentence must be natural and grammatically correct, and every rule must be true. Every memory "
+        "image must fit the grammar exactly (a sticker that stays on, a carrier of time); never an image that does not "
+        "explain anything. When you quote an English form inside a Vietnamese sentence, quote it correctly.\n"
+        "A model lesson (the shape and level expected; for another topic write your own content, never copy it):\n"
+        f"{json.dumps(_EXAMPLE, ensure_ascii=False)}\n"
         "Return ONLY a JSON object that validates against the schema."
     )
 
@@ -276,6 +340,8 @@ def review_prompt(lesson_json: str, lang: str) -> str:
         "chips spell the structure and have the right colour role; summary rows agree with the scenes; the quiz has "
         "exactly one right option and answer is it; English fields contain only English and "
         f"{language} fields only {language}.\n"
+        "Rewrite any explanation or memory image that is vague, illogical or does not really explain the grammar, and "
+        "any quoted English form that is wrong (e.g. 'đã được puts'). "
         "Fix what is wrong and keep everything else exactly as it is. List each fix in issues (empty when nothing was "
         "wrong).\n"
         f"Lesson:\n{lesson_json}\n"

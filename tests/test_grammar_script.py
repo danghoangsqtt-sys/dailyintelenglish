@@ -25,7 +25,7 @@ PASSIVE = {
                                                     "right_en": "The classroom is cleaned.", "right_vi": "Lớp học được dọn."}},
              {"say": "Cấu trúc giống hệt nhau: chủ ngữ, động từ to be và một từ miêu tả",
               "card": {"kind": "formula", "chips": _chips(("S", "s"), ("BE", "be"), ("ADJ / V3", "v3"))}},
-             {"say": "Vậy câu bị động chỉ là miêu tả trạng thái của chủ ngữ"}]},
+             {"say": "Vậy câu bị động chỉ là miêu tả trạng thái của chủ ngữ", "card": {"kind": "sticker"}}]},  # unusable card
         {"label": "Bẻ khoá V3", "title": "Chiếc nhãn dán kết quả!",
          "steps": [
              {"say": "V3 giống như một nhãn dán", "card": {"kind": "sticker", "text": "CLEANED"}},
@@ -186,3 +186,23 @@ def test_the_shorts_batch_makes_grammar_shorts_of_two_minutes(client):  # noqa: 
     series = next(s for topic in tree["topics"] for s in topic["series"] if s["id"] == result["series_id"])
     project = data(client.get(f"/api/projects/{series['episodes'][0]['project_id']}"))
     assert project["explainer_style"] == "grammar" and is_short_video(project) and project["duration_minutes"] == 2.0
+
+
+def test_real_run_a_scene_never_opens_on_an_empty_screen_and_the_prompt_has_a_model_lesson():
+    """Sandbox run 2026-11-03: a scene's first card was unusable and its first line showed nothing."""
+    lesson = json.loads(json.dumps(PASSIVE))
+    lesson["scenes"][1]["steps"][0]["card"] = {"kind": "sticker"}  # no text: dropped
+    beats = build_beats(GrammarLesson.model_validate(lesson), "vi")
+    scene_two = [card for _, card in beats if card["beat"] == "scene" and card["scene"] == 2]
+    assert [[c["kind"] for c in card["cards"]] for card in scene_two] == [["rule"], ["rule"]]
+    assert "Chiếc nhãn dán kết quả" in grammar_prompt("Thì hiện tại hoàn thành", "B1", "vi")
+
+
+def test_real_run_markdown_bold_is_removed():
+    from backend.content.grammar_lesson import with_clean_text
+
+    lesson = json.loads(json.dumps(PASSIVE))
+    lesson["scenes"][0]["steps"][0]["card"]["left_en"] = "The letter **IS** on the desk."
+    cleaned = with_clean_text(GrammarLesson.model_validate(lesson))
+    assert cleaned.scenes[0].steps[0].card.left_en == "The letter IS on the desk."
+    assert cleaned.quiz.question == "The letter ___ yesterday."  # the blank stays

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardsSeen, chipColour, countdown, markedPieces, pillColour, pillText, rowsBefore, sceneStart, stackScale } from "./grammarMath";
+import { cardHeight, cardsSeen, chipColour, countdown, fitScale, markedPieces, pillColour, pillText, rowsBefore, sceneStart, stackScale } from "./grammarMath";
 import { sampleProps } from "./sampleShort";
 import { episodeInputPropsSchema } from "./types";
 
@@ -52,5 +52,17 @@ describe("Phase 88: the easy-grammar Short", () => {
     expect(props.shortStyle).toBe("grammar");
     expect(props.lines.map((item) => item.grammar?.beat)).toEqual(
       ["hook", "hook", "hook", "scene", "scene", "scene", "scene", "summary", "summary", "quiz", "follow"]);
+  });
+
+  it("shrinks a tall stack so it stays above the caption", () => {
+    const short = [{ kind: "sticker", text: "CLEANED" }];
+    expect(fitScale(short, 1000)).toBeCloseTo(1.3);
+    const long = (text: string) => [text, text, text];
+    const table = { kind: "table", columns: ["Yếu tố", "Chức năng", "Ví dụ minh hoạ"],
+      rows: [long("Người nhận hành động hoặc hình ảnh"), long("Gánh vác thời gian của câu"), long("Miêu tả trạng thái, không chia")] };
+    const core = { kind: "core", text: "Cấu tạo câu bị động luôn là chủ ngữ, to be chia theo thì, cộng V3 không bao giờ chia." };
+    const scale = fitScale([table, core], 1000);
+    expect(scale).toBeLessThan(1.3);
+    expect(([table, core].reduce((sum, item) => sum + cardHeight(item, 940 / scale - 70), 0) + 26) * scale).toBeLessThanOrEqual(1000);
   });
 });

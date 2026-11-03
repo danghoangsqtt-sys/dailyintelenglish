@@ -9,7 +9,7 @@ import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, useCurrentFrame, useVideoConfig } from "remotion";
 import { activeTokenIndex, buildKaraokeTokens, withScriptPunctuation } from "./karaoke";
 import { lineAt, slideIn } from "./flashcardMath";
-import { cardsSeen, chipColour, countdown, markedPieces, pillColour, pillText, rowsBefore, sceneStart, stackScale } from "./grammarMath";
+import { cardsSeen, chipColour, countdown, fitScale, markedPieces, pillColour, pillText, rowsBefore, sceneStart } from "./grammarMath";
 import { resolvedMedia } from "./Presenter";
 import { isVietnamese } from "./rootsMath";
 import { GREEN, INK, MUTED, Paper } from "./SlowPodScene";
@@ -90,6 +90,11 @@ function Card({ item, unit, shownRows, time, since, stamped }: { item: GrammarIt
       return <div style={cardBox(unit, { background: GREEN })}><div style={text(50, "#FFFFFF")}>{item.text}</div></div>;
     case "rule":
       return <div style={cardBox(unit, { background: "#FDE7EF", border: `${4 * unit}px solid ${PINK}` })}><div style={text(46, "#8E1E4A")}>{item.text}</div></div>;
+    case "stamp":
+      return <div style={{ display: "flex", justifyContent: "center" }}>
+        <div style={{ border: `${8 * unit}px solid ${RED}`, color: RED, fontFamily: LETTERS, fontSize: 84 * unit, lineHeight: 1,
+          padding: `${12 * unit}px ${30 * unit}px`, borderRadius: 20 * unit, transform: "rotate(-5deg)", background: "rgba(255,255,255,0.7)" }}>✕ {item.text}</div>
+      </div>;
     case "sticker":
       return <div style={{ display: "flex", justifyContent: "center" }}>
         <div data-grammar-sticker="true" style={{ background: YELLOW, color: INK, fontFamily: LETTERS, fontSize: 104 * unit, lineHeight: 1,
@@ -159,10 +164,13 @@ function Beat({ props, index, time, unit }: { props: EpisodeInputProps; index: n
   const head = slideIn(time, since, 0.35);
   const seen = cardsSeen(props.lines, index);
   const shownRows = rowsBefore(props.lines, index);
-  const stamp = card.cards.find((item) => item.kind === "stamp");
-  const stack = card.cards.filter((item) => item.kind !== "stamp");
+  // the hook's stamp lands over the rote formulas; in a scene it is one more card (sandbox run 2026-11-03: drawn over the
+  // scene's example sentence it hid it)
+  const stamp = card.beat === "hook" ? card.cards.find((item) => item.kind === "stamp") : undefined;
+  const stack = card.cards.filter((item) => item !== stamp);
   // the stack is laid out narrower and scaled up, so its cards fill the 940 px column (stills 2026-11-03: too small)
-  const scale = 1.3 * stackScale(stack.length);
+  const top = card.subtitle ? 470 : 420;
+  const scale = fitScale(stack, 1470 - top);
   const width = 940 / scale;
   const quiz = card.cards.find((item) => item.kind === "quiz");
   return <>
@@ -171,12 +179,12 @@ function Beat({ props, index, time, unit }: { props: EpisodeInputProps; index: n
       <div data-grammar-pill="true" style={{ background: pillColour(card.beat, card.scene), color: "#FFFFFF", fontFamily: SANS, fontWeight: 800,
         fontSize: 32 * unit, letterSpacing: "0.04em", padding: `${10 * unit}px ${30 * unit}px`, borderRadius: 999 }}>
         {pillText(card.beat, card.scene, card.label, vi)}</div>
-      <div style={{ fontFamily: LETTERS, color: INK, fontSize: (card.title.length > 34 ? 66 : 80) * unit, lineHeight: 1.05, textAlign: "center",
+      <div style={{ fontFamily: LETTERS, color: INK, fontSize: (card.title.length > 48 ? 54 : card.title.length > 34 ? 66 : 80) * unit, lineHeight: 1.05, textAlign: "center",
         letterSpacing: "0.01em" }}>{card.title}</div>
       {card.subtitle ? <div style={{ fontFamily: HAND, color: MUTED, fontSize: 44 * unit, textAlign: "center" }}>{card.subtitle}</div> : null}
     </div>
     <div data-grammar-stack={stack.length} style={{ position: "absolute", left: (1080 - width) / 2 * unit, width: width * unit,
-      top: (card.subtitle ? 470 : 420) * unit, display: "grid", gap: 26 * unit, transform: `scale(${scale.toFixed(3)})`, transformOrigin: "top center" }}>
+      top: top * unit, display: "grid", gap: 26 * unit, transform: `scale(${scale.toFixed(3)})`, transformOrigin: "top center" }}>
       {stack.map((item, at) => {
         const old = seen[card.cards.indexOf(item)];
         const show = old ? 1 : slideIn(time, line.startSec + 0.05, 0.35);

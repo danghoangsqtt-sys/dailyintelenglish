@@ -85,3 +85,43 @@ export function markedPieces(sentence: string, marks: { text: string; role?: str
   if (last < sentence.length) pieces.push({ text: sentence.slice(last) });
   return pieces;
 }
+
+/** Lines a text takes at a font size inside a width (Montserrat bold is about 0.56 em per character). */
+const linesOf = (text: string | undefined, size: number, width: number) =>
+  text ? Math.max(1, Math.ceil((text.length * size * 0.56) / width)) : 0;
+
+/** A card's height in layout pixels (before scaling), estimated from its content; close enough to keep the stack
+ * above the caption (sandbox run 2026-11-03: a long summary table ran into it). */
+export function cardHeight(item: GrammarItem, width = 870): number {
+  const inner = width - 68;
+  switch (item.kind) {
+    case "formulas": return 52 + (item.items || []).reduce((sum, text) => sum + linesOf(text, 42, inner) * 52 + 14, 0);
+    case "sticker": return 150;
+    case "stamp": return 140;
+    case "formula": return 120 + ((item.chips || []).map((chip) => chip.text).join("   ").length > 22 ? 90 : 0) + (item.text ? 54 : 0);
+    case "lego": return 130 + ((item.chips || []).map((chip) => chip.text).join("   ").length > 16 ? 90 : 0);
+    case "compare": return 70 + Math.max(linesOf(item.left_en, 42, inner / 2 - 20), linesOf(item.right_en, 42, inner / 2 - 20)) * 52
+      + Math.max(linesOf(item.left_vi, 36, inner / 2 - 20), linesOf(item.right_vi, 36, inner / 2 - 20)) * 44 + (item.text ? 64 : 0);
+    case "table": {
+      const columns = Math.max(1, (item.columns || []).length);
+      const rowHeight = (cells: string[], size: number) => 30 + Math.max(...cells.map((cell) => linesOf(cell, size, width / columns - 32))) * size * 1.2;
+      return rowHeight(item.columns || [""], 34) + (item.rows || []).reduce((sum, row) => sum + rowHeight(row.length ? row : [""], 38), 0);
+    }
+    case "example": return 64 + linesOf(item.en, 48, inner) * 62 + linesOf(item.vi, 40, inner) * 48;
+    case "quiz": return 100 + linesOf(item.text, 52, inner) * 65 + 80;
+    default: return 60 + linesOf(item.text, item.kind === "promise" ? 54 : 48, inner) * 64;
+  }
+}
+
+/** The stack's scale: as large as the cards allow (1.3 for one or two cards), never past `room` pixels. */
+export function fitScale(items: GrammarItem[], room: number): number {
+  const base = 1.3 * stackScale(items.length);
+  const visible = items;
+  if (!visible.length) return base;
+  // the layout width shrinks as the scale grows (940 / scale), so step down until the scaled stack fits
+  const height = (scale: number) =>
+    (visible.reduce((sum, item) => sum + cardHeight(item, 940 / scale - 70), 0) + 26 * (visible.length - 1)) * scale;
+  let scale = base;
+  while (scale > 0.55 && height(scale) > room) scale -= 0.02;
+  return Math.max(0.55, scale);
+}
