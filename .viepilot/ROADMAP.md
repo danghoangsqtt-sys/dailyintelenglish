@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 90 — Edit a word-roots or grammar Short on its video (2026-11-03)
+
+Status: planned. A video-editor-like "Sửa trên video" in Step 5: beat list, the 9:16 video beside it, a form for the selected beat; every card edit shows at once, spoken text edits re-make only those lines' audio, one render at the end. Defaults D128–D130. [Plan](phases/90-edit-on-video/PLAN.md).
+
 ## Phase 89 — Academic 16:9 videos and series (2026-11-03)
 
 Status: planned. Long `roots` (one root with 10–15 words, or 2–3 roots) and long `grammar` (scenes as chapters, practice, summary table); series presets that remember used roots and carry the quiz to the next episode. [Plan](phases/89-academic-long-series/PLAN.md).

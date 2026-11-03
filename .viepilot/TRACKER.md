@@ -1,5 +1,9 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 90 — Edit a word-roots or grammar Short on its video (2026-11-03)
+
+Status: planned. A video-editor-like "Sửa trên video" in Step 5: beat list, the 9:16 video beside it, a form for the selected beat; every card edit shows at once, spoken text edits re-make only those lines' audio, one render at the end. Defaults D128–D130. [Plan](phases/90-edit-on-video/PLAN.md).
+
 ## Phase 88 — "Easy grammar" Short (2026-11-03)
 
 Status: implemented_verified (sandbox from source: Ngữ pháp v4 — Câu bị động 69.4 s and Thì hiện tại hoàn thành 56.0 s, 1080x1920, VieNeu voice, into D:\Videos\Kiểm tra Ngữ pháp 2026-11-03; 7 real-run problems fixed; full pytest 2285 passed + 3 browser tests that fail only under render load; vitest 203; the owner watched and asked to install). Installed (owner: "Xem xong, cài đi", 2026-11-03): Full 2.0.0 from 8dff263 (source_dirty false), package dist/2.0-phase88-20261103 (Full ZIP SHA256 de284e353f1d58d985cf80437476d438f4bf152b8228355773985738add762be), backup data/backups/desktop-20261103-144553-097; the running app reports commit 8dff263, 118 projects kept; VieNeu available; the easy-grammar Step 1 card, batch kind and silent preview are served. Not pushed. Tasks 88.1–88.4, [summary](phases/88-academic-grammar/SUMMARY.md). [Plan](phases/88-academic-grammar/PLAN.md).
