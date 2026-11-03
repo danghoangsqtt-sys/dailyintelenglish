@@ -39,3 +39,27 @@ is also a false shortcut. Fixed:
   the "I very like" lesson wrong by borrowing the passive model's "missing TO BE" idea → a second model lesson for the
   `vietnamese_error` kind; a whole sentence as a sticker → drawn as a rule; a table with no fitting row → no summary
   lines. v7: passive, present perfect and "I very like" all on topic, correct, with natural Vietnamese labels.
+
+## Quality round (owner 2026-11-03: "tạo thêm 3 video về ngữ pháp và gốc từ… xóa bỏ bản lỗi")
+
+The faulty grammar test folders (v2–v4, script runs v5–v7) were moved to the Recycle Bin and their sandbox projects
+deleted. Made again from source in the sandbox (Shorts batch, Việt Nam, VieNeu Ngọc Huyền):
+
+| Short | Length | Found → fixed |
+|---|---|---|
+| Ngữ pháp v8 · Câu bị động | 58.3 s | — |
+| Ngữ pháp v8 · Hiện tại hoàn thành | 62.1 s | — |
+| Ngữ pháp v8 · I very like | 63.0 s | "really" / "very much" marks drawn in the beige plain-chip colour (invisible) → ink with a yellow underline, re-rendered; a long pill ran under the channel logo → narrower, smaller |
+| Gốc từ v4 · SPECT | 69.9 s | SUS + PECT, SPECTA + TOR → a root family's words split around the whole root |
+| Gốc từ v4 · RE- | 79.0 s | an English quiz clue in a Vietnamese video → the quiz word's parts and meanings in Vietnamese; stray ";" after meanings |
+| Gốc từ v4 · -MENT | 104.7 s | no picture: Qwen ran out of Windows virtual memory (the installed app, VieNeu and the sandbox were running at once) and the AI's icon names were not in the bundled set; "enjoyment = khoảnh khắc vui vẻ" is a loose meaning (not fixed) |
+
+Also found while showing the owner the screens: Step 2 "Regenerate this line" replaced a roots/grammar line with an
+English line and dropped its card → hidden for these Shorts and refused by the API; Step 5 showed an empty "Scene
+picture" list (a remembered "one still scene" choice) and caption choices these Shorts do not use → hidden; the batch
+and Step 5 copy said Shorts last at most a minute → three for these two kinds. Frame sheets in
+`docs/operations/phase88-screens/` (v8-*, roots-v4-*).
+
+Editing on the video (owner question): today the owner edits the spoken text in Step 2; the cards (formula chips, rule,
+table, labels) are not editable and any change needs a new audio take for the changed lines and a full re-render.
+Card editing with a live 9:16 preview is proposed as a follow-up.
