@@ -1169,6 +1169,10 @@
     "status": "implemented_verified",
     "summary": ".viepilot/phases/95-project-layout/SUMMARY.md",
     "layout": "backend/{tests,scripts,renderer,requirements.txt}, frontend/, installer/, dist/, data/",
-    "left_for_owner": "7 access-denied folders in data/tmp"
+    "left_for_owner": "7 access-denied folders in data/tmp",
+    "installed_from_commit": "70f97200",
+    "installed_backup": "data/backups/desktop-20261104-115640-445",
+    "package": "dist/2.0-phase95-20261104",
+    "pushed": false
   }
 }

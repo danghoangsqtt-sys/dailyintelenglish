@@ -29,6 +29,12 @@ Prototype E keeps its icons and Lina frames in its own folder.
 `installer/package_desktop.ps1` now also makes `DailyBeyondEnglishStudio-<version>-Source.zip` (the workspace both editions
 need) and puts `HUONG-DAN-SU-DUNG.txt` in the output folder and in each ZIP; the stale SETUP.txt text is gone.
 
+## Installed
+
+Full 2.0.0 from 70f97200 runs on port 8000 (data counts unchanged: 118 projects, 5 characters, 226 character assets). The
+renderer's bundle and one rendered still frame were checked after the move; the typecheck in the build caught two imports
+of `frontend/` that the path script had missed (70f97200). No full video was rendered through the app.
+
 ## Not done
 
 - `data/tmp`: 7 folders from 2026-10-16 refuse access (even reading their permissions); left in place.
