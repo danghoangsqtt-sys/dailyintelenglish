@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Picture-led Shorts (Phase 96, 2026-11-04)
+
+- Word of the day is now one word said six times over a full-frame picture of it, then one example; the explanation follows the audience.
+- New Short "What is this called?": an everyday object, a silent 1-2-3, then its name.
+- New Short "Basic vs Advanced": a plain phrase, then the natural one twice, over a picture of a person in that moment.
+- On Step 5 every picture of these Shorts can be drawn again or replaced by an upload (a Lite computer can use its own pictures).
+
 ### Changed — Project layout and clean-up (Phase 95, 2026-11-04)
 
 - Tests, maintenance scripts, the video renderer and `requirements.txt` moved into `backend/`; everything that builds and installs the app moved into `installer/`.
@@ -227,7 +234,7 @@ Release for daily use and for a second machine: everything since 1.4.0-rc.1 (Pha
 
 ### Added — Phase 65 interactive Shorts (2026-10-22)
 
-- Four more **Shorts viral** templates (9:16): **Countdown quiz** — A/B/C options, a 3-2-1 ring timer, the right answer turning green; **Listening challenge** — the sentence is heard with the captions hidden (an ear and a sound wave), then revealed with its hardest words highlighted; **Chat** — two characters text each other, each message a bubble with their voice, typing dots and auto-scroll (a generic chat look); **Would you rather** — red and blue halves with the two options, a timer, then the other character's choice and reason (ENH-047).
+- Four more **Shorts viral** templates (9:16): **Countdown quiz** — A/B/C options, a 1-2-3 ring timer, the right answer turning green; **Listening challenge** — the sentence is heard with the captions hidden (an ear and a sound wave), then revealed with its hardest words highlighted; **Chat** — two characters text each other, each message a bubble with their voice, typing dots and auto-scroll (a generic chat look); **Would you rather** — red and blue halves with the two options, a timer, then the other character's choice and reason (ENH-047).
 - Chat and Would-you-rather are two-character conversations drawn from the script lines (no visual plan, no character pictures needed); quiz and listening use one narrator like the other Shorts. Channel plan series and the automatic production can use all four.
 
 ### Added — Phase 64 quick-learning Shorts (2026-10-22)

@@ -135,7 +135,7 @@ def _link(item: dict[str, Any]) -> str:
 # ---------------------------------------------------------------- Phase 67 (ENH-049): the review studio board
 
 KINDS = {"presenter": "Solo", "vox": "VOX", "news": "Short · English news", "blur": "Short · text on blur",
-         "mistakes": "Short · Don't say / Say", "wordday": "Short · word of the day", "top5": "Short · top 5",
+         "mistakes": "Short · Don't say / Say", "wordday": "Short · word of the day", "whatis": "Short · what is this called?", "levelup": "Short · basic vs advanced", "top5": "Short · top 5",
          "slowpod": "Short · slow English podcast", "flashcards": "Short · vocabulary flashcards",
          "roots": "Short · word roots", "grammar": "Short · easy grammar",
          "quiz": "Short · quiz", "listen": "Short · listening", "chat": "Short · chat", "wyr": "Short · would you rather"}

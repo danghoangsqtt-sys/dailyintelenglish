@@ -18,7 +18,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.core.exceptions import NotFoundError, ValidationError
 
-EDITED_STYLES = ("grammar", "roots", "slowpod", "flashcards", "chat", "wyr")
+from backend.schemas.project import CARD_STYLES  # noqa: E402
+
+EDITED_STYLES = ("grammar", "roots", "slowpod", "flashcards", "chat", "wyr", *CARD_STYLES)
 SECONDS_PER_CHARACTER = 0.075  # a silent preview's estimated timing, before the audio is made
 MIN_LINE_SECONDS = 1.6
 GRAMMAR_ITEM_KINDS = ("formulas", "stamp", "promise", "formula", "lego", "compare", "table", "example", "rule", "sticker",
@@ -105,10 +107,26 @@ def _compact(value):
     return value
 
 
+class WordCardEdit(_Card):
+    """Phase 96: a Word of the day card as edited on the video."""
+    beat: str = "repeat"
+    repeat: int = Field(default=1, ge=1, le=6)
+    number: int = Field(default=1, ge=1, le=20)
+    pause_after_ms: int = Field(default=0, ge=0, le=10000)
+    word: str = Field(min_length=1, max_length=40)
+    ipa: str = Field(default="", max_length=60)
+    part_of_speech: str = Field(default="", max_length=30)
+    meaning_en: str = Field(default="", max_length=120)
+    meaning_vi: str = Field(default="", max_length=120)
+    example_en: str = Field(default="", max_length=160)
+    example_vi: str = Field(default="", max_length=200)
+    picture: str = Field(default="", max_length=300)
+
+
 def checked_card(style: str, card: dict) -> dict:
     """The card as stored: checked by kind, unknown keys dropped (ValidationError when it cannot be drawn)."""
     try:
-        model = GrammarCard if style == "grammar" else RootsCard
+        model = GrammarCard if style == "grammar" else WordCardEdit if style in CARD_STYLES else RootsCard
         checked = model.model_validate(card).model_dump()
     except Exception as exc:  # pydantic's message names the field
         raise ValidationError(f"The card cannot be saved: {str(exc)[:300]}") from exc
@@ -143,7 +161,7 @@ def _vocab_item(learning: dict | None, word: str) -> dict | None:
 
 
 def _line_card(style: str, notes: dict, text: str, learning: dict | None) -> dict:
-    if style in ("grammar", "roots"):
+    if style in ("grammar", "roots", *CARD_STYLES):
         return notes.get(style) or {}
     if style == "slowpod":
         return {"translation_vi": notes.get("translation_vi", "")}
@@ -210,6 +228,9 @@ async def load(db: aiosqlite.Connection, project_id: str) -> dict:
     words = (audio or {}).get("word_timestamps") or [] if with_audio else []
     spans = [(entry["start_sec"], entry["end_sec"]) for entry in timestamps] if with_audio else _estimated(lines)
     folder = roots_pictures.roots_folder(project_id)
+    from backend.content import audience as audience_settings
+
+    shown_audience = await audience_settings.resolve(db, project_id) if key in CARD_STYLES else None
     speakers = {speaker["id"]: speaker for speaker in project["speakers"]}
     out_lines, prop_lines = [], []
     for index, line in enumerate(lines):
@@ -221,9 +242,11 @@ async def load(db: aiosqlite.Connection, project_id: str) -> dict:
         prop = {"startSec": spans[index][0], "endSec": spans[index][1], "speaker": speaker["name"],
                 "speakerId": speaker["id"], "text": line["text"],
                 "words": _words_to_props(words[index]["words"]) if index < len(words) else []}
-        if key in ("grammar", "roots"):
+        if key in ("grammar", "roots", *CARD_STYLES):
             drawn = dict(card)
-            if key == "roots" and card.get("word"):
+            if key in CARD_STYLES:  # Phase 96 (D150): the explanation shown follows the audience
+                drawn["audience"] = shown_audience
+            if key in ("roots", *CARD_STYLES) and card.get("word"):
                 name = f"{roots_pictures.picture_key(card['word'])}.png"
                 if (folder / name).is_file():
                     drawn["pictureUrl"] = picture_url(project_id, name)

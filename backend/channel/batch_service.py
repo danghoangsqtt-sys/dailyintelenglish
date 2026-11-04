@@ -28,7 +28,7 @@ TEMPLATES = {
     "news": ("English news", "one news story told in simple English"),
     "blur": ("Text on blur", "a short story, life lesson or meaningful quote about the topic"),
     "mistakes": ("Don't say / Say", "two to four common learner mistakes about one point, each with the natural phrase"),
-    "wordday": ("Word of the day", "one useful word or phrase about the topic, its meaning and examples"),
+    "wordday": ("Word of the day", "one useful, easy-to-picture word about the topic, said six times, then one example sentence"),
     "top5": ("Top 5 phrases", "five phrases native speakers use for one situation"),
     "quiz": ("Countdown quiz", "two or three multiple-choice questions on one language point"),
     "listen": ("Listening challenge", "two or three short everyday sentences in one situation, heard at natural speed"),
@@ -40,6 +40,8 @@ TEMPLATES = {
     "presenter": ("Solo presenter", "one presenter explains one useful idea, phrase or tip to camera"),
     "vox": ("Vox (voice over pictures)", "a narrator explains one interesting idea over pictures and on-screen text"),
     # Phase 81 (owner 2026-10-28)
+    "levelup": ("Basic vs Advanced", "three to five plain phrases of one theme, each followed twice by the natural phrase native speakers use"),
+    "whatis": ("What is this called?", "seven everyday objects of one place or activity whose English names learners often do not know"),
     "slowpod": ("Slow English podcast", "a calm, slow monologue of eight to ten short everyday sentences about one small topic"),
     "flashcards": ("Vocabulary flashcards", "eight to ten useful words or phrases for one everyday topic (one part of a deck)"),
     # Phase 87 (D125): one word family per Short, explained in Vietnamese for Vietnamese learners
@@ -50,7 +52,7 @@ TEMPLATES = {
                 "one grammar point explained by its essence (e.g. the passive voice, the present perfect) or one mistake "
                 "Vietnamese speakers make (e.g. I very like)"),
 }
-TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr",
+TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "whatis", "levelup", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr",
                         "conversation", "presenter", "vox"]
 TWO_CHARACTERS = (*CONVERSATION_SHORT_STYLES, "conversation")
 

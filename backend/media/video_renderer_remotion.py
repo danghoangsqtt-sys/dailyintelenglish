@@ -421,7 +421,13 @@ async def _build_input_props(
     camelCase conversion (D19.2/19.4/19.5/19.6 field shapes, unchanged)."""
     from backend.schemas.project import LINE_DRAWN_STYLES
 
-    if project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") not in LINE_DRAWN_STYLES:
+    from backend.media import short_pictures
+
+    style = project.get("explainer_style")
+    picture_cards = await short_pictures.line_cards(db, project["id"], style) if style in short_pictures.CARD_STYLES else []
+    # Phase 96 (D148): a Word of the day project written before it has no cards and keeps its approved plan
+    old_wordday = style == "wordday" and not any(picture_cards)
+    if project.get("presentation_mode") == "solo_explainer" and (style not in LINE_DRAWN_STYLES or old_wordday):
         from backend.library.explainer_media import production_props
 
         props = await production_props(db, project["id"], "9:16" if layout == "vertical" else "16:9")
@@ -468,6 +474,18 @@ async def _build_input_props(
             if key in drawn:
                 card["pictureUrl"] = f"remotion-render/visuals/{project_id}/roots/{drawn[key].name}"
             line["roots"] = card
+    if style in short_pictures.CARD_STYLES:  # Phase 96: each line's card, its picture and who the explanation is for
+        from backend.content import audience as audience_settings
+
+        audience = await audience_settings.resolve(db, project_id)
+        pictures = await short_pictures.ensure_pictures(db, project_id, style, picture_cards)
+        urls = {}
+        for word, picture in pictures.items():
+            await asyncio.to_thread(_copy_if_changed, picture, REMOTION_VISUALS_DIR / project_id / "word" / picture.name)
+            urls[word] = f"remotion-render/visuals/{project_id}/word/{picture.name}"
+        for index, line in enumerate(lines):
+            card = picture_cards[index] if index < len(picture_cards) else {}
+            line[style] = {**card, "audience": audience, **({"pictureUrl": urls[card["word"]]} if card.get("word") in urls else {})}
     if project.get("explainer_style") == "grammar":  # Phase 88: each line's scene header and the cards shown so far
         cursor = await db.execute("SELECT language_notes FROM script_lines WHERE project_id = ? ORDER BY line_index", (project_id,))
         notes = [json.loads(row[0] or "{}") or {} for row in await cursor.fetchall()]

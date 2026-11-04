@@ -30,6 +30,9 @@ class LanguageNotesOut(BaseModel):
     translation_vi: str = ""
     # Phase 87: a word-roots Short's beat card (hook, split, example, quiz...), drawn by the renderer from its line
     roots: dict | None = None
+    wordday: dict | None = None  # Phase 96: a Word of the day card
+    whatis: dict | None = None  # Phase 96: a What is this called? card
+    levelup: dict | None = None  # Phase 96: a Basic vs Advanced card
     # Phase 88: an easy-grammar Short's beat (scene header and the cards shown so far)
     grammar: dict | None = None
 

@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 96 — Picture-led Shorts from the viral clips (2026-11-04)
+
+Status: in_progress. [State](phases/96-viral-shorts/PHASE-STATE.md). Word of the day, What is this called?, Basic vs Advanced done in the sandbox; a picture for each sentence waits for the owner's look at the pilot pictures.
+
 ## Phase 95 — Project layout and clean-up (2026-11-04)
 
 Status: implemented_verified. [Summary](phases/95-project-layout/SUMMARY.md). `backend/` holds the app, tests, scripts and renderer; `installer/` holds packaging; `data/` stays (absolute paths in the DB).

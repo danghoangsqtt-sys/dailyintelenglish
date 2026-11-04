@@ -66,6 +66,16 @@ _MIN_MEASURABLE_SECONDS = 0.5
 _MAX_GAIN_DB = 24.0
 
 
+def pause_after_ms(line: dict) -> int:
+    """Phase 96 (D154): the silence a line asks for after it, on top of the usual gap (the 1-2-3 of "What is this called?")."""
+    notes = line.get("language_notes")
+    try:
+        card = (json.loads(notes) if isinstance(notes, str) else notes or {}).get("whatis") or {}
+        return max(0, min(10000, int(card.get("pause_after_ms") or 0)))
+    except (TypeError, ValueError, AttributeError):
+        return 0
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -157,11 +167,12 @@ def _mix_project_sync(
     word_timestamps: list[dict] = []
     cursor_ms = 0
     previous_speaker_id: str | None = None
+    pause_ms = 0
 
     for line in lines:
         line_audio = AudioSegment.from_file(line["audio_cache_path"])
         if previous_speaker_id is not None:
-            gap_ms = (
+            gap_ms = pause_ms + (
                 SILENCE_SAME_SPEAKER_MS
                 if line["speaker_id"] == previous_speaker_id
                 else SILENCE_DIFFERENT_SPEAKER_MS
@@ -169,6 +180,8 @@ def _mix_project_sync(
             segments.append(AudioSegment.silent(duration=gap_ms, frame_rate=line_audio.frame_rate))
             cursor_ms += gap_ms
 
+        pause_ms = pause_after_ms(line)
+        pause_ms = pause_after_ms(line)
         start_ms = cursor_ms
         segments.append(line_audio)
         cursor_ms += len(line_audio)
@@ -359,7 +372,7 @@ async def mix_project(
 async def get_lines_for_mixing(db: aiosqlite.Connection, project_id: str) -> list[dict]:
     """Script lines with the fields AudioService needs, ordered by line_index."""
     cursor = await db.execute(
-        "SELECT id, line_index, speaker_id, text, audio_cache_path, duration_seconds "
+        "SELECT id, line_index, speaker_id, text, audio_cache_path, duration_seconds, language_notes "
         "FROM script_lines WHERE project_id = ? ORDER BY line_index",
         (project_id,),
     )

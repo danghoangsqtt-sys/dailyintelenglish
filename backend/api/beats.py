@@ -1,7 +1,7 @@
 """Phase 90 (D128–D130): edit a word-roots or grammar Short on its video -- the beats, their cards and the preview."""
 
 import aiosqlite
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -27,8 +27,8 @@ class TextUpdate(BaseModel):
 
 
 class PictureRequest(BaseModel):
-    word: str = Field(min_length=1, max_length=30)
-    picture: str = Field(min_length=3, max_length=160)
+    word: str = Field(min_length=1, max_length=40)
+    picture: str = Field(min_length=3, max_length=300)
 
 
 @router.get("")
@@ -63,10 +63,28 @@ async def save_text(project_id: str, line_id: str, payload: TextUpdate, db: aios
 @router.post("/picture")
 async def redraw_picture(project_id: str, payload: PictureRequest, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Draw one word's line-art picture again from its (edited) description."""
-    from backend.media import roots_pictures
+    from backend.content import project_service
+    from backend.media import roots_pictures, short_pictures
 
-    path = await roots_pictures.redraw(db, project_id, payload.word, payload.picture)
+    style = (await project_service.get_project(db, project_id)).get("explainer_style")
+    path = (await short_pictures.redraw(project_id, style, payload.word, payload.picture) if style in short_pictures.CARD_STYLES
+            else await roots_pictures.redraw(db, project_id, payload.word, payload.picture))
     return ok({"word": payload.word, "url": beats_service.picture_url(project_id, path.name) if path else None})
+
+
+@router.post("/picture/upload")
+async def upload_picture(project_id: str, word: str = Form(min_length=1, max_length=40), file: UploadFile = File(...),
+                         db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 96 (D153): a picture made elsewhere takes this word's place."""
+    from backend.content import project_service
+    from backend.core.exceptions import ValidationError
+    from backend.media import short_pictures
+
+    style = (await project_service.get_project(db, project_id)).get("explainer_style")
+    if style not in short_pictures.CARD_STYLES:
+        raise ValidationError("This kind of video has no pictures to upload")
+    path = await short_pictures.upload(project_id, word, await file.read())
+    return ok({"word": word, "url": beats_service.picture_url(project_id, path.name)})
 
 
 @router.get("/pictures/{name}")

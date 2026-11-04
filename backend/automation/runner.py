@@ -38,7 +38,7 @@ KEEP_BACKUPS = 7
 # may accept (their content is English, not facts or numbers); news, VOX and Solo presenter videos still wait for a person,
 # and any specific issue (numbers not said, a missing picture...) always stops the episode.
 GENERIC_REVIEW = "review its knowledge claims and illustration text"
-SELF_REVIEW_STYLES = ("mistakes", "wordday", "top5", "quiz", "listen", "blur")
+SELF_REVIEW_STYLES = ("mistakes", "top5", "quiz", "listen", "blur")
 MISSING_PHOTO = "import or select its illustration"  # explainer_service.source_issues
 # Phase 84: a VOX chart / map using numbers or places the narration never says (explainer_service.vox_fact_issues)
 VOX_DATA_ISSUES = ("are not numbers said in the narration", "are not named in the narration")

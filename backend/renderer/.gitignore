@@ -6,4 +6,5 @@ out/
 public/*
 !public/fonts/
 !public/brand/
+!public/samples/
 *.log

@@ -188,6 +188,11 @@ const Api = (() => {
     saveBeats: (projectId, lines) => request(`/api/projects/${projectId}/beats`, json("PUT", { lines })),
     saveBeatText: (projectId, lineId, text) => request(`/api/projects/${projectId}/beats/${lineId}/text`, json("PUT", { text })),
     redrawBeatPicture: (projectId, word, picture) => request(`/api/projects/${projectId}/beats/picture`, json("POST", { word, picture })),
+    uploadBeatPicture: (projectId, word, file) => {
+      const body = new FormData();
+      body.append("word", word); body.append("file", file);
+      return request(`/api/projects/${projectId}/beats/picture/upload`, { method: "POST", body });
+    },
     audioDownloadUrl: (projectId, format) => `/api/projects/${projectId}/audio/download?format=${format}`,
     listMusic: () => request("/api/music"),
     uploadMusic: (file) => {

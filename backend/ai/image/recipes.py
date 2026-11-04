@@ -48,6 +48,52 @@ def qwen_collage_prompt(description: str) -> str:
             "uncluttered, landscape composition. No faces, no people in close-up, no text, no letters, no logo, no watermark.")
 
 
+def qwen_word_prompt(description: str) -> str:
+    """Phase 96 (D151): a Word of the day picture filling a 9:16 frame, with calm areas for the word over it."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "a simple scene that shows the word's meaning"
+    return (f"Warm, richly coloured storybook illustration, full frame, portrait composition: {what}. Clear subject, soft "
+            "painted light, simple background. If a person is needed show only hands or a figure from behind, with no "
+            "visible face. No text, no letters, no numbers, no signs, no logo, no watermark, no frame.")
+
+
+def qwen_object_prompt(description: str) -> str:
+    """Phase 96.5: one object alone on a plain colour for the "What is this called?" Short; the words go over the empty parts."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "a simple everyday object"
+    return (f"A single object: {what}. Clean realistic product picture, the whole object visible and fairly small, centred "
+            "left to right in the upper half of the frame, the whole lower half of the frame empty, soft shadow, plain solid "
+            "pale sky-blue background filling the portrait frame. No other objects, no people, no text, no letters, no "
+            "numbers, no logo, no watermark.")
+
+
+def qwen_moment_prompt(description: str) -> str:
+    """Phase 96.6 (owner 2026-11-04): the real moment of a phrase: an ordinary made-up person whose feeling reads at a glance. This
+    kind has no recurring cast, so a face is allowed here (the reason for D123 does not apply)."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "an ordinary person in an everyday moment"
+    return (f"Warm, richly coloured storybook illustration, full frame, portrait composition: {what}. An ordinary made-up person "
+            "with a clear, expressive feeling in the face and body, one simple pose, natural anatomy with exactly two arms, two "
+            "hands and five fingers on each hand, a believable everyday place, soft light, the head in the upper middle of the frame with free space above it. No text on "
+            "anything. No text, no letters, no numbers, no signs, no logo, no watermark, no frame.")
+
+
+def qwen_moment_prompt(description: str) -> str:
+    """Phase 96.6 (owner 2026-11-04): the real moment of a phrase: an ordinary made-up person whose feeling reads at a glance. This
+    kind has no recurring cast, so a face is allowed here (the reason for D123 does not apply)."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "an ordinary person in an everyday moment"
+    return (f"Warm, richly coloured storybook illustration, full frame, portrait composition: {what}. An ordinary made-up person "
+            "with a clear, expressive feeling in the face and body, a believable everyday place, soft light, the person in the "
+            "lower two thirds of the frame. No text, no letters, no numbers, no signs, no logo, no watermark, no frame.")
+
+
+def qwen_firstperson_prompt(description: str) -> str:
+    """Phase 96 (D152): one sentence of a picture story, seen through the speaker's eyes: only hands or feet, so that no two
+    pictures of a video show a different person."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "hands doing a simple everyday action"
+    return (f"First-person point of view, looking down at one's own hands or feet: {what}. Warm, richly coloured storybook "
+            "illustration, full frame, portrait composition, natural anatomy with five fingers on each hand, one clear "
+            "action, simple everyday background, soft light. No face, no other person, no text, no letters, no numbers, "
+            "no signs, no logo, no watermark, no frame.")
+
+
 def qwen_lineart_prompt(description: str) -> str:
     """Phase 87.4 (roots Short): a simple line drawing on cream paper, like the hand-drawn explainer the owner sent."""
     what = " ".join(str(description or "").split()).rstrip(".") or "a simple object that shows the word's meaning"

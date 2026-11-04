@@ -18,9 +18,9 @@ idea per screen; a challenge at the start; repetition. This phase makes four pic
 | # | Short | From clip | New or upgrade | Spoken | On screen |
 |---|---|---|---|---|---|
 | A | Word of the day | 5 | upgrade `wordday` (D147) | the word six times, one example | full-frame picture, word copies, IPA, explanation by audience |
-| B | "What is this called?" | 7 | new `whatis` | the question, a silent 3-2-1, the name; 8-10 objects | object on a plain colour, countdown, name, IPA, meaning by audience |
+| B | "What is this called?" | 7 | new `whatis` | the question, a silent 1-2-3, the name; 5-7 objects | object on a plain colour, countdown, name, IPA, meaning by audience |
 | C | A picture for each sentence | 6, 8 | new `picstory` | 5-10 short first-person sentences | one full-frame picture per sentence, words coloured as read |
-| D | Basic vs Advanced | 3 | new `levelup` | "I'm tired. I'm beat." 5-6 pairs | a red and a blue label, the talking character, a small picture for the phrase |
+| D | Basic vs Advanced | 3 | new `levelup` | "I'm tired. I'm beat. I'm beat." 3-5 pairs | a full-frame picture of the meaning, a red and a blue label, the phrase large, its meaning |
 
 Not in this phase: faster VOX, line boil and parallax (clips 1, 2, 4): their own phase after these are tested on the channel.
 Real footage is not added to the renderer (the owner chose pictures).
@@ -37,7 +37,7 @@ Real footage is not added to the renderer (the owner chose pictures).
   same style sentence and one seed per video keep the pictures alike.
 - D153: every picture can be checked on Step 5's editor: its description, "Draw again" and **upload** (new, so Lite and a
   picture made with an outside AI work). All four kinds appear in Create, Step 1, Shorts batch, Channel and Automation.
-- D154 (new capability B needs): a line may ask for a silent pause after it, for the 3-2-1. The audio mix does not have this
+- D154 (new capability B needs): a line may ask for a silent pause after it, for the 1-2-3. The audio mix does not have this
   today.
 - D155: C with a closing line "If you understood this, you are an A2 listener" is an option of C for listening practice,
   not a fifth kind. The existing Listening challenge stays as it is.
@@ -53,10 +53,13 @@ Real footage is not added to the renderer (the owner chose pictures).
   badly: try another style sentence once, then report instead of building on it.
 - **96.4 A picture for each sentence (C):** `picture_story.py` (AI: sentences and a picture description each, the level
   line option), `PictureStoryScene.tsx` (slow zoom, coloured words), wiring.
-- **96.5 "What is this called?" (B):** the pause (D154) in the audio mix and timing; `object_quiz.py` (a theme and 8-10 objects),
+- **96.5 "What is this called?" (B):** the pause (D154) in the audio mix and timing; `object_quiz.py` (a theme and 5-7 objects),
   `ObjectQuizScene.tsx` (circle countdown, name, IPA); objects drawn on a plain colour, so no background removal is needed.
-- **96.6 Basic vs Advanced (D):** `level_up.py` (5-6 checked pairs, real idioms only), `LevelUpScene.tsx`, using the Solo
-  presenter's talking character; the character is chosen in Step 1 as usual.
+- **96.6 Basic vs Advanced (D):** `level_up.py` (3-5 checked pairs, real idioms only), `LevelUpScene.tsx`. Owner 2026-11-04,
+  after seeing it with Lina: "không cần đưa LINA vào ... tập trung vào làm rõ nội dung ... hình ảnh minh họa để khắc nội dung vào
+  não người xem". D156: no presenter; one full-frame picture per pair; the advanced phrase is said twice.
+  Owner, after seeing a bell and a moon: "tôi mệt i'm beat thì phải là 1 người mệt rã rời khi mới đi làm về". D157: the picture is
+  an ordinary person in the real moment, never the idiom drawn literally; faces are allowed for this kind (no recurring cast).
 - **96.7 Finish:** sample clips, Vietnamese labels, full pytest and Vitest, browser tests, one real video of each kind in the
   sandbox, both themes and phone for the changed pages.
 
@@ -69,6 +72,8 @@ Unit tests for the schema and lines; Vitest for the maths and sample; a browser 
 
 - AI pictures may show the wrong action or bad hands: the pilot (96.3) and "Draw again" / upload are the answer.
 - Still pictures lose the real-life feeling of clip 6, so C may do less well: post it and compare.
+- Real result 2026-11-04: Qwen drew a man with three arms when the description asked for two actions with the hands. Prompts now ask
+  for one simple pose and two arms, which lowers the risk but does not remove it; the app cannot detect it, so a person must look.
 - A video of 10 new pictures takes about 6 minutes on this machine and needs 8 GB of VRAM; a batch of many takes long.
 - Vertical pictures do not fit the Activity Library (16:9 only), so they stay with their project and are not reused at first.
 - D154 touches the audio mix that every video uses: its tests must show that videos with no pause are unchanged.

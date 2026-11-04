@@ -47,7 +47,7 @@ const BeatEditor = (() => {
       const base = clone(state.view.props);
       base.lines.forEach((line, index) => {
         const c = state.lines[index].card;
-        if (key() === "grammar" || key() === "roots") {
+        if (["grammar", "roots", "wordday", "whatis", "levelup"].includes(key())) {
           const picture = line[key()]?.pictureUrl;
           line[key()] = { ...clone(c), ...(picture ? { pictureUrl: picture } : {}) };
         } else if (key() === "slowpod") line.translation = c.translation_vi || "";  // Phase 91
@@ -120,6 +120,13 @@ const BeatEditor = (() => {
       mutate(card(index));
       if (key() === "grammar") applyGrammar(index, before, card(index));
       else if (key() === "roots") applyRoots(index, before, card(index));
+      else if (["wordday", "whatis", "levelup"].includes(key())) {  // Phase 96: the lines of one word carry the same card
+        state.lines.forEach((line, at) => {
+          if (at === index || line.card.word !== before.word) return;
+          const { beat, repeat, number, pause_after_ms } = line.card;
+          line.card = { ...clone(card(index)), beat, repeat, number, pause_after_ms }; state.dirty.add(at);
+        });
+      }
       state.dirty.add(index);
       refreshPlayer(); renderList(); scheduleSave();
     }
@@ -210,6 +217,13 @@ const BeatEditor = (() => {
         <button type="button" class="btn btn-ghost btn-sm" data-act="card-remove" data-at="${at}">Remove card</button></div></fieldset>`;
     }
 
+    // Phase 96 (D153): the picture of a picture-led Short: draw it again, or use one made elsewhere (a Lite computer)
+    function pictureTools() {
+      return `${state.view.props.lines[state.selected]?.[key()]?.pictureUrl ? "" : '<p class="section-hint">No picture yet: it is drawn when the video is made, or upload one.</p>'}
+        <button type="button" class="btn btn-ghost btn-sm" data-act="redraw">Draw the picture again</button>
+        <label class="btn btn-ghost btn-sm">Upload a picture<input type="file" accept="image/*" data-act="upload-picture" hidden/></label>`;
+    }
+
     function rootsForm(c) {
       const parts = (c.parts || []).map((part, at) => `<div class="beat-chip-row">
         <input type="text" data-f="parts.${at}.text" value="${escape(part.text)}" aria-label="Part"/>
@@ -233,6 +247,14 @@ const BeatEditor = (() => {
           + `<div class="beat-add"><select data-act="kind" aria-label="Card kind">${KINDS.map(([value, name]) => `<option value="${value}">${name}</option>`).join("")}</select>
             <button type="button" class="btn btn-ghost btn-sm" data-act="card-add">+ Add card</button></div>`,
         roots: () => rootsForm(c),
+        levelup: () => field("basic", c.basic, "Basic phrase") + field("advanced", c.advanced, "Advanced phrase") + field("meaning_en", c.meaning_en, "English explanation")
+          + field("meaning_vi", c.meaning_vi, "Vietnamese explanation") + field("picture", c.picture, "Picture description") + pictureTools(),
+        whatis: () => field("word", c.word, "Name") + field("ipa", c.ipa, "IPA") + field("meaning_en", c.meaning_en, "English explanation")
+          + field("meaning_vi", c.meaning_vi, "Vietnamese explanation") + field("picture", c.picture, "Picture description") + pictureTools(),
+        wordday: () => field("word", c.word, "Word") + field("ipa", c.ipa, "IPA") + field("meaning_en", c.meaning_en, "English explanation")
+          + field("meaning_vi", c.meaning_vi, "Vietnamese explanation") + field("example_en", c.example_en, "Example")
+          + field("example_vi", c.example_vi, "Translation") + field("picture", c.picture, "Picture description")
+          + pictureTools(),
         // Phase 91: the kinds drawn from their lines show what their line puts on screen
         slowpod: () => field("translation_vi", c.translation_vi, "Vietnamese translation (under the line)"),
         flashcards: () => (c.word ? `<p class="section-hint">The card of “${escape(c.word)}” (from the lesson's vocabulary).</p>`
@@ -263,6 +285,7 @@ const BeatEditor = (() => {
       if (event.target.matches("[data-act='text']")) $("[data-act='text-save']").disabled = event.target.value.trim() === state.lines[state.selected].text;
     });
     container.addEventListener("change", (event) => {
+      if (event.target.matches("[data-act='upload-picture']") && event.target.files[0]) { uploadPicture(event.target.files[0]); return; }
       const input = event.target.closest("select[data-f]");
       if (input) change((c) => setPath(c, input.dataset.f, input.value));
     });
@@ -304,6 +327,14 @@ const BeatEditor = (() => {
         state.lines[state.selected].text = text; state.lines[state.selected].audio_ok = false;
         status("Saved · make the voice again for this line"); renderList(); refreshPlayer();
       } catch (error) { status(`Not saved: ${error.message || error}`); button.disabled = false; }
+    }
+    async function uploadPicture(file) {
+      status("Uploading the picture…");
+      try {
+        await save();
+        await Api.uploadBeatPicture(projectId, card().word, file);
+        await reload(); status("Picture saved");
+      } catch (error) { status(`${error.message || error}`); }
     }
     async function redraw(button) {
       const c = card(); button.disabled = true; status("Drawing the picture… (about a minute)");

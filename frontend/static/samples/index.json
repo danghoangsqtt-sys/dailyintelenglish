@@ -44,10 +44,10 @@
     "aspect": "9:16",
     "vi": "wordday-vi.mp4",
     "poster_vi": "wordday-vi.jpg",
-    "seconds": 5,
+    "seconds": 4.1,
     "en": "wordday-en.mp4",
     "poster_en": "wordday-en.jpg",
-    "bytes": 197330
+    "bytes": 333536
   },
   "top5": {
     "kind": "top5",
@@ -188,5 +188,25 @@
     "poster_en": "vox_short.jpg",
     "seconds": 5,
     "bytes": 148808
+  },
+  "whatis": {
+    "kind": "whatis",
+    "aspect": "9:16",
+    "vi": "whatis-vi.mp4",
+    "poster_vi": "whatis-vi.jpg",
+    "seconds": 7,
+    "en": "whatis-en.mp4",
+    "poster_en": "whatis-en.jpg",
+    "bytes": 163788
+  },
+  "levelup": {
+    "kind": "levelup",
+    "aspect": "9:16",
+    "vi": "levelup-vi.mp4",
+    "poster_vi": "levelup-vi.jpg",
+    "seconds": 3.4,
+    "en": "levelup-en.mp4",
+    "poster_en": "levelup-en.jpg",
+    "bytes": 394175
   }
 }

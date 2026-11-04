@@ -8,7 +8,7 @@ import type { EpisodeInputProps, EpisodeLine } from "./types";
 import type { SoloPayload, Visual } from "./soloTypes";
 
 export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards"
-  | "roots"
+  | "roots" | "whatis" | "levelup"
   | "grammar";
 export type SampleIdea = { title: string; brief?: string; vi?: string };  // vi: Phase 92, the example clips' Vietnamese meaning
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
@@ -25,7 +25,7 @@ export function quoted(text: string): string | null {
 const sentence = (text: string) => { const clean = text.trim().replace(/\s+/g, " "); return /[.!?]$/.test(clean) ? clean : `${clean}.`; };
 
 /** The sample segments of a voice-only template (the visuals the AI plan would use). */
-export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar">, idea: SampleIdea): Part[] {
+export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup">, idea: SampleIdea): Part[] {
   const title = idea.title.trim() || "Your Short", brief = (idea.brief || "").trim() || "The AI writes this part from your idea.";
   const card = (cardTitle: string, bullets: string[] = [], emphasis = ""): Visual => ({ kind: "text_card", title: cardTitle, bullets, emphasis }) as Visual;
   const follow = (text: string): Part => ({ visual: card("Daily Beyond English", [], text), lines: [`${text}!`] });
@@ -139,6 +139,44 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, learning: { vocab, idioms: [], audience },
       durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
+  if (template === "levelup") {  // Phase 96.6: a plain phrase, then the natural one twice, over its picture
+    const pairs = [["I'm very busy", "I'm swamped", "ngập đầu trong công việc", "very busy with too much work"]];
+    const say = pairs.flatMap(([basic, advanced, meaning_vi, meaning_en], at) => {
+      const fields = { word: advanced, basic, advanced, meaning_vi, meaning_en, number: at + 1, audience, pictureUrl: "samples/levelup.jpg" };
+      return [[`${basic}.`, { ...fields, beat: "basic" }], [`${advanced}.`, { ...fields, beat: "advanced" }], [`${advanced}.`, { ...fields, beat: "advanced" }]] as const;
+    });
+    const lines = timed(say.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.2).map((line, at) => ({ ...line, levelup: say[at][1] }));
+    return { ...common, learning: sampleLearning(template, idea, audience), presentationMode: "classic", shortStyle: "levelup", visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
+  if (template === "whatis") {  // Phase 96.5: an object, the question, a silent 1-2-3, the name
+    const say = [["plug", "/plʌɡ/", "phích cắm"], ["tap", "/tæp/", "vòi nước"]].flatMap(([word, ipa, meaning_vi], at) => {
+      const fields = { word, ipa, meaning_vi, meaning_en: `a ${word}`, number: at + 1, audience, pictureUrl: `samples/whatis-${word}.jpg` };
+      return [["What is this called?", { ...fields, beat: "ask", pause_after_ms: 3000 }], [`${word[0].toUpperCase()}${word.slice(1)}.`, { ...fields, beat: "answer" }]] as const;
+    });
+    const lines = timed(say.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.1).map((line, at) => ({ ...line, whatis: say[at][1] }));
+    let shift = 0;
+    const spaced = lines.map((line, at) => {
+      const moved = { ...line, startSec: line.startSec + shift, endSec: line.endSec + shift, words: line.words.map((word) => ({ ...word, startSec: word.startSec + shift, endSec: word.endSec + shift })) };
+      if (say[at][1].beat === "ask") shift += 3;
+      return moved;
+    });
+    return { ...common, learning: sampleLearning(template, idea, audience), presentationMode: "classic", shortStyle: "whatis", visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines: spaced, durationSeconds: spaced.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
+  if (template === "wordday") {  // Phase 96: one word said six times over its picture, drawn from its lines
+    const word = quoted(idea.title) ?? idea.title.split(/\s+/).slice(-1)[0].replace(/[^\p{L}'-]/gu, "") ?? "word";
+    const example_en = `It was a ${word} little room.`;
+    const fields = { word, ipa: "/ˈkoʊ.zi/", part_of_speech: "adjective", meaning_en: (idea.brief ?? "").slice(0, 60), meaning_vi: idea.vi ?? "",
+      example_en, example_vi: "Đó là một căn phòng nhỏ ấm cúng.", audience, pictureUrl: "samples/wordday.jpg" };
+    const spoken = word.charAt(0).toUpperCase() + word.slice(1) + ".";
+    const say = [...Array.from({ length: 6 }, (_, at) => [spoken, { ...fields, beat: "repeat", repeat: at + 1 }] as const),
+      [example_en, { ...fields, beat: "example", repeat: 6 }] as const];
+    const lines = timed(say.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.1)
+      .map((line, at) => ({ ...line, wordday: say[at][1] }));
+    return { ...common, learning: sampleLearning(template, idea, audience), presentationMode: "classic", shortStyle: "wordday", visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
   if (template === "roots") {  // Phase 87: a word family's beats, drawn from their lines (the AI picks the real head)
     const part = (text: string, role: "prefix" | "root" | "suffix", meaning: string) => ({ text, role, meaning });
     const compress = [part("com", "prefix", "cùng nhau"), part("press", "root", "ép")];
@@ -191,7 +229,7 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
     return { ...common, presentationMode: "classic", shortStyle: "grammar", visualMode: "podcast_black",
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
-  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar">, idea);
+  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup">, idea);
   const lines: EpisodeLine[] = [], timeline: SoloPayload["timeline"] = [], segments: unknown[] = [];
   let time = 0.3;
   parts.forEach((part, index) => {

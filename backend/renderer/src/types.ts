@@ -23,6 +23,26 @@ export const episodeWordSchema = z.object({
   endSec: z.number(),
 });
 
+/** Phase 96: a Word of the day line's card (backend/content/word_repeat.py) with its picture and audience. */
+export const wordCardSchema = z.object({
+  beat: z.string().optional(),
+  repeat: z.number().optional(),
+  number: z.number().optional(),
+  basic: z.string().optional(),
+  advanced: z.string().optional(),
+  pause_after_ms: z.number().optional(),
+  word: z.string().optional(),
+  ipa: z.string().optional(),
+  part_of_speech: z.string().optional(),
+  meaning_en: z.string().optional(),
+  meaning_vi: z.string().optional(),
+  example_en: z.string().optional(),
+  example_vi: z.string().optional(),
+  picture: z.string().optional(),
+  pictureUrl: z.string().optional(),
+  audience: z.string().optional(),
+});
+
 /** Phase 87: one part of a word in a word-roots Short (prefix / root / suffix) and its meaning. */
 export const rootsPartSchema = z.object({ text: z.string(), role: z.enum(["prefix", "root", "suffix"]), meaning: z.string().optional().default("") });
 
@@ -93,6 +113,10 @@ export const episodeLineSchema = z.object({
   words: z.array(episodeWordSchema).optional().default([]),
   /** Phase 81: the line's Vietnamese translation (slow English podcast). */
   translation: z.string().optional(),
+  /** Phase 96: the card of a Word of the day Short. */
+  wordday: wordCardSchema.optional(),
+  whatis: wordCardSchema.optional(),
+  levelup: wordCardSchema.optional(),
   /** Phase 87: the beat card of a word-roots Short. */
   roots: rootsCardSchema.optional(),
   /** Phase 88: the beat of an easy-grammar Short. */
@@ -271,7 +295,7 @@ export const episodeInputPropsSchema = z.object({
   hook: z.string().optional(),
   hookAtSec: z.number().optional(),
   /** Phase 65 (ENH-047): a two-character conversation Short drawn from its lines -- "chat" or "wyr" (would you rather). */
-  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards", "roots", "grammar"]).optional(),
+  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards", "roots", "grammar", "wordday", "whatis", "levelup"]).optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;

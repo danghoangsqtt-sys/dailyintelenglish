@@ -19,7 +19,7 @@ describe("Phase 68 sample Shorts for the batch preview (ENH-050)", () => {
       if (i) expect(line.startSec).toBeGreaterThan(parsed.lines[i - 1].endSec);
     });
     expect(parsed.durationSeconds!).toBeGreaterThan(parsed.lines.at(-1)!.endSec);
-    if (template === "chat" || template === "wyr") {
+    if (template === "chat" || template === "wyr" || template === "wordday") {
       expect([parsed.presentationMode, parsed.shortStyle]).toEqual(["classic", template]);
     } else {
       const solo = parsed.solo!;

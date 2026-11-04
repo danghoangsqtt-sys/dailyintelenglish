@@ -99,7 +99,7 @@ async def test_the_news_tab_lists_stories_and_reads_the_chosen_articles(page, ba
 async def test_kinds_save_place_make_now_and_results(page, base_url):
     """Phase 80 (owner 2026-10-26): the video types as cards, where the videos go, make now and the results panel."""
     await page.goto(base_url + "/shorts-batch")
-    await expect(page.locator("#template-grid .template-card")).to_have_count(16)  # Phase 87: + word roots; Phase 88: + easy grammar
+    await expect(page.locator("#template-grid .template-card")).to_have_count(18)  # Phase 87: + word roots; Phase 88: + easy grammar
     # Phase 92 (owner 2026-11-03): before there are ideas the preview shows the kind's example clip, also for the kinds
     # drawn from characters, a presenter or pictures (Phase 81/80 showed a silent sample or "No silent preview")
     for kind in ("slowpod", "flashcards", "conversation"):

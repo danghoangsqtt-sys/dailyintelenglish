@@ -11,6 +11,10 @@ class LanguageNotesEdit(BaseModel):
     grammar_point: str = ""
     translation_vi: str = Field(default="", max_length=600)  # Phase 81: shown under the English in a slow English podcast
     roots: dict | None = None  # Phase 87: a word-roots beat card, kept with its line through Step 2 edits
+    whatis: dict | None = None  # Phase 96: a What is this called? card
+    levelup: dict | None = None  # Phase 96: a Basic vs Advanced card
+    whatis: dict | None = None  # Phase 96: a What is this called? card
+    wordday: dict | None = None  # Phase 96: a Word of the day card, kept with its line through Step 2 edits
     grammar: dict | None = None  # Phase 88: an easy-grammar beat (scene header and cards), kept the same way
 
 

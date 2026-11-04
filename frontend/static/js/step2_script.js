@@ -353,7 +353,7 @@
 
   function renderEditorReview(review, busy = false, message = "") {
     const panel = document.getElementById("editor-review");
-    const skipped = ["flashcards", "slowpod", "roots", "grammar"].includes(state.project?.explainer_style);
+    const skipped = ["flashcards", "slowpod", "roots", "grammar", "wordday", "whatis", "levelup"].includes(state.project?.explainer_style);
     panel.hidden = skipped || !state.lines.length;
     if (panel.hidden) return;
     const scores = review?.scores || {};

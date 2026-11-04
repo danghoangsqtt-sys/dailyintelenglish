@@ -29,7 +29,8 @@
         "brief": "warm, comfortable and relaxing",
         "vi": "ấm cúng"
       },
-      "from": 0.4
+      "from": 2.5,
+      "seconds": 7
     },
     "top5": {
       "idea": {
@@ -96,6 +97,22 @@
         "brief": ""
       },
       "from": 1.0
+    },
+    "whatis": {
+      "idea": {
+        "title": "What is this called?",
+        "brief": "everyday objects"
+      },
+      "from": 0.4,
+      "seconds": 7
+    },
+    "levelup": {
+      "idea": {
+        "title": "Basic vs Advanced",
+        "brief": "a natural phrase"
+      },
+      "from": 0.4,
+      "seconds": 6
     }
   },
   "sources": {

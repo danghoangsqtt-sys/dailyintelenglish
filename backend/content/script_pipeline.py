@@ -41,6 +41,7 @@ from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
 from backend.content import grammar_lesson
+from backend.content import level_up, object_quiz, word_repeat
 from backend.content.word_family import WordFamily, build_beats, roots_prompt, with_checked_facts
 from backend.ai.tts.vocal_cues import caption_text
 
@@ -1426,6 +1427,52 @@ async def _run_roots_job(db, job: dict, project: dict, router: "AIRouter") -> No
     await export_service.sync_quietly(db, project_id)
 
 
+# Phase 96 (D148): the picture-led Shorts are built from one schema-checked answer, read in English
+_CARD_SHORTS = {
+    "wordday": (word_repeat.WordCard, word_repeat.word_prompt, word_repeat.build_beats),
+    "whatis": (object_quiz.ObjectQuiz, object_quiz.quiz_prompt, object_quiz.build_beats),
+    "levelup": (level_up.LevelUp, level_up.level_prompt, level_up.build_beats),
+}
+
+
+async def _run_card_short_job(db, job: dict, project: dict, router: "AIRouter") -> None:
+    job_id, project_id = job["id"], project["id"]
+    style = project["explainer_style"]
+    schema, prompt_of, beats_of = _CARD_SHORTS[style]
+    adapter = TypeAdapter(schema)
+    await _update_progress(db, job_id, "word", 20)
+    request = GenerationRequest(prompt=prompt_of(project["topic"], project["cefr_level"], _source_context(project)["source_words"]),
+                                json_schema=schema.model_json_schema(),
+                                deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose=f"short_{style}")
+    try:
+        result = await _call_router(db, job_id, router, request, section_index=None, is_repair=False, adapter=adapter)
+        beats = beats_of(parse_and_validate(result.text, adapter))
+    except ProviderError as exc:
+        await _fail_provider(db, job_id, exc)
+        return
+    except (SchemaValidationError, ValueError) as exc:
+        await _fail(db, job_id, f"short_{style}_invalid", [str(exc)[:300]])
+        return
+    speaker_id = project["speakers"][0]["id"]
+    server_lines = [{"speaker_id": speaker_id, "text": text,
+                     "language_notes": LanguageNotesOut(**{style: card}).model_dump()} for text, card in beats]
+    async with write_transaction(db):
+        final_project = await project_service.get_project(db, project_id)
+        if _job_project_hash(final_project, job) != job["config_hash"]:
+            await ai_job_service.mark_stale(db, job_id, commit=False)
+            return
+        if await _is_cancelled(db, job_id, project_id):
+            await ai_job_service.transition_status(db, job_id, "cancelled", commit=False)
+            return
+        await ai_job_service.transition_status(db, job_id, "validating", commit=False)
+        await _set_narrator_engine(db, final_project, speaker_id, "en")
+        await script_service.save_script(db, project_id, server_lines, {speaker_id}, commit=False)
+        await project_service.mark_script_changed(db, project_id, commit=False)
+        await ai_job_service.transition_status(db, job_id, "complete", commit=False)
+    from backend.content import export_service
+    await export_service.sync_quietly(db, project_id)
+
+
 _LESSON_ADAPTER = TypeAdapter(grammar_lesson.GrammarLesson)
 _REVIEW_ADAPTER = TypeAdapter(grammar_lesson.LessonReview)
 
@@ -1556,6 +1603,9 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         return
     if project.get("explainer_style") == "roots":  # Phase 87: a word family, not prose
         await _run_roots_job(db, job, project, router)
+        return
+    if project.get("explainer_style") in _CARD_SHORTS:  # Phase 96: one checked answer, not prose
+        await _run_card_short_job(db, job, project, router)
         return
     if project.get("explainer_style") == "grammar":  # Phase 88: a grammar lesson, not prose
         await _run_grammar_job(db, job, project, router)
