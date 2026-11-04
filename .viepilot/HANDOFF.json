@@ -1187,7 +1187,10 @@
   "phase97_roots_story_load_word": {
     "status": "implemented_verified",
     "summary": ".viepilot/phases/97-roots-story-load-word/SUMMARY.md",
-    "installed": false,
-    "pushed": false
+    "installed": true,
+    "pushed": true,
+    "installed_from_commit": "b086290c",
+    "installed_backup": "data/backups/desktop-20261104-221824-305",
+    "package": "dist/2.0-phase97-20261104"
   }
 }

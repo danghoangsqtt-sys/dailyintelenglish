@@ -1,6 +1,6 @@
 # Phase 97 state
 
-Status: implemented_verified (2026-11-04, sandbox). Not installed or pushed.
+Status: implemented_verified (2026-11-04). Installed from b086290c (Full ZIP), package `dist/2.0-phase97-20261104`, pushed.
 
 | Task | Scope | Status |
 |---|---|---|
