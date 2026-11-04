@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": 93,
+  "current_phase": 94,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1121,7 +1121,7 @@
     "next_task": "owner looks at Step 1 / Shorts batch; install Phases 88 fixes + 90 + 91 + 92"
   },
   "phase93_studio_ui_frame": {
-    "status": "planned",
+    "status": "implemented_verified",
     "plan": ".viepilot/phases/93-studio-ui-frame/PLAN.md",
     "decisions": [
       "D138 five areas + Settings, old addresses redirect",
@@ -1131,11 +1131,13 @@
       "D142 Video table by default"
     ],
     "design": ".viepilot/ui-direction/session-2026-11-03-alt/e/",
-    "next_task": "93.1 when the owner says to run it",
-    "pushed": false
+    "next_task": "Phase 94 (steps and Lina), started 2026-11-04",
+    "pushed": false,
+    "summary": ".viepilot/phases/93-studio-ui-frame/SUMMARY.md",
+    "tests": "full pytest 2360 passed"
   },
   "phase94_studio_ui_steps_lina": {
-    "status": "planned",
+    "status": "in_progress",
     "plan": ".viepilot/phases/94-studio-ui-steps-lina/PLAN.md",
     "decisions": [
       "D143 one frame for every step",

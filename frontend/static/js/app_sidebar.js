@@ -61,7 +61,7 @@
     toggle.setAttribute("aria-label", label);
     toggle.title = label;
   }
-  const startsCollapsed = () => /^\/step[2-7]\b/.test(location.pathname) || window.innerWidth < 1100;
+  const startsCollapsed = () => /^\/step[1-7]\b/.test(location.pathname) || window.innerWidth < 1100;
   const saved = stored();
   setCollapsed(saved ? saved === "collapsed" : startsCollapsed());
   // The initial width is committed before transitions are enabled (BUG-040).

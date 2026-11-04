@@ -8,6 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Changed — The new studio look: frame and main areas (Phase 93, 2026-11-04)
+
+- One light rail on every page: Create video, Today, Channel, Videos, Library and Settings, with the number of videos waiting; it collapses to icons and becomes a tab bar at the bottom on a phone.
+- Today (`/`) opens with Lina, the assistant: what waits for your review, what is being made, the video to continue, the next planned episode and this week, plus a box to start the next video from a topic.
+- Create video (`/create`) gathers every kind of video by purpose with its example clip; a card opens Step 1 with the kind (and the topic) chosen. Many Shorts at once is its second tab.
+- Videos (`/videos`) holds the project list and, as a second view, the production board by step and the channel roadmap. Library (`/library`) lists the voices and the brand; characters, scenes and pictures, and music are its other tabs. Channel has the publishing plan and automation as tabs.
+- New palette and type: tinted neutrals with one green accent in light and dark, Baloo 2 headings and Be Vietnam Pro text (bundled, SIL OFL), 16 px text, one chunky primary button. Every former page keeps its address and works as before.
+
 ### Added — Example clips for every kind of video (Phase 92, 2026-11-03)
 
 - Every kind card in Step 1 and on the Shorts batch page shows a short muted example clip that plays when you point at or choose it; the corner ⤢ opens a larger example with what the kind is best for. Clips follow the channel audience's language.

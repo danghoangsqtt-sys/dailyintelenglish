@@ -293,9 +293,9 @@ async def test_activity_library_page_has_shelves_review_chips_and_a_scenes_tab(
     page = await activity_browser.new_page()
     await page.goto(f"{activity_live_server_url}/activities")
     assert await page.title() == "Activity Library — Daily Beyond English"
-    current = page.locator('#app-sidebar a[aria-current="page"]')
-    assert (await current.text_content()).strip() == "Activity Library"
-    assert await current.get_attribute("href") == "/activities"
+    current = page.locator('#app-sidebar a[aria-current="page"]')  # Phase 93: the page lights its area, Library
+    assert (await current.text_content()).strip() == "Library"
+    assert await page.locator('nav.area-tabs a[aria-current="page"]').get_attribute("href") == "/activities"
     await page.locator("#activity-import-card summary").click()
     await page.locator("#activity-import-btn").click()
     await page.locator("#activity-grid .shot-card", has_text="reading").wait_for()

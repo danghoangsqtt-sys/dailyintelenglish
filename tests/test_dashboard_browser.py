@@ -97,7 +97,7 @@ async def _mock_list_projects(page, projects: list[dict]) -> None:
 async def test_dashboard_lists_projects_with_status_badges(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await _mock_list_projects(page, MOCK_PROJECTS)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector(".project-card")
     cards = page.locator(".project-card")
@@ -117,7 +117,7 @@ async def test_dashboard_lists_projects_with_status_badges(browser_instance: Bro
 async def test_dashboard_filter_narrows_visible_cards(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await _mock_list_projects(page, MOCK_PROJECTS)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector(".project-card")
     await page.click("[data-filter='draft']")
@@ -133,7 +133,7 @@ async def test_dashboard_filter_narrows_visible_cards(browser_instance: Browser,
 async def test_dashboard_search_narrows_visible_cards(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await _mock_list_projects(page, MOCK_PROJECTS)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector(".project-card")
     await page.fill("#search-input", "climate")
@@ -148,7 +148,7 @@ async def test_dashboard_search_narrows_visible_cards(browser_instance: Browser,
 async def test_dashboard_empty_state_shown_when_no_projects(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await _mock_list_projects(page, [])
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector("#empty-state:not([hidden])")
     assert await page.locator(".project-card").count() == 0
@@ -161,7 +161,7 @@ async def test_dashboard_empty_state_shown_when_no_projects(browser_instance: Br
 async def test_dashboard_new_project_button_navigates_to_step1(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await _mock_list_projects(page, MOCK_PROJECTS)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector(".project-card")
     await page.click("#new-project-btn")
@@ -197,7 +197,7 @@ async def test_dashboard_continue_button_navigates_to_status_step(
     ]
     page = await browser_instance.new_page()
     await _mock_list_projects(page, projects)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector(f"[data-id='{project_id}']")
     await page.click(f"[data-id='{project_id}'] [data-action='continue']")
@@ -221,7 +221,7 @@ async def test_dashboard_continue_unknown_status_is_noop(browser_instance: Brows
     ]
     page = await browser_instance.new_page()
     await _mock_list_projects(page, projects)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector("[data-id='proj-unknown']")
     original_url = page.url
@@ -244,7 +244,7 @@ async def test_dashboard_delete_removes_card_after_confirm(browser_instance: Bro
 
     await page.route("**/api/projects/proj-complete-1", handle_delete)
 
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
     await page.wait_for_selector("[data-id='proj-complete-1']")
     await page.click("[data-id='proj-complete-1'] [data-action='delete']")
     await answer_confirm(page)
@@ -272,7 +272,7 @@ async def test_dashboard_load_failure_shows_error_banner_not_misleading_empty_st
             await route.continue_()
 
     await page.route("**/api/projects", handle_routes)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector("#error-banner:not([hidden])")
     banner_text = await page.text_content("#error-banner")
@@ -310,7 +310,7 @@ async def test_dashboard_delete_failure_shows_error_banner_not_native_alert(
 
     page.on("dialog", handle_dialog)
 
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
     await page.wait_for_selector("[data-id='proj-complete-1']")
     await page.click("[data-id='proj-complete-1'] [data-action='delete']")
     confirm_message = await answer_confirm(page)
@@ -333,7 +333,7 @@ async def test_dashboard_pagination_caps_dom_navigates_and_resets_on_reload(
     projects = _pagination_projects(50)
     page = await browser_instance.new_page()
     await _mock_list_projects(page, projects)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector("#project-pagination:not([hidden])")
     cards = page.locator(".project-card")
@@ -372,7 +372,7 @@ async def test_dashboard_pagination_is_hidden_for_a_single_page(
 ):
     page = await browser_instance.new_page()
     await _mock_list_projects(page, _pagination_projects(3))
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector(".project-card")
     assert await page.locator(".project-card").count() == 3
@@ -387,7 +387,7 @@ async def test_dashboard_filter_and_search_reset_pagination_to_first_page(
     projects = _pagination_projects(50)
     page = await browser_instance.new_page()
     await _mock_list_projects(page, projects)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector("#project-pagination:not([hidden])")
     await page.click("#next-page-btn")
@@ -427,7 +427,7 @@ async def test_dashboard_delete_last_card_on_last_page_clamps_to_valid_page(
             await route.continue_()
 
     await page.route("**/api/projects/pagination-project-24", handle_delete)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")
 
     await page.wait_for_selector("#project-pagination:not([hidden])")
     await page.click("#next-page-btn")

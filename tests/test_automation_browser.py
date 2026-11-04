@@ -51,7 +51,8 @@ async def test_the_page_saves_the_schedule_and_lists_the_due_episodes(page, base
     await page.locator("#auto-enabled").uncheck()
     await page.locator("#auto-form button[type=submit]").click()
     await expect(page.locator("#auto-state-text")).to_have_text("Off")
-    await expect(page.locator("a.side-link[href='/automation']")).to_have_attribute("aria-current", "page")
+    await expect(page.locator("a.side-link[href='/channel']")).to_have_attribute("aria-current", "page")  # Phase 93: its area
+    await expect(page.locator("nav.area-tabs a[href='/automation']")).to_have_attribute("aria-current", "page")
 
 
 async def test_the_review_studio_shows_the_schedule_and_reviews_a_made_video(page, base_url):

@@ -39,7 +39,8 @@ async def test_ideas_from_a_topic_become_a_dated_series(page, base_url):
 
     await page.route("**/api/shorts-batch/ideas", fake_ideas)
     await page.goto(base_url + "/shorts-batch")
-    await expect(page.locator("a.side-link[href='/shorts-batch']")).to_have_attribute("aria-current", "page")
+    await expect(page.locator("a.side-create")).to_have_attribute("aria-current", "page")  # Phase 93: its area, Create video
+    await expect(page.locator("nav.area-tabs a[href='/shorts-batch']")).to_have_attribute("aria-current", "page")
     await page.locator("#template-grid [data-template='mistakes']").click()  # Phase 80: kinds are cards
     await expect(page.locator("#template-grid [data-template='mistakes']")).to_have_attribute("aria-checked", "true")
     await page.locator("#batch-topic").fill("Confusing words")

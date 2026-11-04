@@ -169,7 +169,7 @@ async def _mock_all_routes(page):
 async def test_dashboard_no_overflow_at_1024(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page(viewport=VIEWPORT)
     await _mock_all_routes(page)
-    await page.goto(f"{live_server_url}/")
+    await page.goto(f"{live_server_url}/videos")  # Phase 93: the project grid moved to Videos
     await page.wait_for_selector("#project-grid")
     await _assert_no_horizontal_overflow(page)
     await page.close()

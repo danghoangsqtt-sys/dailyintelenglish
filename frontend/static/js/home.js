@@ -57,8 +57,17 @@
     );
   }
 
-  function renderMoving(cards, going) {
+  function renderMoving(cards, going, next) {
     const rows = cards.slice(0, 5).map((card) => row(card, MOVING[card.state], [], card.step ? `Step: ${card.step}` : ""));
+    if (next) {  // the channel plan's next episode without a project (the former "Start here" card)
+      rows.push(el("div", { className: "e-row home-next" }, [
+        el("span", { className: "e-thumb", "aria-hidden": "true" }),
+        el("div", {}, [el("div", { className: "e-t", textContent: `${next.series} · Ep. ${next.number}: ${next.title}` }),
+          el("div", { className: "e-m", textContent: [next.publish_date, next.topic].filter(Boolean).join(" · ") })]),
+        el("span", { className: "e-state", textContent: "Next planned" }),
+        el("div", { className: "e-acts" }, action("Create its project", next.link, true)),
+      ]));
+    }
     if (going) {
       rows.unshift(el("div", { className: "e-row" }, [
         el("span", { className: "e-thumb", "aria-hidden": "true" }),
@@ -91,12 +100,12 @@
   function renderBand(waiting, going) {
     const line = $("home-line"), acts = $("home-acts");
     if (waiting.length) {
-      line.replaceChildren("There ", waiting.length === 1 ? "is " : "are ", el("b", { textContent: `${waiting.length} video${waiting.length === 1 ? "" : "s"}` }),
+      line.replaceChildren(waiting.length === 1 ? "There is " : "There are ", el("b", { textContent: `${waiting.length} video${waiting.length === 1 ? "" : "s"}` }),
         " waiting for you. Once you approve them they are scheduled.");
       acts.replaceChildren(el("a", { className: "btn btn-primary e-sun", href: "/channel#auto", textContent: `Review ${waiting.length} video${waiting.length === 1 ? "" : "s"}` }),
         going ? el("a", { className: "btn btn-ghost", href: going.link, textContent: "Continue my video" }) : null);
     } else if (going) {
-      line.replaceChildren("Nothing waits for review. Shall we finish ", el("b", { textContent: going.name }), "?");
+      line.replaceChildren("Nothing waits for review. Continue with ", el("b", { textContent: going.name }));
       acts.replaceChildren(el("a", { className: "btn btn-primary e-sun", href: going.link, textContent: `Continue at Step ${going.step_number}` }));
     } else {
       line.textContent = "Nothing waits for you. What should the next video be about?";
@@ -127,8 +136,8 @@
     const moving = videos.filter((card) => MOVING[card.state]);
     const going = channel && channel.start ? channel.start.continue : null;
     renderBand(waiting, going);
-    renderWaiting(waiting, waiting.length ? [] : ((channel && channel.actions) || []).slice(0, 4));
-    renderMoving(moving, going);
+    renderWaiting(waiting, ((channel && channel.actions) || []).slice(0, waiting.length ? 3 : 5));
+    renderMoving(moving, going, channel && channel.start ? channel.start.next_episode : null);
     renderWeek((channel && channel.calendar) || [], channel && channel.today);
   }
 

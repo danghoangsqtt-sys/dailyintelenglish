@@ -55,9 +55,12 @@ def test_every_page_carries_the_new_name_header_and_favicon(page):
     title = re.search(r"<title>(.*?)</title>", html).group(1)
     assert title.endswith("Daily Beyond English"), title
     assert "Daily Intel" not in html and ">DI<" not in html and "brand-mark" not in html
-    assert html.count('class="brand-logo"') == 1 and 'src="/static/brand/logo-64.png"' in html
-    assert "<b>Daily Beyond</b><small>English</small>" in html
-    assert 'aria-label="Daily Beyond English home"' in html  # "dashboard" would clash with the Dashboard link
+    # Phase 93 (D140): the brand is drawn by the one rail script every page loads into its empty sidebar
+    assert html.count('<aside id="app-sidebar"') == 1 and "/static/js/app_sidebar.js" in html
+    rail = (FRONTEND / "static" / "js" / "app_sidebar.js").read_text(encoding="utf-8")
+    assert rail.count('class="brand-logo"') == 1 and 'src="/static/brand/logo-64.png"' in rail
+    assert "<b>Daily Beyond</b><small>English</small>" in rail
+    assert 'aria-label="Daily Beyond English home"' in rail  # "Today" would clash with the Today link
     assert '<link rel="icon" href="/static/brand/logo-64.png"' in html
 
 

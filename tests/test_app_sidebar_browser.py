@@ -1,4 +1,5 @@
-"""Task 27.2 (Phase 27): the collapsible left sidebar shared by every page."""
+"""Task 27.2 (Phase 27); Phase 93 (D138/D140): one rail on every page -- Create video, the five areas, Settings;
+it collapses to icons, and on phones it is a tab bar at the bottom."""
 
 import json
 from typing import AsyncGenerator
@@ -8,12 +9,13 @@ from playwright.async_api import Browser, Page, async_playwright
 
 from tests.conftest import live_server
 
-PAGES = {
-    "/": "Dashboard", "/characters": "Character Library", "/music": "Music Library", "/settings": "Settings",
-    "/activities": "Activity Library", "/channel": "Channel plan",
-    "/step1": None, "/step2": None, "/step3": None, "/step4": None, "/step5": None, "/step6": None, "/step7": None,
+PAGES = {  # page -> the rail item it lights (its area)
+    "/": "Today", "/videos": "Videos", "/create": "Create video", "/shorts-batch": "Create video", "/library": "Library",
+    "/characters": "Library", "/music": "Library", "/activities": "Library", "/channel": "Channel", "/automation": "Channel",
+    "/settings": "Settings", "/step1": "Videos", "/step2": "Videos", "/step3": "Videos", "/step4": "Videos",
+    "/step5": "Videos", "/step6": "Videos", "/step7": "Videos",
 }
-LINKS = ["Dashboard", "Character Library", "Activity Library", "Music Library", "Settings"]
+LINKS = ["Create video", "Today", "Channel", "Videos", "Library", "Settings"]
 
 
 @pytest.fixture(scope="module")
@@ -56,9 +58,8 @@ async def test_every_page_has_one_sidebar_with_one_link_of_each_name(browser_ins
     assert await page.locator("a.brand").count() == 1
     for name in LINKS:
         assert await page.get_by_role("link", name=name, exact=True).count() == 1, name
-    current = await page.locator('#app-sidebar a[aria-current="page"]').all_text_contents()
-    expected = PAGES[path]
-    assert [text.strip() for text in current] == ([expected] if expected else [])
+    current = await page.locator('#app-sidebar a[aria-current="page"]').get_attribute("aria-label")
+    assert current == PAGES[path]
     await page.close()
 
 
@@ -68,13 +69,13 @@ async def test_toggle_collapses_to_a_rail_and_the_choice_is_remembered(browser_i
     toggle = page.locator("#sidebar-toggle")
     assert await toggle.get_attribute("aria-expanded") == "true"
     expanded = await _sidebar_width(page)
-    assert 220 <= expanded <= 250
+    assert 240 <= expanded <= 256
     await toggle.click()
     assert await page.evaluate("document.body.classList.contains('sidebar-collapsed')")
     assert await toggle.get_attribute("aria-expanded") == "false"
     await page.wait_for_function("document.getElementById('app-sidebar').getBoundingClientRect().width <= 80")
     # the links keep their names when only the icons show (title and aria-label stay)
-    assert await page.get_by_role("link", name="Music Library", exact=True).count() == 1
+    assert await page.get_by_role("link", name="Library", exact=True).count() == 1
     assert await page.evaluate("localStorage.getItem('dbe.sidebar')") == "collapsed"
     await page.reload()
     assert await page.evaluate("document.body.classList.contains('sidebar-collapsed')")
@@ -93,27 +94,21 @@ async def test_studio_pages_start_as_a_rail_and_the_dashboard_stays_open(browser
     assert await studio.locator("#pane-sidebar").count() == 1  # the studio keeps its own panel
     await studio.close()
     home = await _open(browser_instance, f"{live_server_url}/")
-    assert await _sidebar_width(home) >= 220
+    assert await _sidebar_width(home) >= 240
     await home.close()
 
 
 @pytest.mark.asyncio
-async def test_narrow_screens_use_a_drawer(browser_instance, live_server_url):
-    page = await _open(browser_instance, f"{live_server_url}/", width=700, height=900)
+async def test_phones_get_a_tab_bar_at_the_bottom(browser_instance, live_server_url):
+    page = await _open(browser_instance, f"{live_server_url}/", width=375, height=812)
     sidebar = page.locator("#app-sidebar")
-    assert not await sidebar.is_visible()
-    assert await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
-    opener = page.locator("#sidebar-open")
-    assert await opener.is_visible()
-    await opener.click()
     assert await sidebar.is_visible()
-    assert await page.evaluate("document.activeElement.closest('#app-sidebar') !== null")
-    await page.keyboard.press("Escape")
-    await sidebar.wait_for(state="hidden")  # it slides out first, then turns invisible
-    assert await page.evaluate("document.activeElement.id") == "sidebar-open"
-    await opener.click()
-    await page.mouse.click(690, 450)  # the backdrop, outside the drawer
-    await sidebar.wait_for(state="hidden")
+    box = await sidebar.bounding_box()
+    assert box["y"] + box["height"] >= 812 - 1 and box["width"] >= 370  # along the bottom edge, full width
+    assert await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    for name in ["Today", "Channel", "Videos", "Library", "Settings"]:
+        assert await page.get_by_role("link", name=name, exact=True).is_visible(), name
+    assert not await page.locator("#sidebar-toggle").is_visible()
     await page.close()
 
 

@@ -34,11 +34,11 @@ async def test_the_interface_switches_to_vietnamese_and_back(browser_instance: B
     page = await browser_instance.new_page(viewport={"width": 1400, "height": 900})
     await page.goto(f"{live_server_url}/")
     sidebar = page.locator("#app-sidebar")
-    await expect(sidebar.get_by_text("Character Library", exact=True)).to_be_visible()  # English by default
+    await expect(sidebar.get_by_text("Library", exact=True)).to_be_visible()  # English by default (Phase 93 rail)
     assert await page.evaluate("document.documentElement.lang") == "en"
     await page.locator("#lang-switch [data-lang='vi']").click()
-    await expect(sidebar.get_by_text("Thư viện nhân vật", exact=True)).to_be_visible()
-    await expect(page.locator("#start-title")).to_have_text("Bắt đầu từ đây")
+    await expect(sidebar.get_by_text("Thư viện", exact=True)).to_be_visible()
+    await expect(page.locator("#waiting-title")).to_have_text("Chờ bạn duyệt")
     assert await page.evaluate("document.documentElement.lang") == "vi"
     assert (await page.title()).startswith("Daily Beyond English")
     # the brand is a name: never translated
@@ -52,10 +52,10 @@ async def test_the_interface_switches_to_vietnamese_and_back(browser_instance: B
     await expect(page.locator("#late")).to_have_text("Cài đặt")
     await expect(page.locator("#kept")).to_have_text("Settings")
     await page.reload()  # the choice is remembered
-    await expect(sidebar.get_by_text("Thư viện nhạc", exact=True)).to_be_visible()
+    await expect(sidebar.get_by_text("Hôm nay", exact=True)).to_be_visible()
     await page.locator("#lang-switch [data-lang='en']").click()
     await page.wait_for_load_state("load")
-    await expect(sidebar.get_by_text("Music Library", exact=True)).to_be_visible()
+    await expect(sidebar.get_by_text("Today", exact=True)).to_be_visible()
     await page.close()
 
 

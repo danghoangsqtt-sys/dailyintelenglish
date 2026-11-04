@@ -9,6 +9,7 @@
     });
     tabs.forEach(([tab]) => document.getElementById(tab).addEventListener("click", () => show(tab)));
     if (location.hash === "#board") show("view-board");
+    window.addEventListener("hashchange", () => show(location.hash === "#board" ? "view-board" : "view-list"));
     // the status chips mirror the existing filter buttons' active class as aria-pressed
     document.querySelectorAll(".filter-btn").forEach((button) => button.addEventListener("click", () => {
       document.querySelectorAll(".filter-btn").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
