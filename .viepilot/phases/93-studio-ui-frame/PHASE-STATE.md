@@ -1,6 +1,6 @@
 # Phase 93 state
 
-Status: implemented_verified (2026-11-04, sandbox; not built, installed or pushed). Owner: "Chạy Phase 93" with the defaults D138–D142. Task cards written and committed before code.
+Status: implemented_verified (2026-11-04, sandbox; installed 2026-11-04 from bf317ae8, not pushed). Owner: "Chạy Phase 93" with the defaults D138–D142. Task cards written and committed before code.
 
 | Task | Scope | Status |
 |---|---|---|
@@ -26,3 +26,5 @@ Status: implemented_verified (2026-11-04, sandbox; not built, installed or pushe
 | Steps 1–7 | 70–75 | new tokens and rail only (the rail now starts collapsed on every step, so Step 1's cards have room); rebuilt in Phase 94 |
 
 Not done from the plan: the redirects of D138 (not needed: the old pages stay as area tabs).
+
+Installed (owner: "Xem xong, cài đi", 2026-11-04): Full 2.0.0 from bf317ae8 (source_dirty false), package dist/2.0-phase94-20261104 (Full ZIP SHA256 870e79129469a681f665053bbfc101742e936620919bb5709823b0e10c73dfcc), backup data/backups/desktop-20261104-075009-307; the running app reports commit bf317ae8 with the same data (118 projects, 5 characters); /, /create, /videos, /library, the bundled fonts and Lina's frames are served. Not pushed.

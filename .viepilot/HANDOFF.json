@@ -1134,7 +1134,12 @@
     "next_task": "Phase 94 (steps and Lina), started 2026-11-04",
     "pushed": false,
     "summary": ".viepilot/phases/93-studio-ui-frame/SUMMARY.md",
-    "tests": "full pytest 2360 passed"
+    "tests": "full pytest 2360 passed",
+    "installed": true,
+    "installed_from_commit": "bf317ae8",
+    "installed_backup": "data/backups/desktop-20261104-075009-307",
+    "package_directory": "dist/2.0-phase94-20261104",
+    "full_zip_sha256": "870e79129469a681f665053bbfc101742e936620919bb5709823b0e10c73dfcc"
   },
   "phase94_studio_ui_steps_lina": {
     "status": "implemented_verified",
@@ -1153,6 +1158,11 @@
       "drawn step layouts",
       "Lina reading aloud (needs a VieNeu preview route)",
       "side view frames"
-    ]
+    ],
+    "installed": true,
+    "installed_from_commit": "bf317ae8",
+    "installed_backup": "data/backups/desktop-20261104-075009-307",
+    "package_directory": "dist/2.0-phase94-20261104",
+    "full_zip_sha256": "870e79129469a681f665053bbfc101742e936620919bb5709823b0e10c73dfcc"
   }
 }

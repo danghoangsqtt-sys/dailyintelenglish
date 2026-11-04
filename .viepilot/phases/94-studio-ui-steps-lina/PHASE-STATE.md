@@ -1,6 +1,6 @@
 # Phase 94 state
 
-Status: implemented_verified (2026-11-04, sandbox; not built, installed or pushed), with a smaller scope than planned
+Status: implemented_verified (2026-11-04, sandbox; installed 2026-11-04 from bf317ae8, not pushed), with a smaller scope than planned
 (see SUMMARY "Not done"). Owner: "làm đi" after Phase 93. Defaults D143–D146. Task cards committed before code.
 
 | Task | Scope | Status |
@@ -12,3 +12,5 @@ Status: implemented_verified (2026-11-04, sandbox; not built, installed or pushe
 | 94.5 | Verify | done — full pytest 2355 passed + 8 step-nav tests updated for the stage labels (then passing) |
 
 Design self-audit: the steps rise from 70–75 to about 78–82 (stages, Back, Lina, room); 90+ needs the drawn layouts.
+
+Installed (owner: "Xem xong, cài đi", 2026-11-04): Full 2.0.0 from bf317ae8 (source_dirty false), package dist/2.0-phase94-20261104 (Full ZIP SHA256 870e79129469a681f665053bbfc101742e936620919bb5709823b0e10c73dfcc), backup data/backups/desktop-20261104-075009-307; the running app reports commit bf317ae8 with the same data (118 projects, 5 characters); /, /create, /videos, /library, the bundled fonts and Lina's frames are served. Not pushed.
