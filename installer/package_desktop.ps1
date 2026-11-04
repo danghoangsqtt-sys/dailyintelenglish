@@ -83,4 +83,10 @@ $manifest += "$((Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.To
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'HUONG-DAN-SU-DUNG.txt') -Destination $output -Force
 
 [IO.File]::WriteAllLines((Join-Path $output 'SHA256SUMS.txt'), $manifest, $utf8)
+
+# Only the ZIPs are kept: the stage folders repeat them and build\ is PyInstaller's work folder.
+# To install here, extract a ZIP into data\tmp\desktop-download (HUONG-DAN-SU-DUNG.txt, section 3).
+foreach ($temporary in @((Join-Path $output 'Full'), (Join-Path $output 'Lite'), (Join-Path $root 'build'))) {
+    if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Recurse -Force }
+}
 Write-Host "Version $Version packages and checksums: $output"
