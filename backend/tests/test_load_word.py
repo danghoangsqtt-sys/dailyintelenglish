@@ -9,7 +9,8 @@ from backend.media.audio_service import loop_ms_of, looped_voice
 from backend.schemas.project import CARD_STYLES, LINE_DRAWN_STYLES, SHORT_STYLES, VOICE_ONLY_STYLES
 
 WORD = {"word": "Compensation", "ipa": "ˌkɑːmpenˈseɪʃn", "part_of_speech": "noun", "meaning_en": "money paid for a loss.", "meaning_vi": "khoản đền bù.",
-        "example_en": "No amount of compensation can make up for it.", "example_vi": "Không khoản đền bù nào bù đắp được."}
+        "example_en": "No amount of compensation can make up for it.", "example_vi": "Không khoản đền bù nào bù đắp được.",
+        "articles": ["The debate over executive compensation has grown this year", "Workers asked for compensation after the factory closed", "A line without the word"]}
 
 
 def test_the_loop_the_word_once_and_the_example():
@@ -18,6 +19,13 @@ def test_the_loop_the_word_once_and_the_example():
     assert [card["beat"] for _, card in beats] == ["load", "reveal", "example"]
     assert beats[0][1]["loop_ms"] == LOOP_MS and "loop_ms" not in beats[1][1]
     assert beats[0][1]["ipa"] == "/ˌkɑːmpenˈseɪʃn/" and beats[0][1]["meaning_vi"] == "khoản đền bù" and beats[0][1]["word"] == "compensation"
+
+
+def test_the_opening_articles_keep_only_lines_with_the_word():
+    articles = build_beats(LoadCard.model_validate(WORD))[0][1]["articles"]
+    assert len(articles) == 2 and all("compensation" in text for text in articles)
+    gone = build_beats(LoadCard.model_validate({**WORD, "articles": ["No word here", "None here", "Nor here"]}))[0][1]["articles"]
+    assert gone == [WORD["example_en"]]
 
 
 def test_the_example_must_use_the_word():

@@ -21,6 +21,10 @@ asked for one, so it cannot invent one; more can be added to the list.
 One word said over and over, faster and faster, on a wall of that word with its meaning, a bar counting up to 100%, then the word with its
 IPA, meaning and one example.
 
+Owner, on the first version: "chưa đúng mẫu tôi đưa, đoạn đầu phải có kiểu như 1 bài báo tua nhanh có từ vựng cần nạp vào não xuất hiện". The
+opening is now news lines flicking past with the word marked at the same place (the AI writes them; no real names), then a flash of speed lines;
+the wall builds column by column with the meaning between the rows.
+
 D159: a new Short, `loadword` ("Load the word"), 9:16 like all our Shorts (the sample is 4:3). Black background, as in the sample: here the
 wall of words is the picture. Spoken: the word looped for 16 seconds, in five steps from normal speed to twice as fast, then the word once
 and one example. D160: the loop is built in the audio mix from the word's own voice clip, at the same pitch; other videos are unchanged.

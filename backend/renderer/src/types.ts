@@ -34,6 +34,7 @@ export const wordCardSchema = z.object({
   translation_vi: z.string().optional(),
   pause_after_ms: z.number().optional(),
   loop_ms: z.number().optional(),
+  articles: z.array(z.string()).optional(),
   word: z.string().optional(),
   ipa: z.string().optional(),
   part_of_speech: z.string().optional(),
@@ -304,6 +305,7 @@ export const episodeInputPropsSchema = z.object({
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
+export type WordCard = z.infer<typeof wordCardSchema>;
 export type RootsCard = z.infer<typeof rootsCardSchema>;
 export type RootsPart = z.infer<typeof rootsPartSchema>;
 export type GrammarCard = z.infer<typeof grammarCardSchema>;

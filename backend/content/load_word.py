@@ -20,11 +20,13 @@ class LoadCard(BaseModel):
     meaning_vi: str = Field(min_length=1, max_length=50)
     example_en: str = Field(min_length=1, max_length=100)
     example_vi: str = Field(min_length=1, max_length=140)
+    # the news lines that flick past at the start, the word marked in each
+    articles: list[str] = Field(min_length=3, max_length=8)
 
     @field_validator("*", mode="before")
     @classmethod
     def _tidy(cls, value):
-        return _clean_text(value) if isinstance(value, str) else value
+        return _clean_text(value) if isinstance(value, (str, list)) else value
 
     @field_validator("word")
     @classmethod
@@ -49,6 +51,7 @@ def build_beats(card: LoadCard) -> list[tuple[str, dict]]:
     if not example_uses_word(card):
         raise ValueError(f"the example does not use the word {card.word!r}")
     fields = card.model_dump()
+    fields["articles"] = [text for text in card.articles if example_uses_word(card.model_copy(update={"example_en": text}))] or [card.example_en]
     example = card.example_en if card.example_en[-1] in ".!?" else f"{card.example_en}."
     return [(spoken_word(card.word), {"beat": "load", "loop_ms": LOOP_MS, **fields}),
             (spoken_word(card.word), {"beat": "reveal", **fields}),
@@ -70,5 +73,7 @@ def load_prompt(topic: str, cefr: str, owner_words: list[str]) -> str:
         "- meaning_vi: its natural Vietnamese meaning in at most 5 words.\n"
         f"- example_en: one natural sentence of 5 to 10 words at {cefr} level with the word.\n"
         "- example_vi: its natural Vietnamese translation.\n"
+        "- articles: five different lines of 8 to 14 words, in the style of newspaper articles on different subjects, each with the word "
+        "in the middle of the line. Ordinary general statements only: no names of real people or companies, no invented numbers.\n"
         "Answer with the JSON object only."
     )

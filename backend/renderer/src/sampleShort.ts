@@ -141,7 +141,9 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
   }
   if (template === "loadword") {  // Phase 97: the word looped on a wall of itself, then shown with an example
     const fields = { word: "compensation", ipa: "/ˌkɑːmpenˈseɪʃn/", part_of_speech: "noun", meaning_en: "money paid for a loss", meaning_vi: "khoản đền bù", audience,
-      example_en: "No amount of compensation can make up for it.", example_vi: "Không khoản đền bù nào bù đắp được." };
+      example_en: "No amount of compensation can make up for it.", example_vi: "Không khoản đền bù nào bù đắp được.",
+      articles: ["The debate over executive compensation has grown sharply this year", "Workers asked for fair compensation after the factory closed", "New rules on compensation will change how companies pay staff",
+        "Many employees now compare compensation before they accept a job", "Critics say the compensation paid to managers is far too high"] };
     const say = [["Compensation.", { ...fields, beat: "load" }], ["Compensation.", { ...fields, beat: "reveal" }], [fields.example_en, { ...fields, beat: "example" }]] as const;
     const lines = timed(say.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.1).map((line, at) => ({ ...line, loadword: say[at][1] }));
     return { ...common, learning: sampleLearning(template, idea, audience), presentationMode: "classic", shortStyle: "loadword", visualMode: "podcast_black",
