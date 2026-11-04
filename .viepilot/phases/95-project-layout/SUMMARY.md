@@ -10,7 +10,7 @@ Moved with `git mv` so history follows. `tests` is now the package `backend.test
 
 ## Removed
 
-To the Recycle Bin (owner can restore; the disk space returns when it is emptied): old package builds, old install backups,
+Sent to the Recycle Bin. A check after the install found the first batch no longer there, so it cannot be restored: old package builds, old install backups,
 `build/`, tool caches, October backups, rejected UI prototypes' untracked files; from `data/` (1.44 GB + 86 MB):
 - inbox pictures byte-identical to their library copies (`library/activities_inbox`, `library/sprites_inbox`);
 - 3 old renders and 4 old audio mixes of one project that no DB row names (its current video stays);
