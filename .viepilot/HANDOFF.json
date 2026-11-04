@@ -1189,8 +1189,8 @@
     "summary": ".viepilot/phases/97-roots-story-load-word/SUMMARY.md",
     "installed": true,
     "pushed": true,
-    "installed_from_commit": "b086290c",
-    "installed_backup": "data/backups/desktop-20261104-221824-305",
-    "package": "dist/2.0-phase97-20261104"
+    "installed_from_commit": "ebeee750",
+    "installed_backup": "data/backups/desktop-20261104-234448-370",
+    "package": "dist/2.0-phase97b-20261104"
   }
 }

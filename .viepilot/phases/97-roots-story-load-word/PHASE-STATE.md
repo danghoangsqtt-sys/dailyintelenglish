@@ -1,6 +1,6 @@
 # Phase 97 state
 
-Status: implemented_verified (2026-11-04). Installed from b086290c (Full ZIP), package `dist/2.0-phase97-20261104`, pushed.
+Status: implemented_verified (2026-11-04). Installed from ebeee750 (Full ZIP), package `dist/2.0-phase97b-20261104`, pushed. The article opening came after the full test run; its related tests passed.
 
 | Task | Scope | Status |
 |---|---|---|
