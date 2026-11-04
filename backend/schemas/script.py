@@ -13,6 +13,8 @@ class LanguageNotesEdit(BaseModel):
     roots: dict | None = None  # Phase 87: a word-roots beat card, kept with its line through Step 2 edits
     whatis: dict | None = None  # Phase 96: a What is this called? card
     levelup: dict | None = None  # Phase 96: a Basic vs Advanced card
+    picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
+    picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
     whatis: dict | None = None  # Phase 96: a What is this called? card
     wordday: dict | None = None  # Phase 96: a Word of the day card, kept with its line through Step 2 edits
     grammar: dict | None = None  # Phase 88: an easy-grammar beat (scene header and cards), kept the same way

@@ -41,7 +41,7 @@ from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
 from backend.content import grammar_lesson
-from backend.content import level_up, object_quiz, word_repeat
+from backend.content import level_up, object_quiz, picture_story, word_repeat
 from backend.content.word_family import WordFamily, build_beats, roots_prompt, with_checked_facts
 from backend.ai.tts.vocal_cues import caption_text
 
@@ -1432,6 +1432,8 @@ _CARD_SHORTS = {
     "wordday": (word_repeat.WordCard, word_repeat.word_prompt, word_repeat.build_beats),
     "whatis": (object_quiz.ObjectQuiz, object_quiz.quiz_prompt, object_quiz.build_beats),
     "levelup": (level_up.LevelUp, level_up.level_prompt, level_up.build_beats),
+    "picstory": (picture_story.PictureStory, picture_story.story_prompt, picture_story.build_beats),
+    "picstory": (picture_story.PictureStory, picture_story.story_prompt, picture_story.build_beats),
 }
 
 
@@ -1446,7 +1448,8 @@ async def _run_card_short_job(db, job: dict, project: dict, router: "AIRouter") 
                                 deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose=f"short_{style}")
     try:
         result = await _call_router(db, job_id, router, request, section_index=None, is_repair=False, adapter=adapter)
-        beats = beats_of(parse_and_validate(result.text, adapter))
+        parsed = parse_and_validate(result.text, adapter)
+        beats = beats_of(parsed, project["cefr_level"]) if style == "picstory" else beats_of(parsed)  # it names the level at the end
     except ProviderError as exc:
         await _fail_provider(db, job_id, exc)
         return

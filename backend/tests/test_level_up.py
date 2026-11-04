@@ -36,3 +36,11 @@ def test_the_prompt_asks_for_real_phrases_and_no_faces():
 
 def test_nobody_is_on_screen():
     assert "levelup" in LINE_DRAWN_STYLES and "levelup" in SHORT_STYLES and "levelup" in VOICE_ONLY_STYLES
+
+
+def test_an_edited_card_keeps_its_phrases():
+    """Found 2026-11-04: the edit check dropped the two phrases of a card."""
+    from backend.content.beats_service import checked_card
+
+    card = checked_card("levelup", {"beat": "advanced", "number": 2, "word": "I'm beat", "basic": "I'm tired", "advanced": "I'm beat", "picture": "a sofa"})
+    assert (card["basic"], card["advanced"], card["number"]) == ("I'm tired", "I'm beat", 2)

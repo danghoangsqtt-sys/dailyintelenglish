@@ -123,17 +123,17 @@ class SpeakerUpdate(BaseModel):
 # rather (a two-character conversation, drawn from its script lines)
 # Phase 81: + the slow English podcast and vocabulary flashcards (one narrator, drawn from their script lines)
 SOLO_SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots",
-                     "grammar", "whatis", "levelup")
+                     "grammar", "whatis", "levelup", "picstory")
 # Phase 87 (D125/D126): the academic Shorts -- Vietnamese explanation in a VieNeu voice, up to three minutes
 ACADEMIC_STYLES = ("roots", "grammar")  # Phase 88: + the easy-grammar Short
 CONVERSATION_SHORT_STYLES = ("chat", "wyr")
 VOICE_ONLY_STYLES = ("vox",) + SOLO_SHORT_STYLES
 SHORT_STYLES = SOLO_SHORT_STYLES + CONVERSATION_SHORT_STYLES
 ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards",
-                         "roots", "grammar", "chat", "wyr", "whatis", "levelup"]
+                         "roots", "grammar", "chat", "wyr", "whatis", "levelup", "picstory"]
 # drawn from their script lines by the renderer: no visual plan to propose or approve
-LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards", "roots", "grammar", "wordday", "whatis", "levelup")
-CARD_STYLES = ("wordday", "whatis", "levelup")  # Phase 96: line cards in language_notes.<style>, with pictures
+LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards", "roots", "grammar", "wordday", "whatis", "levelup", "picstory")
+CARD_STYLES = ("wordday", "whatis", "levelup", "picstory")  # Phase 96: line cards in language_notes.<style>, with pictures
 SLOWPOD_SPEED = 0.8  # Phase 81: the slow English podcast narrator's default speed
 SHORT_MAX_MINUTES = 1.0
 ACADEMIC_SHORT_MAX_MINUTES = 3.0  # Phase 87 (D126)

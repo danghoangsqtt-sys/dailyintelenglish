@@ -113,6 +113,14 @@
       },
       "from": 0.4,
       "seconds": 6
+    },
+    "picstory": {
+      "idea": {
+        "title": "A day at the beach",
+        "brief": "a picture for each sentence"
+      },
+      "from": 0.4,
+      "seconds": 6
     }
   },
   "sources": {

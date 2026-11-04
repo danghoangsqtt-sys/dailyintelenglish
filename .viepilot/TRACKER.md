@@ -2,7 +2,7 @@
 
 ## Phase 96 — Picture-led Shorts from the viral clips (2026-11-04)
 
-Status: in_progress. [State](phases/96-viral-shorts/PHASE-STATE.md). Word of the day, What is this called?, Basic vs Advanced done in the sandbox; a picture for each sentence waits for the owner's look at the pilot pictures.
+Status: implemented_verified (sandbox; pytest 2379, Vitest 212; not installed or pushed). [Summary](phases/96-viral-shorts/SUMMARY.md). Word of the day, What is this called?, Basic vs Advanced, Picture story.
 
 ## Phase 95 — Project layout and clean-up (2026-11-04)
 

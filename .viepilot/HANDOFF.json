@@ -1176,9 +1176,8 @@
     "pushed": false
   },
   "phase96_viral_shorts": {
-    "status": "in_progress",
-    "state": ".viepilot/phases/96-viral-shorts/PHASE-STATE.md",
-    "waiting_for": "owner's decision on the pilot pictures of task 96.3",
+    "status": "implemented_verified",
+    "summary": ".viepilot/phases/96-viral-shorts/SUMMARY.md",
     "installed": false,
     "pushed": false
   }

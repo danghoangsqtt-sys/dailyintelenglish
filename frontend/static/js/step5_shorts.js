@@ -13,7 +13,7 @@
   const MIN_SECONDS = 30;
   const MAX_SECONDS = 90;
   // a Short of these styles is itself a vertical video of a minute or less (backend/schemas/project.py SHORT_STYLES)
-  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "chat", "wyr"];
+  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "chat", "wyr"];
   let busy = false;
   let timestamps = [];
   let lineSpeakers = [];

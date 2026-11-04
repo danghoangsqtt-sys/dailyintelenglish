@@ -208,5 +208,15 @@
     "en": "levelup-en.mp4",
     "poster_en": "levelup-en.jpg",
     "bytes": 394175
+  },
+  "picstory": {
+    "kind": "picstory",
+    "aspect": "9:16",
+    "vi": "picstory-vi.mp4",
+    "poster_vi": "picstory-vi.jpg",
+    "seconds": 4.3,
+    "en": "picstory-en.mp4",
+    "poster_en": "picstory-en.jpg",
+    "bytes": 493001
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleProps } from "./sampleShort";
 import { episodeInputPropsSchema } from "./types";
-import { aroundWord, copiesAt, copyCentre, countAt, COPY_PLACES, levelPhraseSize, levelSaying, wordExplains, wordSize } from "./wordRepeatMath";
+import { aroundWord, copiesAt, copyCentre, countAt, COPY_PLACES, levelPhraseSize, levelSaying, storyWords, wordExplains, wordSize } from "./wordRepeatMath";
 
 describe("Phase 96: the Word of the day Short", () => {
   it("adds one copy of the word per repetition after the first", () => {
@@ -20,6 +20,15 @@ describe("Phase 96: the Word of the day Short", () => {
     expect(levelPhraseSize("I'm beat")).toBe(84);
     expect(levelPhraseSize("up to my ears in work")).toBe(68);
     expect([0, 1, 2, 3].map(levelSaying)).toEqual([1, 1, 2, 2]);
+  });
+
+  it("colours the key words of a sentence and marks the word being read", () => {
+    const timing = [0, 1, 2, 3, 4].map((at) => ({ startSec: at, endSec: at + 1 }));
+    const words = storyWords("I take off my shoes.", ["shoes"], timing, 1.5);
+    expect(words.map((word) => word.text)).toEqual(["I", "take", "off", "my", "shoes."]);
+    expect(words[4].key).toBe(true);
+    expect(words[1].now).toBe(true);
+    expect(storyWords("I take off", [], timing, 1.5).some((word) => word.now)).toBe(false);  // the timing does not match
   });
 
   it("keeps every copy on the frame", () => {

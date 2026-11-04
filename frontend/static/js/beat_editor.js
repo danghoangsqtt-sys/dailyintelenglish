@@ -47,7 +47,7 @@ const BeatEditor = (() => {
       const base = clone(state.view.props);
       base.lines.forEach((line, index) => {
         const c = state.lines[index].card;
-        if (["grammar", "roots", "wordday", "whatis", "levelup"].includes(key())) {
+        if (["grammar", "roots", "wordday", "whatis", "levelup", "picstory"].includes(key())) {
           const picture = line[key()]?.pictureUrl;
           line[key()] = { ...clone(c), ...(picture ? { pictureUrl: picture } : {}) };
         } else if (key() === "slowpod") line.translation = c.translation_vi || "";  // Phase 91
@@ -247,6 +247,7 @@ const BeatEditor = (() => {
           + `<div class="beat-add"><select data-act="kind" aria-label="Card kind">${KINDS.map(([value, name]) => `<option value="${value}">${name}</option>`).join("")}</select>
             <button type="button" class="btn btn-ghost btn-sm" data-act="card-add">+ Add card</button></div>`,
         roots: () => rootsForm(c),
+        picstory: () => (c.beat === "line" ? field("translation_vi", c.translation_vi, "Vietnamese translation") : "") + field("picture", c.picture, "Picture description") + pictureTools(),
         levelup: () => field("basic", c.basic, "Basic phrase") + field("advanced", c.advanced, "Advanced phrase") + field("meaning_en", c.meaning_en, "English explanation")
           + field("meaning_vi", c.meaning_vi, "Vietnamese explanation") + field("picture", c.picture, "Picture description") + pictureTools(),
         whatis: () => field("word", c.word, "Name") + field("ipa", c.ipa, "IPA") + field("meaning_en", c.meaning_en, "English explanation")

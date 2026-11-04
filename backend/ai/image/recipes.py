@@ -90,7 +90,7 @@ def qwen_firstperson_prompt(description: str) -> str:
     what = " ".join(str(description or "").split()).rstrip(".") or "hands doing a simple everyday action"
     return (f"First-person point of view, looking down at one's own hands or feet: {what}. Warm, richly coloured storybook "
             "illustration, full frame, portrait composition, natural anatomy with five fingers on each hand, one clear "
-            "action, simple everyday background, soft light. No face, no other person, no text, no letters, no numbers, "
+            "action in the upper two thirds of the frame, simple everyday background, soft light. No face, no other person, no text, no letters, no numbers, "
             "no signs, no logo, no watermark, no frame.")
 
 

@@ -8,7 +8,7 @@ import type { EpisodeInputProps, EpisodeLine } from "./types";
 import type { SoloPayload, Visual } from "./soloTypes";
 
 export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards"
-  | "roots" | "whatis" | "levelup"
+  | "roots" | "whatis" | "levelup" | "picstory"
   | "grammar";
 export type SampleIdea = { title: string; brief?: string; vi?: string };  // vi: Phase 92, the example clips' Vietnamese meaning
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
@@ -25,7 +25,7 @@ export function quoted(text: string): string | null {
 const sentence = (text: string) => { const clean = text.trim().replace(/\s+/g, " "); return /[.!?]$/.test(clean) ? clean : `${clean}.`; };
 
 /** The sample segments of a voice-only template (the visuals the AI plan would use). */
-export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup">, idea: SampleIdea): Part[] {
+export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory">, idea: SampleIdea): Part[] {
   const title = idea.title.trim() || "Your Short", brief = (idea.brief || "").trim() || "The AI writes this part from your idea.";
   const card = (cardTitle: string, bullets: string[] = [], emphasis = ""): Visual => ({ kind: "text_card", title: cardTitle, bullets, emphasis }) as Visual;
   const follow = (text: string): Part => ({ visual: card("Daily Beyond English", [], text), lines: [`${text}!`] });
@@ -139,6 +139,14 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, learning: { vocab, idioms: [], audience },
       durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
+  if (template === "picstory") {  // Phase 96.4: one picture for each sentence
+    const say = [["I take off my shoes.", "shoes", "Tôi cởi giày.", 1], ["I walk on the sand.", "walk sand", "Tôi đi trên cát.", 2]] as const;
+    const parts = say.map(([text, keywords, translation_vi, number]) => [text, { beat: "line", number, word: `line ${number}`, keywords: keywords.split(" "), translation_vi, audience,
+      pictureUrl: `samples/picstory-${number}.jpg` }] as const);
+    const lines = timed(parts.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.4).map((line, at) => ({ ...line, picstory: parts[at][1] }));
+    return { ...common, learning: sampleLearning(template, idea, audience), presentationMode: "classic", shortStyle: "picstory", visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
   if (template === "levelup") {  // Phase 96.6: a plain phrase, then the natural one twice, over its picture
     const pairs = [["I'm very busy", "I'm swamped", "ngập đầu trong công việc", "very busy with too much work"]];
     const say = pairs.flatMap(([basic, advanced, meaning_vi, meaning_en], at) => {
@@ -229,7 +237,7 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
     return { ...common, presentationMode: "classic", shortStyle: "grammar", visualMode: "podcast_black",
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
-  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup">, idea);
+  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory">, idea);
   const lines: EpisodeLine[] = [], timeline: SoloPayload["timeline"] = [], segments: unknown[] = [];
   let time = 0.3;
   parts.forEach((part, index) => {

@@ -46,6 +46,15 @@ export function levelSaying(started: number): number {
   return Math.max(1, Math.min(2, started));
 }
 
+/** The words of a sentence: which are key words and which one is being read (from the voice's word timing, by position). */
+export function storyWords(text: string, keywords: string[], spoken: { startSec: number; endSec: number }[], time: number): { text: string; key: boolean; now: boolean }[] {
+  const bare = (word: string) => word.toLowerCase().replace(/[^\p{L}\p{N}']/gu, "");
+  const keys = new Set(keywords.flatMap((word) => word.split(/\s+/)).map(bare));
+  const parts = text.split(/\s+/).filter(Boolean);
+  const reading = parts.length === spoken.length ? spoken.findIndex((word) => time >= word.startSec && time < word.endSec) : -1;
+  return parts.map((word, at) => ({ text: word, key: keys.has(bare(word)), now: at === reading }));
+}
+
 /** Which explanations the audience setting shows (D150). */
 export function wordExplains(audience: string | undefined): { en: boolean; vi: boolean } {
   if (audience === "international") return { en: true, vi: false };

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 PICTURE_SIZE = (768, 1344)  # 9:16 for the full frame
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 # The look of each kind of Short; one seed per video keeps a video's pictures alike
-PROMPTS = {"wordday": recipes.qwen_word_prompt, "whatis": recipes.qwen_object_prompt, "levelup": recipes.qwen_moment_prompt}
+PROMPTS = {"wordday": recipes.qwen_word_prompt, "whatis": recipes.qwen_object_prompt, "levelup": recipes.qwen_moment_prompt, "picstory": recipes.qwen_firstperson_prompt}
 CARD_STYLES = tuple(PROMPTS)
 
 

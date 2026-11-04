@@ -112,6 +112,10 @@ class WordCardEdit(_Card):
     beat: str = "repeat"
     repeat: int = Field(default=1, ge=1, le=6)
     number: int = Field(default=1, ge=1, le=20)
+    basic: str = Field(default="", max_length=60)
+    advanced: str = Field(default="", max_length=60)
+    keywords: list[str] = Field(default_factory=list, max_length=4)
+    translation_vi: str = Field(default="", max_length=200)
     pause_after_ms: int = Field(default=0, ge=0, le=10000)
     word: str = Field(min_length=1, max_length=40)
     ipa: str = Field(default="", max_length=60)

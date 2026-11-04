@@ -12,6 +12,7 @@ import { RootsScene } from "./RootsScene";
 import { WordRepeatScene } from "./WordRepeatScene";
 import { ObjectQuizScene } from "./ObjectQuizScene";
 import { LevelUpScene } from "./LevelUpScene";
+import { PictureStoryScene } from "./PictureStoryScene";
 import { GrammarScene } from "./GrammarScene";
 import {resolvedMedia} from "./Presenter";
 import React, { useMemo } from "react";
@@ -484,6 +485,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           solo.style === "vox" ? <VoxScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           <SoloScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" />}
         </> : shortStyle === "slowpod" ? <SlowPodScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
+        : shortStyle === "picstory" ? <PictureStoryScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle === "levelup" ? <LevelUpScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle === "whatis" ? <ObjectQuizScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle === "wordday" ? <WordRepeatScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />

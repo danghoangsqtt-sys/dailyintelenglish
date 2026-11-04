@@ -13,6 +13,7 @@ Versioning: [SemVer](https://semver.org/)
 - Word of the day is now one word said six times over a full-frame picture of it, then one example; the explanation follows the audience.
 - New Short "What is this called?": an everyday object, a silent 1-2-3, then its name.
 - New Short "Basic vs Advanced": a plain phrase, then the natural one twice, over a picture of a person in that moment.
+- New Short "Picture story": one short sentence on each screen, over a picture of that action, ending with the level the viewer has reached.
 - On Step 5 every picture of these Shorts can be drawn again or replaced by an upload (a Lite computer can use its own pictures).
 
 ### Changed — Project layout and clean-up (Phase 95, 2026-11-04)

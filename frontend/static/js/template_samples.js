@@ -14,6 +14,7 @@ const TemplateSamples = (() => {
     news: "One news story in simple English; a Short under a minute.",
     blur: "One short story or idea in big text on a blurred background.",
     mistakes: "A common mistake and the natural way to say it.",
+    picstory: "One short sentence on each screen, over a picture of that action.",
     levelup: "A plain phrase, then the natural one twice, over its picture.",
     whatis: "Viewers name everyday objects: the object, a 1-2-3, the name.",
     wordday: "One word said six times over its picture, then an example.",
