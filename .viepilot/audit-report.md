@@ -1,46 +1,88 @@
-# Audit Report - 2026-10-26 (second pass, after Phase 78)
+# Audit — project folder layout and clean-up (2026-11-04)
 
-Scope: owner `/vp-audit` "xem dự án còn vị trí nào bất hợp lý và bug tiến hành phân tích và sửa lỗi". Branch `owner-runs/20261001-r9`. Evidence: the installed app's `data/logs/desktop.log`, the data folders, a security review of the local API, Ruff bug rules (`F,E9,B,PLE,ASYNC,S608`). Fixes delivered as [Phase 79](phases/79-audit-fixes/PLAN.md).
+Owner: "bố cục cây thư mục của dự án khá rối rắm … chia ra làm 2 thư mục lớn là backend và frontend … thư mục chứa
+file cài đặt đưa ra bên ngoài … xóa bản cài đặt cũ, các tệp chạy thử cũ, tệp mã nguồn cũ, xử lý rác".
+Report only: nothing was moved or deleted. Measured on commit 72f7b5b0.
 
-## Summary
+## What is at the top level today
 
-| Tier | Status | Notes |
-|---|---|---|
-| 1 State | ⚠️ | Phases 78–79 committed but not pushed (owner has not asked); phases 39–77 untagged by design |
-| 2 Docs | ✅ after fix | ENH-055 ROADMAP drift (Phase 49, 76) reconciled; CHANGELOG updated |
-| 3 Stack/code | ✅ after fixes | 3 bugs and 1 security gap fixed with tests (below); Ruff bug rules: only harmless hits |
-| 4 Framework | skipped | not the ViePilot repo |
+| Entry | Size | Tracked files | What it is |
+| --- | ---: | ---: | --- |
+| `backend/` | 54 GB | 239 | Python app; 53 GB of it is `backend/ai/models` (Qwen image + VieNeu weights, gitignored) |
+| `frontend/` | small | 141 | pages, JS, CSS |
+| `renderer/` | 540 MB | 97 | Remotion (React/TS) video renderer, run by the backend through Node; also builds `frontend/static/solo-preview` |
+| `tests/` | small | 224 | pytest (unit + browser) |
+| `scripts/` | small | 27 | build/install scripts mixed with one-off maintenance scripts |
+| `assets/` | 156 KB | 1 | `app.ico` only (used by the PyInstaller spec) |
+| `daily_intel_english_studio.spec`, `requirements.txt`, `pytest.ini` | | 3 | build spec, Python deps, test config |
+| `data/` | 8.4 GB | 62 | live app data (DB, videos, audio, library) |
+| `dist/` | 6.8 GB | 0 | package outputs **and the installed app** (`dist/DailyIntelEnglishStudio`) |
+| `build/` | 92 MB | 0 | PyInstaller work folder (rebuilt every package run) |
+| `docs/`, `.viepilot/`, `CHANGELOG.md`, `README.md`, `LICENSE` | 25 MB | | documentation and project state |
+| `.venv`, `.venv-image`, `.venv-vieneu`, `.remotion` | | 0 | Python envs for the app / image worker / VieNeu; Remotion's headless Chrome |
+| `.pytest_cache`, `.ruff_cache`, `.cache` | ~0 | 0 | tool caches |
 
-## Fixed (Phase 79)
+## Hard constraints found (these decide what may move)
 
-| ID | Severity | Finding | Fix |
-|---|---|---|---|
-| BUG-053 | high | Step 6 topic picture / AI scenes: any image-worker failure was an unhandled 500. The owner hit it twice (`OSError: The paging file is too small … (os error 1455)`). | `ImageWorkerError` with a plain, actionable message (virtual memory / GPU memory / crash / other); 502 with that message; raw text only in the log; Vietnamese copy. |
-| BUG-054 | medium | Every render made a new attempt folder; the replaced one (150–250 MB video + 7–8 MB log) stayed forever. 3 orphan folders, 0.63 GB today. | After a render is committed as current, the previous attempt folder is removed (episode, vertical, clip). Only 32-hex attempt folders in the project/clip folder that hold no current path; a locked file leaves it for later. |
-| ENH-056 | medium | CORS allowed any `localhost:<port>` with credentials; no Host check, so DNS rebinding could reach the API (projects, AI keys, file writes). | CORS limited to the studio's own origins; `LocalHostOnly` refuses other Host names (off when the owner sets a network `APP_HOST`). The night automation's in-process client moved from `http://automation` to `http://localhost` (it would have been refused). |
-| BUG-055 | low | 211 harmless `ConnectionResetError [WinError 10054]` tracebacks (browser cancelling video range requests) buried real errors in `desktop.log`. | That one asyncio callback error is dropped; every other loop error is still logged. |
-| — | low | `dashboard_channel.js` `el()` assigned `aria-*` as DOM properties (silently dropped). | Set as attributes. |
-| ENH-055 | low | ROADMAP Phase 49 / 76 status drift. | Reconciled with TRACKER. |
+1. **`data/` cannot move.** The DB stores absolute paths `D:\DataAdmin\Daily_Intel_English\data\…` in 1,800+ rows
+   (script line audio 550, thumbnails 264, character assets 226, activity library 188, video jobs 88, …).
+2. **The installed app runs from this repo.** `dist/DailyIntelEnglishStudio/studio-runtime.json` sets
+   `workspace_dir = ..\..` and `data_dir = ..\..\data`; at start it checks for `renderer/package.json` and
+   `backend/ai/image/image_worker.py` and uses `.venv-image`, `.venv-vieneu` and `backend/ai/models` (`backend/core/paths.py`).
+   Any move of `renderer/` or of the installed folder needs a rebuild and reinstall in the same step, or the app breaks.
+3. **`backend/ai/models` (53 GB) stays where it is.** It is already inside `backend/`; moving it is a 53 GB copy for nothing.
+4. Hard-coded path references outside docs: `renderer/` 20 files, `tests/` 37, `scripts/` 27, `frontend/` 21,
+   `.venv-image` 13, spec 4, `requirements.txt` 4. All fixable with `git mv` + edits, then the full test run.
+5. No orphaned project output: every folder in `data/video`, `audio`, `thumbnails`, `explainer` belongs to a project in the DB.
 
-## Reviewed, no change needed
+## Proposed layout
 
-- All 17 file-serving endpoints validate names or resolve paths inside their data folders.
-- Settings API returns masked keys only.
-- The one audio 500 in the log was a handled error that succeeded on retry.
+```
+Daily_Intel_English/
+├── backend/            Python app (as today)
+│   ├── tests/          ← tests/            (pytest.ini follows)
+│   ├── scripts/        ← maintenance scripts from scripts/ (cleanup, library_package, check_dependencies, …)
+│   └── requirements.txt ← requirements.txt
+├── frontend/           pages, JS, CSS (as today)
+│   └── renderer/       ← renderer/  (the video renderer and the Solo preview player; RENDERER_DIR, spec, runtime check updated)
+├── installer/          ← everything that builds and installs the desktop app:
+│   │                     daily_intel_english_studio.spec, assets/app.ico, package_desktop.ps1, install_desktop.ps1,
+│   │                     build_exe.ps1, create_setup_zip.py, desktop_upgrade.py, verify_desktop_upgrade.py, setup_vieneu.ps1
+├── dist/               package outputs + the installed app (outside backend/frontend, as asked)
+├── data/               live data — cannot move (constraint 1)
+├── docs/  .viepilot/  README.md  CHANGELOG.md  LICENSE  .env.example  .gitignore
+└── .venv  .venv-image  .venv-vieneu  .remotion   (environments, gitignored; stay at the root)
+```
 
-## Left for the owner
+## Clean-up candidates (each needs the owner's yes)
 
-- Existing orphan renders (3 folders, 0.63 GB) are not deleted; they can be removed once the owner agrees.
-- Installed app (Phase 78 build) does not include Phase 79 until it is rebuilt and installed.
+| Item | Size | Why it is junk | Proposed |
+| --- | ---: | --- | --- |
+| `dist/2.0-phase86d-20261029`, `2.0-phase87-20261103`, `2.0-phase88-20261103`, `2.0-phase94-20261104` | 4.97 GB | old package builds; the installed app is 72f7b5b0 | delete |
+| `dist/2.0-library-20261104` | 0 | empty folder from today's failed package run | delete |
+| `build/` | 92 MB | PyInstaller work folder, recreated by every package run | delete (and gitignore stays) |
+| `data/backups/desktop-*` (6 folders) | 1.95 GB | copies of earlier installs; keep the newest (`desktop-20261104-083008-440`) | delete 5, keep 1 |
+| `data/backups/old-branches-20261022.bundle` | 589 MB | git bundle of branches deleted on 2026-10-22 | owner decides |
+| `data/backups/library-characters-sprites-before-phase33-…tgz`, `app-before-cleanup-…db`, `edge-*`, `automation` | 105 MB | backups from before Phases 33/41 (October) | owner decides |
+| `.pytest_cache`, `.ruff_cache`, `.cache` | ~0 | tool caches | delete |
+| `scripts/archive_old_shots.py`, `scripts/benchmarks/image_models/bench_realvisxl.py` | | shots and SDXL were removed (D123) | delete with their tests if any |
+| `scripts/migrate_character_profiles_v2.py`, `generate_cefr_review_samples.py`, `verify_ai_baseline.py`, `qualify_local_ai.py`, `generate_api_docs.py`, `verify_solo_media.py` | | one-off scripts nothing calls (Sept–Oct) | delete after a reference check |
+| `.viepilot/ui-direction/session-2026-11-03-ia` (v2–v6) and the rejected A–D pages | ~2 MB | rejected UI prototypes; E is the accepted one | owner decides (they are history) |
 
-## Tests
+Not junk: `data/video` 2.9 GB, `data/audio` 1.0 GB, `data/library` 1.4 GB (all belong to live projects),
+`renderer/node_modules`, `.remotion`, the three `.venv*`, `backend/ai/models`.
 
-- New: `test_local_api_exposure.py` (15), `test_render_attempt_cleanup.py` (4), BUG-053 tests in the Qwen thumbnail suites (3), `test_video_api` render-replacement test (1).
-- Full suite first run: 2162 passed, 3 failed — `test_script_api` used `base_url="http://test"` (now refused by the Host check; test moved to `http://localhost`, 15/15 repeat passes); 2 activity-library browser tests passed 3/3 in isolation. Second full run: **2165 passed, 0 failed** (19:27).
+## Found but outside this clean-up (follow-ups)
 
-## Stack guardrails (for vp-auto preflight)
+- **SDXL leftovers in code** after D123: `backend/ai/image/pipelines.py`, `image_worker.py`, `core/config.py`,
+  `main.py`, `schemas/video.py`, `frontend/static/js/step5_video.js`, `shot_library.js`, and tests that mention it.
+  Removing dead code is a code change of its own.
+- **`models--Qwen--Qwen-Image-2512`** in the model cache is not named anywhere in the code (the app uses
+  Qwen-Image-2.1-Turbo and Qwen-Image-Edit-2511); its blobs may be several GB. Check before deleting.
 
-- In-process clients (`httpx.ASGITransport`) and tests use `http://localhost` as base URL.
-- Image-worker failures surface as `ImageWorkerError`; endpoints map it to a friendly 4xx/5xx, never let it escape.
-- A render that replaces another removes the previous attempt folder only after the database commit.
-- Previous guardrails stay: migration functions registered by every runner; full suite before packaging; commit new modules with their importers; UI errors show friendly text.
+## How it would run (if approved)
+
+1. A phase plan with the exact move list, committed before any move.
+2. `git mv` for every tracked move (history kept); path edits in code, spec, scripts, tests, `.gitignore`, docs.
+3. Full pytest, then package + reinstall in the same step (constraint 2), then check the running app.
+4. Deletions only from the list the owner approves; the Recycle Bin for anything not in git.
