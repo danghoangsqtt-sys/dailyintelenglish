@@ -1178,7 +1178,10 @@
   "phase96_viral_shorts": {
     "status": "implemented_verified",
     "summary": ".viepilot/phases/96-viral-shorts/SUMMARY.md",
-    "installed": false,
-    "pushed": false
+    "installed": true,
+    "pushed": true,
+    "installed_from_commit": "c1935a74",
+    "installed_backup": "data/backups/desktop-20261104-180425-307",
+    "package": "dist/2.0-phase96-20261104"
   }
 }

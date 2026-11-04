@@ -1,6 +1,6 @@
 # Phase 96 state
 
-Status: implemented_verified (2026-11-04, sandbox). Not installed or pushed.
+Status: implemented_verified (2026-11-04). Installed from c1935a74 (Full ZIP, the guide's way), package `dist/2.0-phase96-20261104`, pushed.
 
 | Task | Scope | Status |
 |---|---|---|
