@@ -2131,6 +2131,11 @@ window.I18N_VI.patterns.push(
     "What should the next video be about? For example: the second conditional": "Video tiếp theo nói về gì? Ví dụ: câu điều kiện loại 2",
     "Waiting for you": "Chờ bạn duyệt",
     "Create": "Tạo",
+    "All steps done — back to Today": "Xong mọi bước — về Hôm nay",
+    "Back to Today": "Về Hôm nay",
+    "Content": "Nội dung",
+    "Production": "Sản xuất",
+    "Publishing": "Đăng",
     "Next planned": "Tập kế tiếp",
     "created": "đã có dự án",
     "Create its project": "Tạo dự án cho tập này",
@@ -2219,5 +2224,7 @@ window.I18N_VI.patterns.push(
     [/^\+(\d+) more$/, "+$1 nữa"],
     [/^Step (\d+) of 7$/, "Bước $1 trên 7"],
     [/^(\d+) voices$/, "$1 giọng"],
+    [/^← Step (\d)$/, "← Bước $1"],
+    [/^Back to Step (\d) — (.+)$/, "Quay lại Bước $1 — $2"],
   );
 })();

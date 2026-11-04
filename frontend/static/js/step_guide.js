@@ -11,6 +11,7 @@
   if (!match || !projectId || typeof Api === "undefined") return;
   const current = Number(match[1]);
   let bar = null;
+  let face = null;
 
   function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
@@ -44,8 +45,18 @@
       ? el("a", { className: `btn ${step.done ? "btn-primary" : "btn-ghost"} btn-sm step-guide-next`, href: href(next),
         textContent: `Next: Step ${next.number} — ${next.label} →` })
       : el("a", { className: `btn ${step.done ? "btn-primary" : "btn-ghost"} btn-sm step-guide-next`, href: "/",
-        textContent: step.done ? "All steps done — back to the Dashboard" : "Back to the Dashboard" });
-    bar.replaceChildren(state, action);
+        textContent: step.done ? "All steps done — back to Today" : "Back to Today" });
+    // Phase 94 (D143): Back to the previous step on the left, the step's state, then Next
+    const previous = progress.steps[current - 2];
+    const back = previous ? el("a", { className: "btn btn-ghost btn-sm step-guide-back", href: href(previous),
+      textContent: `← Step ${previous.number}` }) : null;
+    if (back) back.setAttribute("aria-label", `Back to Step ${previous.number} — ${previous.label}`);
+    // Phase 94 (D144/D145): the line is Lina's -- her face beside it, the line comes from the project's own progress
+    if (!face) {
+      face = el("span", { className: "step-guide-face" }, el("img", { src: "/api/assistant/frames/calm__closed.webp", alt: "" }));
+      face.querySelector("img").addEventListener("error", () => { face.hidden = true; });
+    }
+    bar.replaceChildren(...[back, face, state, action].filter(Boolean));
     // the step list ticks the steps before this one; tick only the ones really done
     progress.steps.forEach((item) => {
       const dot = document.querySelector(`#step-nav [data-step="${item.number}"] .step-dot`);

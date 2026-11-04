@@ -53,9 +53,14 @@ async def test_the_bar_follows_the_projects_progress(browser_instance: Browser, 
     assert "Step 3 — Learning is not done yet" in await bar.locator(".step-guide-earlier").text_content()
     await page.wait_for_function("document.querySelector('#step-nav [data-step=\"3\"] .step-dot').textContent === '3'")
     assert await page.locator('#step-nav [data-step="2"] .step-dot').text_content() == "✓"
+    # Phase 94 (D143): Back to the previous step, and the step list in three stages
+    back = page.locator("#step-guide .step-guide-back")
+    assert await back.text_content() == "← Step 3" and await back.get_attribute("href") == f"/step3?project_id={project_id}"
+    assert await page.locator("#step-nav .step-nav-stage").all_text_contents() == ["Content", "Production", "Publishing"]
     await page.goto(f"{live_server_url}/step7?project_id={project_id}")
     await page.locator("#step-guide").wait_for()
     assert await page.locator("#step-guide .step-guide-next").get_attribute("href") == "/"
+    assert "back to Today" in (await page.locator("#step-guide .step-guide-next").text_content()).replace("Back", "back")
     await page.close()
 
 

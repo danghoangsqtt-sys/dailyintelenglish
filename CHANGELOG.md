@@ -8,6 +8,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Changed — The seven steps in the new look (Phase 94, 2026-11-04)
+
+- The step list is grouped in three stages (Content, Production, Publishing); the bar at the bottom of every step has a Back link, Lina's face beside what is left to do, and Next; Step 7 leads back to Today. Every step opens with the rail folded so the work has the room.
+
 ### Changed — The new studio look: frame and main areas (Phase 93, 2026-11-04)
 
 - One light rail on every page: Create video, Today, Channel, Videos, Library and Settings, with the number of videos waiting; it collapses to icons and becomes a tab bar at the bottom on a phone.

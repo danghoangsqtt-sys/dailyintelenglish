@@ -2,7 +2,7 @@
 
 ## Phase 94 — The new studio look: the seven steps and Lina (2026-11-04)
 
-Status: planned. One frame for every step (title, 3 stages of 7 steps, sticky Back / Next), each step laid out as drawn in direction E with its IDs and behaviour kept; Lina as the assistant (band on Home, a one-line note elsewhere, lines from the app's state, reading aloud off by default). Defaults D143–D146. [Plan](phases/94-studio-ui-steps-lina/PLAN.md).
+Status: implemented_verified (sandbox; full pytest 2355 passed; not built, installed or pushed; smaller scope than planned: the step layouts keep their own structure in the new look, reading aloud not built). [Summary](phases/94-studio-ui-steps-lina/SUMMARY.md). The step list in three stages, Back on the sticky next-step bar, Lina's face speaking the bar's line from the project's progress, the rail collapsed on every step. Defaults D143–D146. [Plan](phases/94-studio-ui-steps-lina/PLAN.md).
 
 ## Phase 93 — The new studio look: frame and main areas (2026-11-04)
 

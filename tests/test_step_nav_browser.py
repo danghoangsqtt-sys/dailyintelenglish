@@ -77,7 +77,7 @@ async def test_each_page_renders_and_navigates_shared_step_nav(
     await page.wait_for_selector("#step-nav .step-nav-pill")
 
     assert await page.locator("#step-nav .step-nav").get_attribute("aria-label") == "Project steps"
-    assert await page.locator("#step-nav .step-nav > span").text_content() == f"Step {current_step} of 7"
+    assert await page.locator("#step-nav .step-nav-progress").text_content() == f"Step {current_step} of 7"
     labels = await page.locator("#step-nav .step-nav-pill").evaluate_all(
         "links => links.map(link => link.lastChild.textContent)"
     )
@@ -133,7 +133,7 @@ async def test_step_nav_rebuilds_from_url_after_reload(
     await page.reload()
     await page.wait_for_selector('#step-nav .step-nav-pill[aria-current="step"]')
 
-    assert await page.locator("#step-nav .step-nav > span").text_content() == "Step 6 of 7"
+    assert await page.locator("#step-nav .step-nav-progress").text_content() == "Step 6 of 7"
     assert (
         await page.locator('#step-nav .step-nav-pill[aria-current="step"]').get_attribute(
             "data-step"

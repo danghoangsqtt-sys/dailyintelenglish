@@ -34,7 +34,15 @@
     progress.textContent = `Step ${current} of ${STEPS.length}`;
     nav.appendChild(progress);
 
+    // Phase 94 (D143): the workflow list groups the steps in three stages
+    const STAGES = { 1: "Content", 4: "Production", 6: "Publishing" };
     STEPS.forEach((step) => {
+      if (variant === "workflow" && STAGES[step.number]) {
+        const label = document.createElement("span");
+        label.className = "step-nav-stage";
+        label.textContent = STAGES[step.number];
+        nav.appendChild(label);
+      }
       const link = document.createElement("a");
       link.className = variant === "workflow" ? "step-nav-pill workflow-item" : "step-nav-pill";
       link.classList.toggle("active", step.number === current);
