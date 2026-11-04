@@ -2,7 +2,7 @@
 
 Owner: "bố cục cây thư mục của dự án khá rối rắm … chia ra làm 2 thư mục lớn là backend và frontend … thư mục chứa
 file cài đặt đưa ra bên ngoài … xóa bản cài đặt cũ, các tệp chạy thử cũ, tệp mã nguồn cũ, xử lý rác".
-Report only: nothing was moved or deleted. Measured on commit 72f7b5b0.
+Measured on commit 72f7b5b0. Acted on in [Phase 95](phases/95-project-layout/SUMMARY.md): the renderer went into `backend/`, not `frontend/`, by the owner's choice.
 
 ## What is at the top level today
 

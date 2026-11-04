@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 VIENEU_PYTHON = VIENEU_VENV_DIR / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 VIENEU_WORKER = RUNTIME_ROOT / "backend/ai/tts/vieneu_worker.py"
 VIENEU_HF_HOME = MODELS_DIR / "vieneu"
-SETUP_HINT = "Run scripts/setup_vieneu.ps1 to install the Vietnamese voice (VieNeu)."
+SETUP_HINT = "Run installer/setup_vieneu.ps1 to install the Vietnamese voice (VieNeu)."
 
 # (text, offset_sec, duration_sec) per script word -- tts_service wraps these into its WordBoundary.
 Boundary = tuple[str, float, float]

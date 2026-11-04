@@ -110,7 +110,7 @@ visible flicker or lag; it reads as crisp, not stuttery.
   Task 14.10, not a regression from anything in Phase 19. The fresh render's duration
   matching the audio exactly is confirmation that today's (untouched) `video_service.py` code
   works correctly.
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 
 ## 6. Verification frames (real data, from one coherent run)
 
@@ -171,7 +171,7 @@ span). Revert-and-confirm-failure done: reverted `buildKaraokeTokens` to always 
 - `npm run test` (vitest): **6/6 passed.**
 - Python full suite: **1178/1178 passed** (unchanged from Task 19.2 baseline -- this task
   adds no Python tests). `ruff check .`: **clean.**
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 
 ## 10. Carry-over conditions (acknowledged, not acted on)
 

@@ -4,7 +4,7 @@ Owner asks whether Phase77 affected karaoke after observing Edge speech and capt
 
 ## What changed in Phase77
 
-TTS dispatch, legacy-tag cleanup, cue-part joining removal and cache fingerprint inputs changed. The native Edge word capture still divides offset/duration by 10,000,000; that formula did not change. `audio_service.py`, `video_renderer_remotion.py`, `renderer/src/karaoke.ts` and `Episode.tsx` have no Phase77 diff. Thus unchanged renderer code is established, but is not evidence of correct end-to-end synchronization.
+TTS dispatch, legacy-tag cleanup, cue-part joining removal and cache fingerprint inputs changed. The native Edge word capture still divides offset/duration by 10,000,000; that formula did not change. `audio_service.py`, `video_renderer_remotion.py`, `backend/renderer/src/karaoke.ts` and `Episode.tsx` have no Phase77 diff. Thus unchanged renderer code is established, but is not evidence of correct end-to-end synchronization.
 
 ## Actual current file
 

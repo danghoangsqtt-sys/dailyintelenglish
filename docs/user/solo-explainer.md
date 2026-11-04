@@ -47,9 +47,9 @@ Export của tập Solo thêm `explainer/plan.json`, revision/mode và ảnh c�
 ## Chạy từ mã nguồn
 
 ```powershell
-npm --prefix renderer ci
-npm --prefix renderer run build:preview
+npm --prefix backend/renderer ci
+npm --prefix backend/renderer run build:preview
 .venv\Scripts\python.exe -m uvicorn backend.main:app
 ```
 
-Nếu báo thiếu preview bundle, chạy lại lệnh build trên. Không cần một máy chủ React/Vite riêng. Quy trình `scripts/build_exe.ps1` tự cài dependency theo lockfile, kiểm tra TypeScript, build widget rồi mới chạy PyInstaller.
+Nếu báo thiếu preview bundle, chạy lại lệnh build trên. Không cần một máy chủ React/Vite riêng. Quy trình `installer/build_exe.ps1` tự cài dependency theo lockfile, kiểm tra TypeScript, build widget rồi mới chạy PyInstaller.

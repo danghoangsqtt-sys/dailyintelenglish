@@ -83,7 +83,7 @@ All twelve Phase 13 invariants remain in force. Phase 14 adds:
 19. **Session partition is a hard rule** (§10). PM never edits `app/**`, `tests/**`,
     `scripts/**`, `prompts/**`; Coder never edits `docs/**`, `.viepilot/TRACKER.md`,
     `.viepilot/ROADMAP.md`, `.viepilot/HANDOFF.json`; Coder never runs
-    `scripts/run_ai_operational_trial.py`.
+    `backend/scripts/run_ai_operational_trial.py`.
 
 ## 3. Scope
 
@@ -341,13 +341,13 @@ Existing unrelated changes are never staged. Commits contain explicit paths only
 
 **Allowed files:** `app/services/ai/router.py`, `app/services/ai/contracts.py`,
 `app/core/constants.py`, `app/core/exceptions.py` (only for the optional
-`retry_after_seconds` attribute), `tests/test_ai_router.py`,
-`tests/test_ai_contracts.py`, `tests/test_ai_logging.py`,
-`tests/test_ai_providers.py` (only if the retry-after hint is implemented).
+`retry_after_seconds` attribute), `backend/tests/test_ai_router.py`,
+`backend/tests/test_ai_contracts.py`, `backend/tests/test_ai_logging.py`,
+`backend/tests/test_ai_providers.py` (only if the retry-after hint is implemented).
 
 **Amendment A (PM, 2026-09-21, after Coder commit `2384578` reported the block):**
-`tests/test_learning_service.py`, `tests/test_script_service.py`,
-`tests/test_youtube_service.py` are added — **test-only, exactly the four
+`backend/tests/test_learning_service.py`, `backend/tests/test_script_service.py`,
+`backend/tests/test_youtube_service.py` are added — **test-only, exactly the four
 `*_wraps_provider_error*` tests** that script two `ProviderUnavailableError` outcomes to
 model the pre-14.1 "exhaust after one retry" policy. Under four attempts the router makes
 a third call, `FakeProvider` runs out of scripted outcomes, and the test sees
@@ -359,7 +359,7 @@ the wrapping behaviour changes. No production file is added.
 
 **Actions:** implement §4.1 exactly. Import `sleep` as a module-local name
 (`from asyncio import sleep`) so tests patch `app.services.ai.router.sleep`, never the
-global `asyncio.sleep` (see `tests/test_script_service.py` history for why). Keep
+global `asyncio.sleep` (see `backend/tests/test_script_service.py` history for why). Keep
 providers single-attempt. Keep the hybrid route shape and circuit-breaker accounting.
 
 **Verification:**
@@ -386,8 +386,8 @@ providers single-attempt. Keep the hybrid route shape and circuit-breaker accoun
 **Allowed files:** `app/services/ai_job_service.py`, `app/services/script_pipeline.py`,
 `app/services/learning_pipeline.py`, `app/models/ai_job.py`, `app/api/ai_jobs.py`
 (only if the projection needs it), `app/core/constants.py`,
-`tests/test_ai_job_service.py`, `tests/test_script_pipeline.py`,
-`tests/test_learning_pipeline.py`, `tests/test_ai_jobs_api.py`.
+`backend/tests/test_ai_job_service.py`, `backend/tests/test_script_pipeline.py`,
+`backend/tests/test_learning_pipeline.py`, `backend/tests/test_ai_jobs_api.py`.
 
 **Actions:** implement §4.2. Record every router call (outline, section, repair,
 learning, learning repair) via `record_generation_call` inside the pipeline's existing
@@ -418,7 +418,7 @@ both pipelines. Expose `metrics` on `AIJobOut`.
 so the effect is measurable).
 
 **Allowed files:** `app/services/script_pipeline.py`, `app/core/constants.py`,
-`prompts/script/section.txt`, `prompts/script/repair.txt`, `tests/test_script_pipeline.py`,
+`prompts/script/section.txt`, `prompts/script/repair.txt`, `backend/tests/test_script_pipeline.py`,
 `tests/fixtures/ai/*`.
 
 **Actions:** implement §4.3 exactly. Add the constants-pin test asserting
@@ -449,7 +449,7 @@ reverted by git if required.
 ### 14.4 — Re-run Gate B for both providers (P1)
 
 **14.4a Runner preparation (Coder). Allowed files:**
-`scripts/run_ai_operational_trial.py` only.
+`backend/scripts/run_ai_operational_trial.py` only.
 
 **Actions:** classify each run's failure as `infra`/`content`/`other` from `error_code`
 (`schema_validation_failed` is `content` — Amendment B);
@@ -497,8 +497,8 @@ annotations; `git diff` shows additions only within the annotated regions.
 **Dependency:** 14.4b decision for both providers; 14.5 done.
 
 **Allowed files:** exactly Task 13.10's list, split by domain: Coder — `README.md`,
-`CHANGELOG.md`, `.env.example`, `scripts/check_dependencies.py`,
-`daily_intel_english_studio.spec`, `scripts/build_exe.ps1`, `.viepilot/ARCHITECTURE.md`,
+`CHANGELOG.md`, `.env.example`, `backend/scripts/check_dependencies.py`,
+`installer/daily_intel_english_studio.spec`, `installer/build_exe.ps1`, `.viepilot/ARCHITECTURE.md`,
 `.viepilot/AI-GUIDE.md`, `.viepilot/PROJECT-CONTEXT.md`; PM — `docs/api.md`,
 `docs/user/prompt-guide.md`, `docs/operations/local-ai.md`,
 `docs/operations/phase13-acceptance.md`, `.viepilot/ROADMAP.md`, `.viepilot/TRACKER.md`,
@@ -564,7 +564,7 @@ migration. Backoff and the running budget each have constant-level neutralisatio
 - **Coder owns:** `app/**`, `tests/**`, `scripts/**`, `prompts/**`, `README.md`,
   `CHANGELOG.md`, `.env.example`, packaging files, and the Phase 14 state folder after
   handover.
-- **Only the PM runs** `scripts/run_ai_operational_trial.py` and the full suite during a
+- **Only the PM runs** `backend/scripts/run_ai_operational_trial.py` and the full suite during a
   trial window (`OLLAMA_NUM_PARALLEL=1`; concurrent inference corrupts timing evidence).
   Before any trial or full-suite run the PM confirms with the user that the Coder is
   idle.
@@ -601,14 +601,14 @@ recovery path for releases.
 `frontend/static/js/settings.js`, `frontend/static/js/api.js` (only if a call is removed),
 `frontend/static/js/step2_script.js`, `frontend/static/js/step3_learning.js` (only to
 replace the "using Gemini fallback" copy with the Ollama-missing guidance),
-`frontend/static/css/style.css`, `scripts/check_dependencies.py`,
-`daily_intel_english_studio.spec` (only if imports/data change), `README.md`,
-`CHANGELOG.md`, `tests/test_settings_service.py`, `tests/test_settings_api.py`,
-`tests/test_ai_health_api.py`, `tests/test_ui_async_browser.py`,
-`tests/test_script_jobs_browser.py`, `tests/test_learning_jobs_browser.py`,
-`tests/test_ai_router.py` (default-mode assertions only), `tests/conftest.py` (only if the
+`frontend/static/css/style.css`, `backend/scripts/check_dependencies.py`,
+`installer/daily_intel_english_studio.spec` (only if imports/data change), `README.md`,
+`CHANGELOG.md`, `backend/tests/test_settings_service.py`, `backend/tests/test_settings_api.py`,
+`backend/tests/test_ai_health_api.py`, `backend/tests/test_ui_async_browser.py`,
+`backend/tests/test_script_jobs_browser.py`, `backend/tests/test_learning_jobs_browser.py`,
+`backend/tests/test_ai_router.py` (default-mode assertions only), `backend/tests/conftest.py` (only if the
 default mode change requires a fixture change), and — **Amendment E (PM, 2026-09-21, before
-any 14.7 code)** — `tests/test_thumbnail_service.py`, `tests/test_youtube_service.py`
+any 14.7 code)** — `backend/tests/test_thumbnail_service.py`, `backend/tests/test_youtube_service.py`
 (test-only, for action 7's two FakeProvider tests; omitted from the first list by
 mistake). PM documents `docs/operations/local-ai.md` and `docs/api.md`.
 
@@ -620,14 +620,14 @@ always-false field would be misleading; update every frontend reader of the old 
 the same change.
 
 **Amendment F (PM, 2026-09-21, after reviewing commit `518dd0a`):** two more files are
-added to 14.7's allowed list, both narrowly: `tests/test_ai_jobs_api.py` (test-only — the
+added to 14.7's allowed list, both narrowly: `backend/tests/test_ai_jobs_api.py` (test-only — the
 pre-existing `test_ai_health_never_exposes_the_gemini_key` asserts the removed
 `gemini_fallback_configured` field; swap the assertion to `cloud_enabled is False`, keep
 the secret-absence assertion untouched) and `frontend/pages/step6_thumbnail.html`
 (copy-only — the "Pillow + Gemini text" badge is stale under D9; replace with a
 provider-neutral label such as "Pillow + local AI text"). Also recorded: action 7 was
 delivered for thumbnail only; the YouTube FakeProvider test under `AI_MODE=local` in
-`tests/test_youtube_service.py` (already allowed by Amendment E) is still required before
+`backend/tests/test_youtube_service.py` (already allowed by Amendment E) is still required before
 14.7 is accepted.
 
 **Actions:**
@@ -667,7 +667,7 @@ behaviour without a code revert.
 ### 14.8 — Local hardening: over-length sections and the consecutive-lines rule (Coder)
 
 **Allowed files:** `prompts/script/section.txt`, `prompts/script/repair.txt`,
-`app/services/script_pipeline.py`, `app/core/constants.py`, `tests/test_script_pipeline.py`,
+`app/services/script_pipeline.py`, `app/core/constants.py`, `backend/tests/test_script_pipeline.py`,
 `tests/fixtures/ai/*`.
 
 **Evidence to design against (Gate B-2 local):** sections of 417, 426 (after a 340-word
@@ -802,9 +802,9 @@ unchanged rule; the residual learning and media gaps are tracked as Phase 14 tas
 `app/services/project_service.py` (apply the level default at speaker creation when no
 speed is given), `frontend/static/js/step1_config.js` and `frontend/pages/step1_config.html`
 (only if the speed control's default must follow the level), `app/services/video_service.py`
-(D14 investigation/fix only), `scripts/run_ai_operational_trial.py` (only
-`AV_DIFF_MAX_SECONDS` if D14 re-declares), `tests/test_script_pipeline.py`,
-`tests/test_project_service.py`, `tests/test_video_service.py`, `tests/fixtures/ai/*`.
+(D14 investigation/fix only), `backend/scripts/run_ai_operational_trial.py` (only
+`AV_DIFF_MAX_SECONDS` if D14 re-declares), `backend/tests/test_script_pipeline.py`,
+`backend/tests/test_project_service.py`, `backend/tests/test_video_service.py`, `tests/fixtures/ai/*`.
 
 **Actions:** implement D13's two tables as named constants (`CEFR_DEFAULT_TTS_SPEED`,
 `CEFR_WORDS_PER_MINUTE`); a new speaker without an explicit `speed` gets the level
@@ -820,7 +820,7 @@ from the constant); D14 outcome recorded; full suite green; `ruff` clean.
 ### 14.11 — Learning repair by removal (Coder)
 
 **Allowed files:** `app/services/learning_pipeline.py`, `app/core/constants.py`,
-`prompts/learning/learning_repair.txt` (optional wording), `tests/test_learning_pipeline.py`,
+`prompts/learning/learning_repair.txt` (optional wording), `backend/tests/test_learning_pipeline.py`,
 `tests/fixtures/ai/*`.
 
 **Actions:** implement D15. Order: validate → one repair (unchanged) → drop still-failing
@@ -854,7 +854,7 @@ Decisions D17–D18 are recorded there under the PM's delegated authority.
 
 ### 14.4a-d — Runner: apply the level default speed (Coder)
 
-**Allowed files:** `scripts/run_ai_operational_trial.py` only. Omit `speed` from the test
+**Allowed files:** `backend/scripts/run_ai_operational_trial.py` only. Omit `speed` from the test
 speakers so `CEFR_DEFAULT_TTS_SPEED` applies exactly as the UI does; record each project's
 resolved speaker speeds in the run evidence. Verify with `--reaggregate` on the B-4 file
 (unchanged results) and `ruff`.
@@ -862,7 +862,7 @@ resolved speaker speeds in the run evidence. Verify with `--reaggregate` on the 
 ### 14.13 — Repetition repair (Coder)
 
 **Allowed files:** `app/services/script_pipeline.py`, `app/core/constants.py`,
-`prompts/script/section.txt`, `prompts/script/repair.txt`, `tests/test_script_pipeline.py`,
+`prompts/script/section.txt`, `prompts/script/repair.txt`, `backend/tests/test_script_pipeline.py`,
 `tests/fixtures/ai/*`.
 
 **Actions:** (1) a pure function that, given the merged lines, returns the repeated 8-gram

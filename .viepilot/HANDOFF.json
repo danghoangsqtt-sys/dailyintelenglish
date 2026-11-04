@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": 94,
+  "current_phase": 95,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1164,5 +1164,11 @@
     "installed_backup": "data/backups/desktop-20261104-075009-307",
     "package_directory": "dist/2.0-phase94-20261104",
     "full_zip_sha256": "870e79129469a681f665053bbfc101742e936620919bb5709823b0e10c73dfcc"
+  },
+  "phase95_project_layout": {
+    "status": "implemented_verified",
+    "summary": ".viepilot/phases/95-project-layout/SUMMARY.md",
+    "layout": "backend/{tests,scripts,renderer,requirements.txt}, frontend/, installer/, dist/, data/",
+    "left_for_owner": "7 access-denied folders in data/tmp"
   }
 }

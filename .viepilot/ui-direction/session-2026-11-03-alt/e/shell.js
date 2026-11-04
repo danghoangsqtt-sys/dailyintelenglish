@@ -1,7 +1,7 @@
 // Prototype only: draws the rail (or the phone tab bar), and inside one video the title, the 3 stages with their 7 steps,
 // and the Back / Next bar. <body data-page="home|create|channel|videos|library" data-step="1..7">
 (function () {
-  const ICON = "../../session-2026-11-03-ia/icons.svg";
+  const ICON = "../icons.svg";
   const I = (id, cls = "") => `<svg class="i ${cls}" aria-hidden="true"><use href="${ICON}#${id}"/></svg>`;
   const b = document.body, page = b.dataset.page, step = Number(b.dataset.step || 0);
   const items = [["home", "home.html", "home", "Hôm nay", 3], ["channel", "channel.html", "calendar", "Kênh"],

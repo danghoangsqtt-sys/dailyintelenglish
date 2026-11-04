@@ -6,7 +6,7 @@ bố cục không hợp lý", then "Không chốt giao diện này, tạo lại 
 Three Home screens, each a different idea, all filling a 1920×1080 screen with 16px body text and no empty sidebar.
 A switcher at the bottom moves between them. Serve the repo root (`python -m http.server 8040`) and open
 `/.viepilot/ui-direction/session-2026-11-03-alt/a-board.html`. Lina's frames come from
-`../session-2026-11-03-ia/mascot/build_lina.py` (run it once if `mascot/lina/` is missing).
+`build_lina.py` (run it once if `lina/` is missing).
 
 | File | Idea | Lina |
 |---|---|---|

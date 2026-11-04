@@ -743,7 +743,7 @@
       status.hidden = state.remotionConfigured;
       status.textContent = state.remotionConfigured ? ""
         : `The video renderer is not ready on this machine: ${state.rendererProblem || "unknown"}. `
-          + "Run scripts/check_dependencies.py for the details.";
+          + "Run backend/scripts/check_dependencies.py for the details.";
     }
   }
 

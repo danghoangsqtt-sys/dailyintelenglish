@@ -37,7 +37,7 @@ Order: **18.1 → 18.2 → 18.3 → 18.4** (Coder, doc-first, PM-approved design
 
 **Allowed files:** new `app/services/ai/openai_compat_provider.py`, `app/core/exceptions.py`
 (only if a new error subclass is needed), `app/core/constants.py`, new
-`tests/test_openai_compat_provider.py`, `CHANGELOG.md`.
+`backend/tests/test_openai_compat_provider.py`, `CHANGELOG.md`.
 
 **Required behaviour** (the smoke-test findings are the spec):
 - `POST {base_url}/chat/completions`, Bearer key, one call per `generate()` with **no internal
@@ -67,7 +67,7 @@ test that the key never appears in any exception message or log record. Full sui
 `app/services/ai/__init__.py`, `app/services/ai/gemini_provider.py` (**delete**),
 `app/core/config.py`, `app/core/constants.py`, `app/main.py` (router builder only),
 `app/services/settings_service.py` (the mode migration only), `.env.example`,
-`tests/test_ai_router.py`, `tests/test_ai_providers.py`, `tests/test_ai_contracts.py`, and other
+`backend/tests/test_ai_router.py`, `backend/tests/test_ai_providers.py`, `backend/tests/test_ai_contracts.py`, and other
 tests **only where they construct or assert the Gemini provider or mode names** (list them in the
 card before editing), `CHANGELOG.md`.
 
@@ -108,9 +108,9 @@ the legacy mode migration; revert-and-confirm-failure on the separate-budget tes
 `app/services/settings_service.py`, `app/api/ai_jobs.py` (health payload only), `app/main.py`
 (startup loading only), `frontend/pages/settings.html`, `frontend/static/js/settings.js`,
 `frontend/static/js/api.js` (settings calls only), `frontend/static/css/style.css` (settings
-block only), `scripts/check_dependencies.py`, `tests/test_settings_api.py`,
-`tests/test_settings_service.py`, `tests/test_ai_health_api.py`,
-`tests/test_ai_jobs_api.py` (health assertions only), and a settings browser test file named in
+block only), `backend/scripts/check_dependencies.py`, `backend/tests/test_settings_api.py`,
+`backend/tests/test_settings_service.py`, `backend/tests/test_ai_health_api.py`,
+`backend/tests/test_ai_jobs_api.py` (health assertions only), and a settings browser test file named in
 the card, `CHANGELOG.md`.
 
 **Required behaviour:**
@@ -136,7 +136,7 @@ response), test-connection with a fake provider, and a browser test of the page 
 
 **Allowed files:** `app/services/ai_job_service.py` (read-side aggregate only),
 `app/api/ai_jobs.py`, `frontend/pages/settings.html` / `frontend/static/js/settings.js` (a display
-line only), `scripts/run_ai_operational_trial.py`, the matching tests, `CHANGELOG.md`.
+line only), `backend/scripts/run_ai_operational_trial.py`, the matching tests, `CHANGELOG.md`.
 
 **Required behaviour:**
 - `fallback_rate` over the last N completed jobs: the share of AI calls served by the fallback,
@@ -209,7 +209,7 @@ it would also contradict invariant 32: "cloud + no key" must silently degrade to
 **Ruling:** 18.2's allowed files gain these four services, **only** to delete that guard, its
 `Raises:` docstring line, and any import it leaves unused, plus their test files where a test
 asserts that guard. The `settings.GEMINI_API_KEY` config field **stays** until 18.3, because
-`settings_service.py`, `scripts/check_dependencies.py` and `scripts/generate_cefr_review_samples.py`
+`settings_service.py`, `backend/scripts/check_dependencies.py` and `scripts/generate_cefr_review_samples.py`
 still read it. 18.3 retires the settings side and `check_dependencies`; the sample script keeps
 reading it (out of scope).
 
@@ -352,7 +352,7 @@ and limits on the real section task. The pass criteria are unchanged (Amendment 
 **Allowed files:** `app/services/ai/openai_compat_provider.py`, `app/services/ai/router.py`,
 `app/core/exceptions.py`, `app/core/config.py`, `app/core/constants.py`, `.env.example`,
 `app/services/ai_job_service.py` (error-code mapping only), the matching tests,
-a **new opt-in** `scripts/live_provider_contract_check.py`, and `CHANGELOG.md`.
+a **new opt-in** `backend/scripts/live_provider_contract_check.py`, and `CHANGELOG.md`.
 
 1. **Vendor-aware body.** `reasoning: {"exclude": true}` and the `models` array are sent **only**
    to OpenRouter-type entries. Gemini (and generic) entries receive plain OpenAI-compatible
@@ -366,7 +366,7 @@ a **new opt-in** `scripts/live_provider_contract_check.py`, and `CHANGELOG.md`.
 4. **Default order (D30): Gemini first.**
    `CLOUD_PROVIDER_ORDER = gemini,openrouter`, i.e. `gemini-3.1-flash-lite` →
    `gemini-flash-lite-latest` → OpenRouter (Nemotron 3 Super → Gemma 4 → Dots3) → local.
-5. **An opt-in live contract check** (`scripts/live_provider_contract_check.py`, never collected by
+5. **An opt-in live contract check** (`backend/scripts/live_provider_contract_check.py`, never collected by
    pytest):
    - It sends the app's **exact** request body, built by the real provider class, with a tiny
      prompt to each configured vendor, and prints only the vendor, the HTTP status and pass/fail.

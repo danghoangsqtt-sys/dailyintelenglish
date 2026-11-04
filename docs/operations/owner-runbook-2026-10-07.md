@@ -6,7 +6,7 @@ What is new and what only you can decide.
 
 - From the source folder: `venv\Scripts\python -m uvicorn app.main:app --port 8000`, or run the rebuilt package
   `dist\DailyIntelEnglishStudio\DailyIntelEnglishStudio.exe` (rebuilt 2026-10-07 and smoke-tested on a fresh data folder; rebuild it
-  again with `powershell -File scripts\build_exe.ps1` after the later changes of Phase 31).
+  again with `powershell -File installer\build_exe.ps1` after the later changes of Phase 31).
 - The image worker needs the GPU: close any other program that uses it while pictures are being drawn.
 
 ## 1. The characters: Alex and Lina

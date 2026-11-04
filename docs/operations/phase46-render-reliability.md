@@ -16,7 +16,7 @@ Inter now ships as `frontend/static/fonts/Inter-Variable.ttf` with its SIL OFL l
 
 - Font source: [Google Fonts Inter](https://github.com/google/fonts/tree/main/ofl/inter).
 - Font SHA256: `29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031`.
-- `tests/test_offline_fonts_browser.py` reaches `load` on 13 routes, loads the actual Inter font, and checks that no external requests are made.
+- `backend/tests/test_offline_fonts_browser.py` reaches `load` on 13 routes, loads the actual Inter font, and checks that no external requests are made.
 - New regression plus all four previously affected modules: **38 passed in 34.57 seconds**.
 - Load-event semantics: [Playwright navigation documentation](https://playwright.dev/python/docs/navigations).
 

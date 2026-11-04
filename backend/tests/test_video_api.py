@@ -1,0 +1,302 @@
+"""HTTP tests for video generation routes (Task 1.7, Sub-task 1.7a).
+
+Same real-tone-MP3 approach as backend/tests/test_audio_api.py: only the Edge TTS network call is
+mocked (with real decodable audio), so the audio mix -> video render chain underneath is
+exercised for real (real ffmpeg, real pydub, real subtitle burn-in).
+"""
+
+import io
+
+import pytest
+from fastapi.testclient import TestClient
+from pydub.generators import Sine
+
+from backend.core.config import settings
+from backend.main import app
+from backend.ai.tts import tts_service
+from backend.media import video_service
+
+PROJECT_PAYLOAD = {
+    "name": "Video API Test Episode",
+    "topic": "Testing video generation",
+    "cefr_level": "B1",
+    "duration_minutes": 5,
+    "num_speakers": 1,
+    "genre": "small_talk",
+    "accent": "american",
+    "speakers": [{"name": "Alex", "gender": "male", "accent": "american"}],
+}
+
+
+def _real_tone_mp3_bytes(freq: int = 440) -> bytes:
+    buffer = io.BytesIO()
+    Sine(freq).to_audio_segment(duration=500).apply_gain(-20).export(buffer, format="mp3", bitrate="192k")
+    return buffer.getvalue()
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture(autouse=True)
+def _fake_edge_tts(monkeypatch):
+    async def fake_edge_tts(text: str, speaker: dict) -> tuple[bytes, list]:
+        return _real_tone_mp3_bytes(), []
+
+    monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
+
+
+@pytest.fixture(autouse=True)
+def _fake_remotion(monkeypatch):
+    """Task 35.5: Remotion is the only renderer; these API tests use a fake render (a real one takes minutes)."""
+    from backend.media import video_renderer_remotion
+
+    async def fake_render(db, project, audio_job, learning, output_path, **kwargs):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"fake mp4")
+        return {"mp4_path": str(output_path), "srt_path": None, "background_image": None, "mode": "remotion",
+                "intro_seconds": 0.0, "soundtrack": False, "activity_uses": []}
+
+    monkeypatch.setattr(video_service, "renderer_problem", lambda: None)
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", fake_render)
+
+
+def create_project(client: TestClient) -> dict:
+    response = client.post("/api/projects", json=PROJECT_PAYLOAD)
+    assert response.status_code == 200
+    return response.json()["data"]
+
+
+def save_script(client: TestClient, project: dict) -> list[dict]:
+    speaker_id = project["speakers"][0]["id"]
+    payload = {"lines": [{"speaker_id": speaker_id, "text": "Welcome to the show!"}]}
+    response = client.put(f"/api/projects/{project['id']}/script", json=payload)
+    assert response.status_code == 200
+    return response.json()["data"]
+
+
+def generate_audio(client: TestClient, project: dict, lines: list[dict]) -> None:
+    for line in lines:
+        response = client.post(f"/api/projects/{project['id']}/tts/preview", json={"line_id": line["id"]})
+        assert response.status_code == 200
+    response = client.post(f"/api/projects/{project['id']}/audio/generate", json={})
+    assert response.status_code == 200
+
+
+def test_generate_video_returns_200_after_audio_exists(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    # Task 35.5: an old client's template_id is ignored, not refused
+    response = client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["status"] == "complete" and data["mode"] == "remotion"
+    assert data["mp4_path"].endswith("video_remotion.mp4")
+    assert data["srt_path"] and data["background_image"] is None and data["mp4_path_vertical"] is None
+
+
+def test_generate_video_advances_project_status_to_video_generated(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
+
+    response = client.get(f"/api/projects/{project['id']}")
+    assert response.json()["data"]["status"] == "video_generated"
+
+
+def test_generate_video_before_audio_returns_422(client: TestClient):
+    project = create_project(client)
+    save_script(client, project)  # no audio generated yet
+
+    response = client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
+
+    assert response.status_code == 422
+
+
+def test_first_video_render_failure_records_error_only_job(client: TestClient, monkeypatch):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    async def fail_render(*args, **kwargs):
+        raise video_service.VideoRenderError("forced first render failure")
+
+    monkeypatch.setattr(video_service, "generate_video", fail_render)
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"}
+    )
+
+    assert response.status_code == 500
+    job = client.get(f"/api/projects/{project['id']}/video/status").json()["data"]
+    assert job["status"] == "error"
+    assert job["error_message"] == "forced first render failure"
+    assert job["mode"] == "background"
+    assert job["mp4_path"] is None
+    assert job["mp4_path_vertical"] is None
+    assert job["srt_path"] is None
+
+
+def test_generate_video_missing_project_returns_404(client: TestClient):
+    response = client.post("/api/projects/does-not-exist/video/generate", json={"template_id": "midnight"})
+    assert response.status_code == 404
+
+
+def test_status_returns_404_before_generate(client: TestClient):
+    project = create_project(client)
+    response = client.get(f"/api/projects/{project['id']}/video/status")
+    assert response.status_code == 404
+
+
+def test_status_returns_job_after_generate(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "charcoal_wave"})
+
+    response = client.get(f"/api/projects/{project['id']}/video/status")
+
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "complete"
+
+
+def test_download_returns_404_before_generate(client: TestClient):
+    project = create_project(client)
+    response = client.get(f"/api/projects/{project['id']}/video/download")
+    assert response.status_code == 404
+
+
+def test_download_mp4_and_srt_after_generate(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "deep_purple"})
+
+    mp4_response = client.get(f"/api/projects/{project['id']}/video/download?format=mp4")
+    srt_response = client.get(f"/api/projects/{project['id']}/video/download?format=srt")
+
+    assert mp4_response.status_code == 200
+    assert mp4_response.headers["content-type"] == "video/mp4"
+    assert srt_response.status_code == 200
+    assert "Alex: Welcome to the show!" in srt_response.text
+
+
+def test_download_unsupported_format_returns_422(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
+
+    response = client.get(f"/api/projects/{project['id']}/video/download?format=avi")
+    assert response.status_code == 422
+
+
+# --- Task 2.5b: 9:16 vertical output (real gap found by Task 2.1c's QA pass) ---
+
+
+def test_failed_video_regeneration_keeps_prior_outputs_downloadable(client: TestClient, monkeypatch):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    generated = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"}
+    )
+    assert generated.status_code == 200
+    prior_job = generated.json()["data"]
+    prior_mp4 = client.get(f"/api/projects/{project['id']}/video/download?format=mp4").content
+    prior_srt = client.get(f"/api/projects/{project['id']}/video/download?format=srt").content
+
+    async def fail_render(*args, **kwargs):
+        raise video_service.VideoRenderError("forced regeneration failure")
+
+    monkeypatch.setattr(video_service, "generate_video", fail_render)
+    failed = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "deep_purple"}
+    )
+
+    assert failed.status_code == 500
+    job = client.get(f"/api/projects/{project['id']}/video/status").json()["data"]
+    assert job["status"] == "error"
+    assert job["error_message"] == "forced regeneration failure"
+    for column in (
+        "id",
+        "mode",
+        "mp4_path",
+        "mp4_path_vertical",
+        "srt_path",
+        "background_image",
+        "subtitle_style_json",
+        "started_at",
+    ):
+        assert job[column] == prior_job[column]
+    mp4 = client.get(f"/api/projects/{project['id']}/video/download?format=mp4")
+    srt = client.get(f"/api/projects/{project['id']}/video/download?format=srt")
+    assert mp4.status_code == 200
+    assert mp4.content == prior_mp4
+    assert srt.status_code == 200
+    assert srt.content == prior_srt
+
+
+# --- Task 20.2d: caption_style request field ------------------------------------------
+
+
+def test_generate_video_invalid_caption_style_returns_422(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate",
+        json={"template_id": "midnight", "renderer": "remotion", "caption_style": "neon"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("body_extra", "expected"),
+    [({}, "outline"), ({"caption_style": "box"}, "box"), ({"caption_style": "shade"}, "shade")],
+)
+def test_generate_video_forwards_caption_style_with_outline_default(
+    client: TestClient, monkeypatch, body_extra, expected
+):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    seen = {}
+    real_generate = video_service.generate_video
+
+    async def spy(*args, **kwargs):
+        seen["caption_style"] = kwargs.get("caption_style")
+        return await real_generate(*args, **kwargs)
+
+    monkeypatch.setattr(video_service, "generate_video", spy)
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight", **body_extra}
+    )
+
+    assert response.status_code == 200
+    assert seen["caption_style"] == expected
+
+
+def test_a_new_render_removes_the_render_it_replaced(client: TestClient):
+    """BUG-054: each render had its own attempt folder and the replaced ones stayed on disk forever."""
+    from pathlib import Path
+
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    url = f"/api/projects/{project['id']}/video/generate"
+    first = Path(client.post(url, json={}).json()["data"]["mp4_path"])
+    assert first.is_file() and (first.parent / "subtitles.srt").is_file()
+    second = Path(client.post(url, json={}).json()["data"]["mp4_path"])
+    assert second.is_file() and second.parent != first.parent
+    assert not first.parent.exists()
+    assert client.get(f"/api/projects/{project['id']}/video/download?format=mp4").status_code == 200

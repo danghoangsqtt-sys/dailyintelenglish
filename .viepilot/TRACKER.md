@@ -1,5 +1,9 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 95 — Project layout and clean-up (2026-11-04)
+
+Status: implemented_verified. [Summary](phases/95-project-layout/SUMMARY.md). `backend/` holds the app, tests, scripts and renderer; `installer/` holds packaging; `data/` stays (absolute paths in the DB).
+
 ## Phase 94 — The new studio look: the seven steps and Lina (2026-11-04)
 
 Status: implemented_verified (sandbox; full pytest 2355 passed; not built, installed or pushed; smaller scope than planned: the step layouts keep their own structure in the new look, reading aloud not built). [Summary](phases/94-studio-ui-steps-lina/SUMMARY.md). The step list in three stages, Back on the sticky next-step bar, Lina's face speaking the bar's line from the project's progress, the rail collapsed on every step. Defaults D143–D146. [Plan](phases/94-studio-ui-steps-lina/PLAN.md). Installed (owner: "Xem xong, cài đi", 2026-11-04): Full 2.0.0 from bf317ae8 (source_dirty false), package dist/2.0-phase94-20261104 (Full ZIP SHA256 870e79129469a681f665053bbfc101742e936620919bb5709823b0e10c73dfcc), backup data/backups/desktop-20261104-075009-307; the running app reports commit bf317ae8 with the same data (118 projects, 5 characters); /, /create, /videos, /library, the bundled fonts and Lina's frames are served. Not pushed.

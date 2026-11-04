@@ -358,8 +358,8 @@ the gate still fails, continue with Gemini primary and mark local experimental.
 
 **Allowed files:** `app/services/ai/**`, `app/core/config.py`,
 `app/core/constants.py`, `app/core/exceptions.py`, `requirements.txt`,
-`tests/test_ai_contracts.py`, `tests/test_ai_providers.py`,
-`tests/test_ai_router.py`, `tests/test_ai_validation.py`.
+`backend/tests/test_ai_contracts.py`, `backend/tests/test_ai_providers.py`,
+`backend/tests/test_ai_router.py`, `backend/tests/test_ai_validation.py`.
 
 **Actions:** implement typed contracts/errors, Ollama adapter using async `httpx`, stable
 Gemini adapter, centralized routing/deadlines/retries/circuit state/metrics, schema plus
@@ -378,10 +378,10 @@ secrets and full prompts are absent; ruff is clean.
 `app/services/ai_worker.py`, `app/api/ai_jobs.py`, `app/api/projects.py`,
 `app/api/learning.py`, `app/api/settings.py`, `app/api/audio.py`,
 `app/api/thumbnail.py`, `app/api/tts.py`, `app/api/video.py`, `app/api/youtube.py`,
-`app/main.py`, `tests/conftest.py`,
-`tests/test_projects_write_lock.py`, `tests/test_ai_job_database.py`,
-`tests/test_ai_job_service.py`, `tests/test_ai_jobs_api.py`,
-`tests/test_ai_worker.py`.
+`app/main.py`, `backend/tests/conftest.py`,
+`backend/tests/test_projects_write_lock.py`, `backend/tests/test_ai_job_database.py`,
+`backend/tests/test_ai_job_service.py`, `backend/tests/test_ai_jobs_api.py`,
+`backend/tests/test_ai_worker.py`.
 
 **Actions:** move the single DB lock/transaction helpers out of the projects router and
 update every reverse-importing router/test;
@@ -403,8 +403,8 @@ remain. Do not drop them or roll back schema destructively.
 `prompts/script/repair.txt`, `app/services/script_pipeline.py`,
 `app/services/script_service.py`, `app/services/ai_worker.py`,
 `app/core/constants.py`, `tests/fixtures/ai/*`,
-`tests/test_script_pipeline.py`, `tests/test_script_service.py`,
-`tests/test_script_api.py`.
+`backend/tests/test_script_pipeline.py`, `backend/tests/test_script_service.py`,
+`backend/tests/test_script_api.py`.
 
 **Actions:** implement deterministic targets, outline/section checkpoints, server-owned
 line IDs, validation/repair/fallback, final merge, stale/cancel guards, and atomic
@@ -419,8 +419,8 @@ resumes at last valid checkpoint; failure leaves prior script unchanged.
 **Allowed files:** `prompts/learning/learning_repair.txt`,
 `app/services/learning_pipeline.py`, `app/services/learning_service.py`,
 `app/services/ai_worker.py`, `app/core/constants.py`,
-`tests/fixtures/ai/*`, `tests/test_learning_pipeline.py`,
-`tests/test_learning_service.py`, `tests/test_learning_api.py`.
+`tests/fixtures/ai/*`, `backend/tests/test_learning_pipeline.py`,
+`backend/tests/test_learning_service.py`, `backend/tests/test_learning_api.py`.
 
 **Actions:** use persisted script hash, structured low-temperature generation,
 grounding/count/duplicate/answer checks, one targeted repair, stale/cancel guards, and
@@ -437,9 +437,9 @@ script mutation produces `stale`; failed generation leaves old pack unchanged.
 `frontend/pages/step3_learning.html`, `frontend/static/js/api.js`,
 `frontend/static/js/settings.js`, `frontend/static/js/step2_script.js`,
 `frontend/static/js/step3_learning.js`, `frontend/static/css/style.css`,
-`tests/test_settings_service.py`, `tests/test_settings_api.py`,
-`tests/test_ai_health_api.py`, `tests/test_ui_async_browser.py`,
-`tests/test_script_jobs_browser.py`, `tests/test_learning_jobs_browser.py`.
+`backend/tests/test_settings_service.py`, `backend/tests/test_settings_api.py`,
+`backend/tests/test_ai_health_api.py`, `backend/tests/test_ui_async_browser.py`,
+`backend/tests/test_script_jobs_browser.py`, `backend/tests/test_learning_jobs_browser.py`.
 
 **Actions:** persist validated non-secret settings; add safe health; create/poll/resume/
 cancel/retry jobs; render queued/running/validating/fallback/terminal states; `aria-live`;
@@ -456,8 +456,8 @@ API, or logs; browser tests pass at desktop and narrow viewport.
 `app/services/ai/router.py`, `app/services/script_service.py`,
 `app/services/learning_service.py`, `app/services/thumbnail_service.py`,
 `app/services/youtube_service.py`, `app/api/projects.py`, `app/api/learning.py`,
-`docs/api.md`, `tests/test_ai_router.py`, `tests/test_ai_providers.py`,
-`tests/test_script_api.py`, `tests/test_learning_api.py`.
+`docs/api.md`, `backend/tests/test_ai_router.py`, `backend/tests/test_ai_providers.py`,
+`backend/tests/test_script_api.py`, `backend/tests/test_learning_api.py`.
 
 **Actions:** verify/pin stable Gemini model; implement bounded remote-background path
 only where live capability probing supports it, otherwise use an async foreground call
@@ -471,8 +471,8 @@ validation errors do not retry; legacy contracts remain green.
 
 ### 13.8 — Automated regression and observability gate
 
-**Allowed files:** all Phase 13 test files already listed, `tests/test_ai_logging.py`,
-`scripts/check_dependencies.py`, `daily_intel_english_studio.spec` only if imports/data
+**Allowed files:** all Phase 13 test files already listed, `backend/tests/test_ai_logging.py`,
+`backend/scripts/check_dependencies.py`, `installer/daily_intel_english_studio.spec` only if imports/data
 require it, and docs generated by existing tooling.
 
 **Actions:** close state-machine, concurrency, security, UI, packaging, and health gaps;
@@ -484,8 +484,8 @@ run targeted tests, full pytest, ruff, JS syntax checks, and a packaged smoke bu
 venv\Scripts\python.exe -m ruff check app tests scripts
 venv\Scripts\python.exe -m pytest -q
 Get-ChildItem frontend\static\js\*.js | ForEach-Object { node --check $_.FullName }
-venv\Scripts\python.exe scripts\check_dependencies.py
-powershell -ExecutionPolicy Bypass -File scripts\build_exe.ps1
+venv\Scripts\python.exe backend\scripts\check_dependencies.py
+powershell -ExecutionPolicy Bypass -File installer\build_exe.ps1
 ```
 
 **Pass:** no deterministic failures; any claimed flake is re-run in isolation and as
@@ -494,7 +494,7 @@ Ollama is stopped.
 
 ### 13.9 — Real no-mock bake-off and full operational trial (Gate B)
 
-**Allowed files:** `scripts/run_ai_operational_trial.py`,
+**Allowed files:** `backend/scripts/run_ai_operational_trial.py`,
 `docs/operations/phase13-acceptance.md`, `artifacts/phase13/gate-b/*` (evidence), and
 runtime-created project/media/database rows. The test project must not be deleted.
 
@@ -525,8 +525,8 @@ experimental. Gate thresholds are not weakened after seeing results.
 `.viepilot/PROJECT-CONTEXT.md`, `.viepilot/ROADMAP.md`, `.viepilot/TRACKER.md`,
 `.viepilot/HANDOFF.json`, `docs/api.md`, `docs/user/prompt-guide.md`,
 `docs/operations/local-ai.md`, `docs/operations/phase13-acceptance.md`,
-`CHANGELOG.md`, `.env.example`, `scripts/check_dependencies.py`,
-`daily_intel_english_studio.spec`, `scripts/build_exe.ps1` if verified changes are needed.
+`CHANGELOG.md`, `.env.example`, `backend/scripts/check_dependencies.py`,
+`installer/daily_intel_english_studio.spec`, `installer/build_exe.ps1` if verified changes are needed.
 
 **Dependency:** the Gate B **decision**, whether pass or fail. A pass permits local-first
 development rollout; a failure ships durable jobs with Gemini primary and labels local

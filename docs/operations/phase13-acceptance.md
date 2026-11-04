@@ -1,7 +1,7 @@
 # Phase 13 Gate B — Operational Trial Acceptance Report
 
 - **Run date:** 2026-09-21 (00:09:03Z – 00:23:57Z UTC, ~14m 54s wall clock)
-- **Runner:** `scripts/run_ai_operational_trial.py` (Task 13.9)
+- **Runner:** `backend/scripts/run_ai_operational_trial.py` (Task 13.9)
 - **Machine config at run time:** `AI_MODE=local` (fallback OFF — Gate B's own requirement),
   Ollama reachable, `qwen3.5:9b` present, digest
   `6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7` (matches Task 13.1's

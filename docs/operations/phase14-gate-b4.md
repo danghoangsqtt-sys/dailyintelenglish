@@ -89,7 +89,7 @@ the UI now does) so the level default applies; Gate B-5 measures it.
   `global_validation_failed` as today. Also add the prior sections' most frequent 8-grams to
   the section prompt's continuity note so the model is told what not to repeat. The 1%
   threshold and the check itself are **unchanged**.
-- **D18 — Runner speed (14.4a-d, Coder, `scripts/run_ai_operational_trial.py` only).** Stop
+- **D18 — Runner speed (14.4a-d, Coder, `backend/scripts/run_ai_operational_trial.py` only).** Stop
   hard-coding `"speed": 1.0`; omit the field so the API applies `CEFR_DEFAULT_TTS_SPEED`
   exactly as the UI does. Record the resolved speed in the run evidence.
 - **Gate B-5 (14.14, PM)** after both land: same protocol; media must be measured at the

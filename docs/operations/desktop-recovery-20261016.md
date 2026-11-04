@@ -14,7 +14,7 @@ The installer now checks SQLite integrity/FKs and unfinished jobs, makes an onli
 
 ## Rehearsal before owner upgrade
 
-Command: `.venv/Scripts/python.exe scripts/verify_desktop_upgrade.py --stage data/tmp/phase51-exe-stage/DailyIntelEnglishStudio/DailyIntelEnglishStudio.exe`.
+Command: `.venv/Scripts/python.exe installer/verify_desktop_upgrade.py --stage data/tmp/phase51-exe-stage/DailyIntelEnglishStudio/DailyIntelEnglishStudio.exe`.
 
 A consistent owner DB snapshot and copied character/sprite folders were used under `data/tmp/phase51-upgrade/`; explicit isolated DATA_DIR/cloud-off settings prevented owner writes or cloud generation. Actual frozen startup migrations and two process launches preserved all original columns/rows in projects, characters, assets, speakers, script lines, durable AI jobs/checkpoints. Integrity/FKs passed; all 289 existing character/sprite file hashes matched. Both launches reported the same code/data identities. This rehearsal was run twice, the second also waiting for the real catalog to load.
 

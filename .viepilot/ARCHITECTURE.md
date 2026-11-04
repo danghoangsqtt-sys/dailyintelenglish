@@ -109,7 +109,7 @@ graph TB
     end
 
     subgraph Sub["🧩 Subprocess runtimes"]
-        REM[renderer/ Remotion, Node]
+        REM[backend/renderer/ Remotion, Node]
         IMG[.venv-image image_worker, RTX 3060]
     end
 
@@ -378,9 +378,9 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
   illustrations) run one at a time against `backend/ai/image/image_worker.py` in `.venv-image` (Qwen only since Phase 44);
   `IMAGE_ENGINE=fake` gives a deterministic GPU-free engine for tests.
 
-### 11. Remotion renderer (`backend/media/video_renderer_remotion.py`, `renderer/`) — Phase 19+
+### 11. Remotion renderer (`backend/media/video_renderer_remotion.py`, `backend/renderer/`) — Phase 19+
 - Builds the composition props (timings, captions, cast, storyboard scenes, sprites, activity cutaways,
-  brand intro/outro, music) and runs the Node `renderer/` workspace (Remotion 4, React 19,
+  brand intro/outro, music) and runs the Node `backend/renderer/` workspace (Remotion 4, React 19,
   TypeScript, Vitest) as a local subprocess. Nothing per-episode leaves the machine (invariant 37).
 - The only renderer since Task 35.5 (invariant 36 is retired: there is no ffmpeg fallback any more).
 

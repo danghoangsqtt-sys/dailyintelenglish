@@ -26,10 +26,10 @@
         <span class="who">Lina · trợ lý của bạn</span>
         <p class="line">Đêm qua mình làm xong <b>3 video</b>. Duyệt xong là chúng tự lên lịch tuần này.</p>
         <div class="acts"><a class="btn primary sun" href="#review">Duyệt 3 video</a><a class="btn ghost" href="channel.html">Xem đêm qua làm gì</a></div>
-        <label class="topic" for="topic"><svg class="i" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#spark"/></svg>
+        <label class="topic" for="topic"><svg class="i" aria-hidden="true"><use href="../icons.svg#spark"/></svg>
           <input id="topic" placeholder="Video tiếp theo nói về gì? Ví dụ: câu điều kiện loại 2"><button class="btn sm primary" type="button">Tạo</button></label>
       </div>
-      <div class="lina"><img id="lina" src="../../session-2026-11-03-ia/mascot/lina/front/gesture-wave.webp" alt="Lina vẫy tay chào"></div>
+      <div class="lina"><img id="lina" src="../lina/front/gesture-wave.webp" alt="Lina vẫy tay chào"></div>
     </section>
 
     <section id="review">
@@ -71,7 +71,7 @@ const W = [["T3", 3, 1, [["roots-vi", "Gốc SPECT", "19:00"]]], ["T4", 4, 0, [[
 document.getElementById("week").innerHTML = W.map(([d, n, today, evs]) => `<div class="day${today ? " today" : ""}"><div class="d">${d}<b class="num">${n}</b></div><div>${
   evs.length ? evs.map(([img, t, time, k]) => `<div class="ev${k === "plan" ? " plan" : ""}"><div class="thumb"><img src="${S(img)}" alt=""></div><span class="w">${t}${k === "wait" ? ' <span class="state wait" style="height:22px;font-size:12.5px;padding:0 8px">chờ duyệt</span>' : ""}</span><time class="num">${time}</time></div>`).join("")
   : '<span class="muted">Chưa có video. Lina có thể làm một Short tối nay.</span>'}</div></div>`).join("");
-const lina = document.getElementById("lina"), F = "../../session-2026-11-03-ia/mascot/lina/front/";
+const lina = document.getElementById("lina"), F = "../lina/front/";
 ["calm__closed", "blink"].forEach((n) => { new Image().src = F + n + ".webp"; });
 if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
   setTimeout(() => { lina.src = F + "calm__closed.webp"; lina.alt = "Lina"; }, 2200);

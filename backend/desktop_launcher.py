@@ -51,7 +51,7 @@ def _reuse_existing_instance(url: str, expected: dict) -> None:
         raise RuntimeError(
             f"Another Studio build or application is already using {url}.\n"
             "Finish any running jobs and close the previous Studio before opening this build.\n"
-            "For a Desktop upgrade, use scripts/install_desktop.ps1 with the verified staging folder; "
+            "For a Desktop upgrade, use installer/install_desktop.ps1 with the verified staging folder; "
             "it checks active jobs and backs up your data and previous application."
         )
     webbrowser.open(url)

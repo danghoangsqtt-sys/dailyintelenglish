@@ -106,7 +106,7 @@ today's "no learning pack" export path).
   (`ffmpeg` when set to anything other than `remotion`).
 - Fallback-rate readout on `GET /api/video/health` (or existing health surface), same
   pattern as Phase 18 §18.4's cloud fallback readout.
-- `scripts/check_dependencies.py` checks Node runtime, `video-renderer/node_modules/`
+- `backend/scripts/check_dependencies.py` checks Node runtime, `video-renderer/node_modules/`
   freshness, headless Chromium presence; missing pieces are guidance not crashes.
 - PyInstaller build recipe extended to bundle `video-renderer/` (measured against the 19.1
   spike's real packaging-footprint estimate). Startup path verified against the packaged

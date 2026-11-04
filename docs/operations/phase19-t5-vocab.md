@@ -71,7 +71,7 @@ All 3/3 correct.
   explicitly the last task before 19.7 touches it.
 - Python full suite: **1189/1189 passed**, unchanged (no Python files touched beyond the
   runner script, and this task adds no Python tests). `ruff check .`: clean.
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 - Frame 3 above (§4) is the direct proof 19.3's karaoke and 19.4's speaker chip both still
   render correctly alongside the new vocab card.
 
@@ -97,7 +97,7 @@ to explain why the project pin in §3 was necessary, not as this task's own base
   confirm-failure done: reverted `attachItemsToLines` to always return `[]` -- 3/21 tests
   failed with real assertion mismatches (not crashes); restored, 21/21 green again.
 - Python full suite: **1189/1189 passed**, unchanged. `ruff check .`: **clean.**
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 - `git log fe06405..HEAD -- app/services/video_service.py`: **empty.**
 
 ## 8. Carry-over conditions (acknowledged, not acted on)

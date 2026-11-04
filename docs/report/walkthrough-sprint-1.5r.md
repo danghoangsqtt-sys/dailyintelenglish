@@ -85,7 +85,7 @@ Sprint 1.5R is a stabilization and governance iteration addressing critical defe
 
 ### B. Automated Test Suite (223 Total Tests)
 - **Unit & Integration Suite**: `218 passed` across project CRUD, write lock transactions, learning API, script generation, and prompt loaders.
-- **Browser Playwright E2E Suite** (`tests/test_ui_async_browser.py`): `5 passed` in 13.63s:
+- **Browser Playwright E2E Suite** (`backend/tests/test_ui_async_browser.py`): `5 passed` in 13.63s:
   - `test_step2_normal_edit_and_successful_autosave_navigation` ✅
   - `test_step2_save_failure_blocks_navigation_and_recovers` ✅
   - `test_step2_rapid_edits_coalescence` ✅
@@ -116,5 +116,5 @@ git add app/services/script_service.py app/services/learning_service.py app/mode
 git add frontend/static/js/step2_script.js frontend/static/js/step3_learning.js frontend/pages/step4_tts_placeholder.html
 
 # Stage 5: Automated Regression & Browser Test Suite
-git add tests/test_script_service.py tests/test_learning_service.py tests/test_ui_async_browser.py tests/test_learning_api.py tests/test_project_service.py tests/test_projects_api.py tests/test_prompt_loader.py
+git add backend/tests/test_script_service.py backend/tests/test_learning_service.py backend/tests/test_ui_async_browser.py backend/tests/test_learning_api.py backend/tests/test_project_service.py backend/tests/test_projects_api.py backend/tests/test_prompt_loader.py
 ```

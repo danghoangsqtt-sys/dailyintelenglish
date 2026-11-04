@@ -9,7 +9,7 @@
 ## 1. Why this phase exists
 
 The 2026-09-23 audit ran the full suite (932/932: 771 unit/API + 161 browser), `ruff` (clean),
-`scripts/check_dependencies.py` (all green) and a read-only `PRAGMA integrity_check` of
+`backend/scripts/check_dependencies.py` (all green) and a read-only `PRAGMA integrity_check` of
 `data/app.db` (`ok`). The foundation is sound. It still found four gaps between "works" and
 "stable":
 
@@ -54,8 +54,8 @@ close-out.
 ### 16.1 — Worker loop guard + liveness (BUG-022, P0, Coder)
 
 **Allowed files:** `app/services/ai_worker.py`, `app/api/ai_jobs.py` (health payload only),
-`app/core/constants.py`, `tests/test_ai_worker.py`, `tests/test_ai_health_api.py`,
-`tests/test_ai_jobs_api.py` (health assertions only), `CHANGELOG.md`.
+`app/core/constants.py`, `backend/tests/test_ai_worker.py`, `backend/tests/test_ai_health_api.py`,
+`backend/tests/test_ai_jobs_api.py` (health assertions only), `CHANGELOG.md`.
 
 **Design:**
 1. `_run_loop` wraps each iteration in `try/except Exception`: `logger.exception
@@ -78,7 +78,7 @@ task. Revert-and-confirm-failure on the loop-survival test. Full suite, `ruff`.
 ### 16.2 — ffmpeg timeouts (ENH-008, P1, Coder)
 
 **Allowed files:** `app/services/video_service.py`, `app/core/constants.py`,
-`tests/test_video_service.py`, `CHANGELOG.md`.
+`backend/tests/test_video_service.py`, `CHANGELOG.md`.
 
 **Design:** both `subprocess.run` calls pass `timeout=`. The main render uses
 `max(VIDEO_RENDER_TIMEOUT_MIN_SECONDS, VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND ×
@@ -94,9 +94,9 @@ unchanged. Revert-and-confirm-failure. Full suite, `ruff`.
 
 ### 16.3 — Test-data leak: root cause, guard, cleanup tool, CHANGELOG (BUG-023, P1, Coder → PM)
 
-**Allowed files:** `tests/conftest.py`; whichever test files are identified as the leak
+**Allowed files:** `backend/tests/conftest.py`; whichever test files are identified as the leak
 source (named in the card's design section **before** editing); new
-`scripts/cleanup_test_projects.py`; new `tests/test_cleanup_test_projects.py`;
+`backend/scripts/cleanup_test_projects.py`; new `backend/tests/test_cleanup_test_projects.py`;
 `CHANGELOG.md` (the missing Phase 15 entry plus this task).
 
 **Design:**
@@ -107,11 +107,11 @@ source (named in the card's design section **before** editing); new
    A test that opens it against the real `DATA_DIR` and never closes it would make every
    later `TestClient(app)` lifespan reuse the real DB, even after `DATA_DIR` is
    monkeypatched.
-2. **Guard:** an autouse session-level safeguard in `tests/conftest.py` that fails loudly
+2. **Guard:** an autouse session-level safeguard in `backend/tests/conftest.py` that fails loudly
    if any test opens the real `data/app.db` (for example, by asserting the singleton's
    path is under a tmp dir, or by resetting `Database._instance` between tests). The
    exact mechanism is chosen in the card.
-3. **Cleanup tool:** `scripts/cleanup_test_projects.py`:
+3. **Cleanup tool:** `backend/scripts/cleanup_test_projects.py`:
    - `--dry-run` is the default and prints counts per name plus ids.
    - `--apply` first copies `app.db` to `data/backups/app-before-cleanup-<UTC>.db`, then
      deletes only projects whose `name` is exactly one of `Learning API Test Episode`,
@@ -131,7 +131,7 @@ deleted, a backup is written, and dry-run writes nothing. `ruff`.
 
 **Allowed files:** `prompts/script/section.txt`, `prompts/script/repair.txt`,
 `app/services/script_pipeline.py` (avoid-phrase selection only),
-`app/core/constants.py`, `tests/test_script_pipeline.py`, `tests/test_prompt_loader.py`,
+`app/core/constants.py`, `backend/tests/test_script_pipeline.py`, `backend/tests/test_prompt_loader.py`,
 `tests/fixtures/ai/*`, `CHANGELOG.md`.
 
 **Design (doc-first; the card's evidence section is reviewed by the PM before code):**
@@ -198,7 +198,7 @@ Same as Phase 14 §10, with a live message channel added:
   and the PM requests edits.
 - **Coder** (Claude Sonnet) owns `app/**`, `tests/**`, `scripts/**`, `prompts/**`,
   `README.md`, `CHANGELOG.md`, `.env.example`, packaging files.
-- **Only the PM** runs `scripts/run_ai_operational_trial.py`, the real-DB cleanup, and gate
+- **Only the PM** runs `backend/scripts/run_ai_operational_trial.py`, the real-DB cleanup, and gate
   runs. Before any of them, the PM messages the Coder and waits for "idle".
 - **Messages:** `SendMessage` between the two local sessions (`ListAgents` shows the
   name). A message states the task id and the commit sha. Git is the record: anything that
@@ -222,7 +222,7 @@ Same as Phase 14 §10, with a live message channel added:
 ## 7. Amendments
 
 **Amendment A (PM, 2026-09-23, on accepting 16.1 `56bb74b`):** 16.2's allowed files gain
-`tests/test_ai_health_api.py`, **only** to fix nit N3: in
+`backend/tests/test_ai_health_api.py`, **only** to fix nit N3: in
 `test_health_reports_worker_alive_false_when_the_worker_task_is_dead`, the monkeypatched
 `_task = None` is still in place when the `client` fixture's lifespan calls `stop()`, so
 `stop()` returns early and the real loop task is orphaned. Fix: save the real task and restore
@@ -251,7 +251,7 @@ re-render unchanged.
   singleton against the real `data/app.db`. `Database.connect()` then reuses that stale
   connection for the next `TestClient(app)`, even though that test monkeypatched `DATA_DIR`.
 - **One shared helper, not 21 more copies.** The drift between copies (3 correct, 21 not) *is*
-  the root cause. The fix is a single live-server helper in `tests/conftest.py` that:
+  the root cause. The fix is a single live-server helper in `backend/tests/conftest.py` that:
   1. isolates `settings.DATA_DIR` to `tmp_path_factory`;
   2. starts uvicorn and waits for the port;
   3. on teardown sets `should_exit`, joins the thread with a bounded timeout, and **fails
@@ -272,10 +272,10 @@ re-render unchanged.
   run immediately.
 
 **Amendment D (PM, 2026-09-23, on the Coder's stop report during 16.3):** the new guard caught
-a pre-existing isolation gap. `tests/test_ai_health_api.py::test_health_response_has_no_extra_undeclared_fields`
+a pre-existing isolation gap. `backend/tests/test_ai_health_api.py::test_health_response_has_no_extra_undeclared_fields`
 uses a bare `TestClient(app)` with no `DATA_DIR` override, so since Task 13.6 its lifespan has
 opened the real `data/app.db`. It was never visible because the test is GET-only. 16.3's allowed
-files gain `tests/test_ai_health_api.py`, **only** to isolate that one test (use the file's
+files gain `backend/tests/test_ai_health_api.py`, **only** to isolate that one test (use the file's
 existing `client` fixture, or `tmp_path` + `monkeypatch.setattr(settings, "DATA_DIR", ...)`).
 No other change to that file. Any further guard trip found in the final run follows the same
 rule: stop and report; don't widen scope unilaterally.

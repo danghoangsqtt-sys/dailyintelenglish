@@ -30,7 +30,7 @@ Daily_Intel_English/
 │   ├── library/             # characters, scenes, shots, sprites, activity library, storyboard
 │   └── channel/             # channel plan, dashboard
 ├── frontend/                # unchanged
-├── renderer/                # was video-renderer/ (Remotion)
+├── backend/renderer/                # was video-renderer/ (Remotion)
 ├── scripts/                 # maintenance CLIs only (nothing the app imports or spawns)
 ├── tests/  docs/  data/
 └── .venv/  .venv-image/     # recreated from pip freeze (were venv/, venv-image/)
@@ -105,7 +105,7 @@ Module file names do not change (only packages), so code that uses `audio_servic
 | `scripts/image_worker.py` | `backend/ai/image/image_worker.py` | `git mv` |
 | `prompts/` | `backend/ai/prompts/` | `git mv` |
 | `requirements-image.txt` | `backend/ai/image/requirements.txt` | `git mv` |
-| `video-renderer/` | `renderer/` | same-drive rename (keeps `node_modules/`) |
+| `video-renderer/` | `backend/renderer/` | same-drive rename (keeps `node_modules/`) |
 | `models/` | `backend/ai/models/` | same-drive rename, **after** the Phase 39 downloads finish |
 | `venv/`, `venv-image/` | `.venv/`, `.venv-image/` | recreated from `pip freeze` (same versions); old ones removed only after tests pass and with owner OK |
 
@@ -115,11 +115,11 @@ Module file names do not change (only packages), so code that uses `audio_servic
   (AST-located `from … import …` statements, split when one statement imports modules that now live in different
   packages).
 - `backend/core/paths.py` stays 3 levels deep (`backend/core/paths.py` → root); path constants for prompts
-  (`backend/ai/prompts`), renderer (`renderer/`), image worker, image venv (`.venv-image`), model cache
+  (`backend/ai/prompts`), renderer (`backend/renderer/`), image worker, image venv (`.venv-image`), model cache
   (`backend/ai/models/image`).
-- Entry points: `uvicorn backend.main:app`; `.claude/launch.json`; `scripts/build_exe.ps1` (`.venv`);
-  `daily_intel_english_studio.spec` (datas: `backend/ai/prompts`, `backend/db/migrations`; entry script); `.gitignore`
-  (`.venv*/`, `backend/ai/models/`, `renderer/` ignores); `pytest.ini`; Ruff config; `scripts/*.py`.
+- Entry points: `uvicorn backend.main:app`; `.claude/launch.json`; `installer/build_exe.ps1` (`.venv`);
+  `installer/daily_intel_english_studio.spec` (datas: `backend/ai/prompts`, `backend/db/migrations`; entry script); `.gitignore`
+  (`.venv*/`, `backend/ai/models/`, `backend/renderer/` ignores); `pytest.ini`; Ruff config; `scripts/*.py`.
 - Docs: README (install, run, structure), `.viepilot/ARCHITECTURE.md`, `AI-GUIDE.md`, `docs/structure/STRUCTURE.md`
   (new "where does X live" map), CHANGELOG. Historical phase docs keep the old paths.
 - Packaged app: data folder and exe names unchanged (`DailyIntelEnglishStudio`).
@@ -127,7 +127,7 @@ Module file names do not change (only packages), so code that uses `audio_servic
 ## Steps (one commit each, full verification after each)
 
 1. Code moves + codemod + path constants + entry points (`backend/`, `schemas/`, domains, worker, prompts).
-2. `video-renderer/` → `renderer/` and its references.
+2. `video-renderer/` → `backend/renderer/` and its references.
 3. Recreate `.venv` and `.venv-image` from freeze; switch launch/build scripts; tests on the new venvs.
 4. After the Phase 39 downloads: `models/` → `backend/ai/models/`.
 5. Docs: README, ARCHITECTURE, AI-GUIDE, STRUCTURE.md, CHANGELOG.

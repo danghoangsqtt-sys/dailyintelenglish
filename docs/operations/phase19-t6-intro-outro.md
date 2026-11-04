@@ -118,7 +118,7 @@ above (a video frame, not the still) instead, since the still's timestamp is an 
   last task before 19.7 touches it.
 - Python full suite: **1189/1189 passed**, unchanged (no Python test files touched; the
   runner-script change is code, not tests). `ruff check .`: clean.
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 - Frame #2 above (§5) is the direct proof 19.3's karaoke, 19.4's speaker chip, and 19.5's
   vocab card all still render correctly alongside this task's new chapter bar.
 
@@ -152,7 +152,7 @@ The still render itself took **3.261 s** (single frame, negligible, as expected)
   `{overallPct: 0, currentChapter: null, chapters: []}` -- 4/7 chapters tests failed with real
   assertion mismatches (not crashes); restored, 28/28 green again.
 - Python full suite: **1189/1189 passed**, unchanged. `ruff check .`: **clean.**
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 - `git log fe06405..HEAD -- app/services/video_service.py`: **empty.**
 
 ## 9. Carry-over conditions (acknowledged, not acted on)

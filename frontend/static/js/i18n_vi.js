@@ -1048,7 +1048,7 @@ window.I18N_VI = {
     "The proposal is still running. Reload later to resume its durable status.": "Đề xuất vẫn đang chạy. Tải lại sau để xem tiếp trạng thái.",
     "Discard the local unsaved plan draft and load the server revision?": "Bỏ bản nháp kế hoạch chưa lưu và tải bản trên máy chủ?",
     "Preview bundle is missing. Rebuild the preview widget before starting the app.": "Thiếu gói xem trước. Hãy build lại widget xem trước trước khi mở app.",
-    "Run scripts/check_dependencies.py for the details.": "Chạy scripts/check_dependencies.py để xem chi tiết.",
+    "Run backend/scripts/check_dependencies.py for the details.": "Chạy backend/scripts/check_dependencies.py để xem chi tiết.",
 
     // ---- step 6 thumbnail
     "Step 6 of 7": "Bước 6 / 7",

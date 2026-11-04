@@ -1,0 +1,32 @@
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+aiosqlite==0.22.1
+python-dotenv==1.2.3
+pydantic==2.13.5
+pydantic-settings==2.15.0
+httpx==0.28.1
+jinja2==3.1.6
+pydub==0.25.1
+audioop-lts==0.2.2; python_version >= "3.13"  # pydub needs stdlib audioop, removed in 3.13 (PEP 594)
+pyloudnorm==0.2.0  # real ITU-R BS.1770 loudness measurement for AudioService normalization
+Pillow==12.3.0
+edge-tts==7.3.1
+aiofiles==25.1.0
+python-multipart==0.0.32
+numpy==2.5.3  # used directly (audio levels, sprites, colour checks); was only pulled in by pyloudnorm
+librosa==1.0.0  # Task 22.9 music pace/mood analysis (backend/media/music_analysis.py); was undeclared (Phase 38)
+tzdata==2026.4  # zoneinfo data on Windows: Gemini quota reset at midnight America/Los_Angeles; was undeclared (Phase 38)
+
+pytest==9.1.1
+pytest-asyncio==1.4.0
+ruff==0.7.4
+# Tests only: the real CLIP tokenizer for the prompt-budget tests (tests/test_visuals_phase28.py).
+# No torch here -- tokenizers only; the PyInstaller spec excludes transformers from the .exe.
+transformers==5.17.0
+huggingface_hub==1.33.0
+playwright==1.62.0  # browser tests use playwright.async_api directly, not the pytest-playwright
+                    # plugin; after installing, also run: playwright install chromium
+
+# Packaging (Task 12.2) -- only needed to build the standalone .exe, not to run/test
+# the app itself. See installer/build_exe.ps1 and installer/daily_intel_english_studio.spec.
+pyinstaller==6.22.3

@@ -2,6 +2,8 @@
 
 [← Về README](../../README.md)
 
+> **Bản 2.0:** hướng dẫn ngắn và mới nhất là [installer/HUONG-DAN-SU-DUNG.txt](../../installer/HUONG-DAN-SU-DUNG.txt). Trang này giữ các chi tiết của bản 1.x (mô hình ảnh, Ollama).
+
 **Áp dụng cho:** `v1.4.0-rc.1` · Windows x64 · Cập nhật 15/10/2026.
 
 > **Bản 1.5.0 (22/10/2026):** cài từ thư mục chuyển giao và đưa nhân vật/thư viện sang bằng Gói thư viện — xem [Cài lên máy thứ hai](second-machine.md). Các mục dưới đây vẫn đúng cho yêu cầu hệ thống và xử lý sự cố.
@@ -48,10 +50,10 @@ Mở PowerShell trong thư mục gốc. Giải nén **toàn bộ** gói ứng d�
 DailyBeyondEnglishStudio/
 ├── backend/
 ├── frontend/
-├── renderer/
+├── backend/renderer/
 │   ├── package.json
 │   └── package-lock.json
-├── scripts/
+├── installer/
 │   └── install_desktop.ps1
 └── data/
     └── tmp/
@@ -96,7 +98,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Chuẩn bị trình duyệt render thất bạ
 Pop-Location
 ```
 
-Với mã nguồn Phase 49 mới, chạy thêm `npm --prefix renderer run build:preview` tại thư mục gốc để tạo Player trong Step 5. Mã nguồn tại tag phát hành 1.4.0-rc.1 chưa có lệnh này; không áp dụng bước này cho tag cũ.
+Với mã nguồn Phase 49 mới, chạy thêm `npm --prefix backend/renderer run build:preview` tại thư mục gốc để tạo Player trong Step 5. Mã nguồn tại tag phát hành 1.4.0-rc.1 chưa có lệnh này; không áp dụng bước này cho tag cũ.
 
 `npm ci` cài theo lockfile của bản phát hành. `remotion browser ensure` tải/kiểm tra trình duyệt dành cho render; trình duyệt này khác với trình duyệt bạn dùng mở giao diện.
 
@@ -107,7 +109,7 @@ Nếu PowerShell chặn `npm.ps1`/`npx.ps1`, dùng `npm.cmd` và `npx.cmd` tươ
 Tại thư mục gốc, sau khi các lệnh ở mục 3 thành công:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install_desktop.ps1 -StageDirectory .\data\tmp\desktop-download\DailyIntelEnglishStudio
+powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\install_desktop.ps1 -StageDirectory .\data\tmp\desktop-download\DailyIntelEnglishStudio
 ```
 
 Script sẽ:
@@ -164,7 +166,7 @@ Không sao chép nguyên `.venv-image` từ máy cũ để thay cho cài đặt 
 | Bấm icon không mở giao diện | Mở `data\logs\desktop.log`, kiểm tra workspace, quyền ghi và cổng. Thử truy cập `http://localhost:8000`. |
 | Báo workspace không hợp lệ | Xem `studio-runtime.json`; workspace phải chứa `renderer\package.json` và `backend\ai\image\image_worker.py`. Cài lại bằng script từ đúng mã nguồn tag. |
 | Không tìm thấy Node/FFmpeg | Kiểm tra PATH và các lệnh mục 3; khởi động lại ứng dụng sau khi thay PATH. `ffprobe` cũng phải có trong PATH. |
-| Thiếu renderer/trình duyệt render | Chạy lại `npm ci` và `npx remotion browser ensure` trong `renderer`. |
+| Thiếu backend/renderer/trình duyệt render | Chạy lại `npm ci` và `npx remotion browser ensure` trong `renderer`. |
 | Không tạo được kịch bản | Kiểm tra mạng, API key/model trong Settings; nếu dùng local, kiểm tra Ollama và model. |
 | Không tạo được giọng đọc | Kiểm tra kết nối đến dịch vụ Edge TTS; đây là dịch vụ trực tuyến. |
 | Không tạo được ảnh AI local | Kiểm tra `.venv-image`, CUDA, VRAM và đầy đủ model cache; trạng thái có venv không chứng minh model đã sẵn sàng. |
@@ -197,8 +199,8 @@ Nếu hồ sơ cũ thiếu **Character voice** hoặc **Presenter · 21 pictures
 Từ đúng workspace mã nguồn mới, hoàn tất hoặc hủy tác vụ đang chạy, rồi dựng staging và cài:
 
 ```powershell
-powershell -NoProfile -File scripts/build_exe.ps1 -OutputRoot data/tmp/phase51-exe-stage
-powershell -NoProfile -File scripts/install_desktop.ps1 -StageDirectory data/tmp/phase51-exe-stage/DailyIntelEnglishStudio
+powershell -NoProfile -File installer/build_exe.ps1 -OutputRoot data/tmp/phase51-exe-stage
+powershell -NoProfile -File installer/install_desktop.ps1 -StageDirectory data/tmp/phase51-exe-stage/DailyIntelEnglishStudio
 ```
 
 Script cài kiểm tra các job chưa kết thúc và integrity/FK; sao lưu SQLite bằng API backup để giữ cả dữ liệu đã commit trong WAL. Script chỉ dừng EXE tại đường dẫn cài đích, giữ nguyên bản cũ và shortcut trong `data/backups/desktop-<thời gian>/`, rồi thay toàn bộ thư mục ứng dụng. Có cả `app.before-upgrade.db` và `app.at-exit.db`; ảnh/media vẫn ở thư mục dữ liệu hiện có. Script không tự phát hành hoặc tự mở bản vừa cài: bấm lại icon **Daily Beyond English Studio** và kiểm tra Settings.

@@ -56,7 +56,7 @@ async def list_engines() -> dict:
     started_at = time.perf_counter()
     engines = [
         {"id": "edge_tts", "available": True, "kind": "online_free"},
-        {"id": "vieneu", "available": vieneu_service.is_available(), "kind": "local", "setup": "scripts/setup_vieneu.ps1",
+        {"id": "vieneu", "available": vieneu_service.is_available(), "kind": "local", "setup": "installer/setup_vieneu.ps1",
          "voices": [{"id": voice_id, "gender": gender, "region": region, "style": style}
                     for voice_id, (gender, region, style) in VIENEU_PRESETS.items()]},
     ]

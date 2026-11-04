@@ -20,11 +20,11 @@ Focused checks executed during implementation:24 layout/bridge/channel/editor ch
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
 .venv\Scripts\python.exe -m ruff check .
-npm --prefix renderer test -- --run
-npm --prefix renderer run typecheck
-npm --prefix renderer run build:preview
+npm --prefix backend/renderer test -- --run
+npm --prefix backend/renderer run typecheck
+npm --prefix backend/renderer run build:preview
 .venv\Scripts\python.exe scripts/verify_solo_media.py
-powershell -File scripts/build_exe.ps1 -OutputRoot data/tmp/phase49-exe-stage
+powershell -File installer/build_exe.ps1 -OutputRoot data/tmp/phase49-exe-stage
 ```
 
 `scripts/verify_solo_media.py` installs the test suite's owner-DB/cloud guards, creates a unique disposable database, synthetic front images and encoded silent audio, then renders baseline/landscape/portrait/Short using the real renderer. It probes/fully decodes outputs and compares actual Player seek screenshots to StillFrame at the same frames for all three visual types. Evidence lives under `data/tmp/phase49-20261016/`; no real owner image is fabricated or marked accepted.

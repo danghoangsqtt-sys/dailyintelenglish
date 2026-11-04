@@ -4,14 +4,14 @@
 
 **Applies to:** 2.0.0 local build (not publicly released) | Windows 10/11 x64 | updated 2026-10-23.
 
-The Full and Lite 2.0.0 setup ZIPs are in `dist/2.0/`. Each contains the application folder and `SETUP.txt`; neither ZIP includes the project workspace/source, media library, or AI models. The matching workspace is required for video rendering. This local build has no GitHub release.
+The short guide is `installer/HUONG-DAN-SU-DUNG.txt` (also in each package). The Full and Lite 2.0.0 setup ZIPs and the Source ZIP are in the newest `dist/2.0-*` folder. Each contains the application folder and `SETUP.txt`; neither ZIP includes the project workspace/source, media library, or AI models. The matching workspace is required for video rendering. This local build has no GitHub release.
 Package files: `DailyBeyondEnglishStudio-2.0.0-Full-windows-x64.zip`, `DailyBeyondEnglishStudio-2.0.0-Lite-windows-x64.zip`, and `SHA256SUMS.txt`.
 
 | Tệp | Là gì |
 |---|---|
 | `DailyBeyondEnglishStudio-2.0.0-Lite-windows-x64.zip` | Ứng dụng bản **Lite**, cho máy không có GPU NVIDIA từ 8 GB (như laptop 4 GB VRAM) |
 | `DailyBeyondEnglishStudio-2.0.0-Full-windows-x64.zip` | Ứng dụng bản **Full**, cho máy có GPU NVIDIA từ 8 GB và đã cài mô hình tạo ảnh |
-| `SHA256SUMS.txt` | SHA-256 values for the Full and Lite ZIPs under `dist/2.0` |
+| `SHA256SUMS.txt` | SHA-256 values for the Full and Lite ZIPs in that folder |
 
 Gói thư viện **không chứa khoá API** và **không chứa dự án**. Đừng đưa gói lên nơi công khai, vì trong đó có ảnh nhân vật của kênh.
 
@@ -50,7 +50,7 @@ ffprobe -version
 ## 3. Giải nén
 
 1. Tạo thư mục `C:\Users\<tên-bạn>\Apps\DailyBeyondEnglishStudio`.
-2. Extract the matching 2.0.0 project workspace here; it must contain `backend`, `frontend`, `renderer` and `scripts` at its root. The workspace is separate from the application ZIP.
+2. Extract the matching 2.0.0 project workspace here; it must contain `backend`, `frontend` and `installer` at its root. The workspace is separate from the application ZIP.
 3. Extract the matching Full or Lite ZIP into `data\tmp\desktop-download`; it creates `data\tmp\desktop-download\DailyIntelEnglishStudio\DailyIntelEnglishStudio.exe`.
 
 ## 4. Cài phần dựng video và ứng dụng
@@ -58,15 +58,15 @@ ffprobe -version
 Mở PowerShell **tại thư mục gốc** `DailyBeyondEnglishStudio` rồi chạy lần lượt:
 
 ```powershell
-cd renderer
+cd backend/renderer
 npm ci
 npx remotion browser ensure
 npm run build:preview
-cd ..
+cd ..\..
 ```
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install_desktop.ps1 -StageDirectory .\data\tmp\desktop-download\DailyIntelEnglishStudio
+powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\install_desktop.ps1 -StageDirectory .\data\tmp\desktop-download\DailyIntelEnglishStudio
 ```
 
 Nếu PowerShell chặn `npm`, thay bằng `npm.cmd`. Lệnh cuối cài ứng dụng vào `dist\DailyIntelEnglishStudio` và tạo biểu tượng **Daily Beyond English Studio** trên Desktop.

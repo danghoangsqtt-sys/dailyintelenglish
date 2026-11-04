@@ -38,7 +38,7 @@ resolved on the server without inventing content.
 ### 15.1 — Speaker aliases in the section contract (P0, Coder)
 
 **Allowed files:** `app/services/script_pipeline.py`, `app/core/constants.py`,
-`prompts/script/section.txt`, `prompts/script/repair.txt`, `tests/test_script_pipeline.py`,
+`prompts/script/section.txt`, `prompts/script/repair.txt`, `backend/tests/test_script_pipeline.py`,
 `tests/fixtures/ai/*`.
 
 **Design:**
@@ -70,7 +70,7 @@ net; full suite; `ruff`.
 ### 15.2 — Deterministic consecutive-lines fix (P1, Coder)
 
 **Allowed files:** `app/services/script_pipeline.py`, `app/core/constants.py`,
-`prompts/script/repair.txt`, `tests/test_script_pipeline.py`, `tests/fixtures/ai/*`.
+`prompts/script/repair.txt`, `backend/tests/test_script_pipeline.py`, `tests/fixtures/ai/*`.
 
 **Design:** after the one semantic repair, if the *only* remaining structural error is a
 run of more than `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER` lines by one speaker in a
@@ -88,9 +88,9 @@ constants pin; revert-and-confirm-failure; full suite; `ruff`.
 
 ### 15.3 — Trial runner per-gate evidence path + `_record_dropped_items` layering (P2, Coder)
 
-**Allowed files:** `scripts/run_ai_operational_trial.py`, `app/services/ai_job_service.py`,
-`app/services/learning_pipeline.py`, `tests/test_ai_job_service.py`,
-`tests/test_learning_pipeline.py`.
+**Allowed files:** `backend/scripts/run_ai_operational_trial.py`, `app/services/ai_job_service.py`,
+`app/services/learning_pipeline.py`, `backend/tests/test_ai_job_service.py`,
+`backend/tests/test_learning_pipeline.py`.
 
 **Actions:** `--gate <name>` selects `data/quality_reviews/phase15/<name>/` for evidence
 and trial data (default keeps today's path); `ai_job_service.set_job_metric(db, job_id,

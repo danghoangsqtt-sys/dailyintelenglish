@@ -49,7 +49,7 @@ Order: **17.1 → 17.2** (Coder, doc-first, PM approves each card's design befor
 
 **Allowed files:** `app/services/script_pipeline.py` (global validation stage and the
 repair-prompt inputs only), `app/core/constants.py`, `prompts/script/repair.txt`,
-`tests/test_script_pipeline.py`, `tests/fixtures/ai/*`, `CHANGELOG.md`.
+`backend/tests/test_script_pipeline.py`, `tests/fixtures/ai/*`, `CHANGELOG.md`.
 
 **Required behaviour (the design details are the Coder's, in the card):**
 1. **Targeted budget repair.** When the total is outside ±10%, repair the section with the
@@ -75,9 +75,9 @@ the run 1 shape. Full suite, `ruff`.
 
 ### 17.2 — Final-section sign-off (outro watch item, P2, Coder)
 
-**Allowed files:** `prompts/script/section.txt`, `scripts/run_ai_operational_trial.py`
-(diagnostic field only), `tests/test_script_pipeline.py`,
-`tests/test_run_ai_operational_trial.py` (if present; otherwise name the test file in the card),
+**Allowed files:** `prompts/script/section.txt`, `backend/scripts/run_ai_operational_trial.py`
+(diagnostic field only), `backend/tests/test_script_pipeline.py`,
+`backend/tests/test_run_ai_operational_trial.py` (if present; otherwise name the test file in the card),
 `CHANGELOG.md`.
 
 **Required behaviour:**

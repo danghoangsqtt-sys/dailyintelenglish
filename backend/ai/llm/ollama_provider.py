@@ -32,7 +32,7 @@ _LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 def validate_loopback_url(base_url: str) -> str:
     """Reject anything but a plain HTTP loopback base URL (anti-SSRF).
 
-    Mirrors `scripts/qualify_local_ai.py::validate_loopback_url` -- duplicated
+    Mirrors the former `qualify_local_ai.py::validate_loopback_url` -- duplicated
     rather than imported, since that file is a standalone diagnostic script, not
     product code (Task 13.1's allowed files did not include `app/`).
     """

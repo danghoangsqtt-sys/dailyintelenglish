@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Changed — Project layout and clean-up (Phase 95, 2026-11-04)
+
+- Tests, maintenance scripts, the video renderer and `requirements.txt` moved into `backend/`; everything that builds and installs the app moved into `installer/`.
+- The package folder now has a Source ZIP and a Vietnamese guide (`HUONG-DAN-SU-DUNG.txt`) covering which edition to choose, installing, daily use, updating and problems.
+- Removed old builds and backups, unused scripts, exact duplicate pictures and old renders from `data/`.
+
 ### Changed — The seven steps in the new look (Phase 94, 2026-11-04)
 
 - The step list is grouped in three stages (Content, Production, Publishing); the bar at the bottom of every step has a Back link, Lina's face beside what is left to do, and Next; Step 7 leads back to Today. Every step opens with the rail folded so the work has the room.

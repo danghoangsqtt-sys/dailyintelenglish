@@ -8,7 +8,7 @@ OmniVoice GPU integration was investigated and deliberately not pursued — see 
 and Step 4's UI does not offer any other engine as a selectable option.
 
 ### Setup
-No installation beyond `pip install -r requirements.txt` (`edge-tts` is already pinned
+No installation beyond `pip install -r backend/requirements.txt` (`edge-tts` is already pinned
 there) — it's a free, network-based Microsoft neural TTS endpoint, not a local model.
 An internet connection is required at synthesis time; no API key is needed.
 
@@ -61,7 +61,7 @@ installed and run for real on this machine's RTX 3060: `torch==2.11.0+cu128` +
 downloaded via `huggingface_hub.snapshot_download` into `models/omnivoice/`. The model
 was confirmed to actually load onto the GPU (`torch.cuda.is_available()` checked, not
 assumed — an earlier unpinned `torch` install had silently resolved to a CPU-only build)
-and report real VRAM usage (2.03GB). `scripts/check_dependencies.py` reported this GREEN.
+and report real VRAM usage (2.03GB). `backend/scripts/check_dependencies.py` reported this GREEN.
 
 ### Why it was not pursued further
 OmniVoice's real inference API is `model.generate(text=..., ref_audio="ref.wav",
@@ -89,7 +89,7 @@ synthesis calls succeeded in Task 2.1c's QA pass).
 
 ## Piper TTS (offline, availability-checked only)
 
-`scripts/check_dependencies.py` checks for a `piper` binary on `PATH` as an
+`backend/scripts/check_dependencies.py` checks for a `piper` binary on `PATH` as an
 availability signal but nothing in the app currently calls it — it is not a selectable
 or implemented synthesis path, only a dependency-check placeholder for a possible future
 fully-offline mode.

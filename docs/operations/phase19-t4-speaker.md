@@ -71,7 +71,7 @@ crashes; restored, 10/10 green again.
 - `git log fe06405..HEAD -- app/services/video_service.py`: **empty.** Untouched.
 - Python full suite: **1178/1178 passed**, unchanged (no Python files touched). `ruff check
   .`: clean.
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 - 19.3's karaoke band still renders correctly alongside the new chip -- confirmed directly:
   spot-check frame 1 (§6) shows both the karaoke-highlighted word "or" **and** the active
   Alex chip in the same frame, proving `<SpeakerChips>` is a true sibling addition, not a
@@ -125,7 +125,7 @@ not laggy.
 - `tsc --noEmit` on `video-renderer/src/`: **clean.**
 - `npm run test` (vitest): **10/10 passed** (6 karaoke + 4 speaker).
 - Python full suite: **1178/1178 passed**, unchanged. `ruff check .`: **clean.**
-- `tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
+- `backend/tests/test_video_studio_browser.py`: **10/10 passed**, unchanged.
 - `git log fe06405..HEAD -- app/services/video_service.py`: **empty.**
 
 ## 10. Carry-over conditions (acknowledged, not acted on)

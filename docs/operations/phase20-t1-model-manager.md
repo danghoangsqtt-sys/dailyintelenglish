@@ -69,7 +69,7 @@ This comes from the Task 20.2 `warm_qwen2` run, with qwen loaded by the app's ow
 
 ## 4. Test coverage
 
-- **30 new tests:** `tests/test_gpu_model_manager.py` (24) and `tests/test_ai_providers.py`
+- **30 new tests:** `backend/tests/test_gpu_model_manager.py` (24) and `backend/tests/test_ai_providers.py`
   (+6).
 - **Mutation-checked:** a lock that is not rebuilt per loop, removing the lease from
   `generate`, and removing the eviction poll each make their tests fail.

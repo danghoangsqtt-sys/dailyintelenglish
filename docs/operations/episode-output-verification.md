@@ -47,7 +47,7 @@ Local Market/
 From the project directory:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\start_studio.ps1
+powershell -ExecutionPolicy Bypass -File backend\scripts\start_studio.ps1
 ```
 
 The launcher uses the workspace database, creates a fresh SQLite backup before startup, and opens port 8001. If a server is already listening there, open the existing source session. It will refuse to silently connect to an unrelated process. In Project Folder, choose the shared series root; the application adds the episode subfolder automatically when saving/exporting.

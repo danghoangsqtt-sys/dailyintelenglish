@@ -10,10 +10,10 @@ The production composition memoizes page construction for each line/layout/phras
 
 | Area | Files |
 |---|---|
-| Pure segmentation and page selection | `renderer/src/captionPaging.ts` |
-| Compatible captionPage entry point | `renderer/src/karaoke.ts` |
-| Learning phrases and memoization | `renderer/src/Episode.tsx` |
-| Regression coverage | `renderer/src/captionPaging.test.ts` |
+| Pure segmentation and page selection | `backend/renderer/src/captionPaging.ts` |
+| Compatible captionPage entry point | `backend/renderer/src/karaoke.ts` |
+| Learning phrases and memoization | `backend/renderer/src/Episode.tsx` |
+| Regression coverage | `backend/renderer/src/captionPaging.test.ts` |
 
 Existing font size, safe-area geometry, word/character limits and caption motion remain as configured. The transcript, original audio, speaker and word timings are retained.
 
@@ -66,6 +66,6 @@ Local artifacts (runtime data is excluded from Git): `data/tmp/caption-fix-20261
 
 ## Using the fix
 
-The installed Windows trial links to this workspace's `renderer/` through `studio-runtime.json`; new renders from this installation use the updated renderer. Existing MP4s contain the old burned-in text and need to be rendered again to show the new pages. This task provides short review clips and does not replace the full exported episode.
+The installed Windows trial links to this workspace's `backend/renderer/` through `studio-runtime.json`; new renders from this installation use the updated renderer. Existing MP4s contain the old burned-in text and need to be rendered again to show the new pages. This task provides short review clips and does not replace the full exported episode.
 
 The published `v1.4.0-rc.1` tag, ZIP and release source remain unchanged. The source fix is recorded under **Unreleased** on the owner branch; a fresh installation made from the old release tag alone does not include this patch. No new EXE or release-version claim is made for this task.

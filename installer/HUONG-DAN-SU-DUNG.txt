@@ -1,0 +1,129 @@
+﻿﻿DAILY BEYOND ENGLISH STUDIO 2.0 - HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG
+Dành cho Windows 10/11 64-bit.
+
+
+1. CHỌN BẢN NÀO?
+----------------
+Bản Lite - cho máy cấu hình yếu: không có card NVIDIA hoặc card dưới 8 GB.
+  Làm được đầy đủ: viết kịch bản (AI qua Internet), giọng đọc, dựng video, ảnh bìa,
+  gói YouTube, kế hoạch kênh, Shorts hàng loạt. Dùng ảnh có sẵn trong thư viện.
+  Chỉ ẩn 4 nút vẽ ảnh bằng AI trên máy: ảnh cảnh, ảnh hoạt động còn thiếu (Bước 5),
+  ảnh chủ đề và cảnh AI (Bước 6).
+
+Bản Full - cho máy có card NVIDIA từ 8 GB VRAM trở lên VÀ đã cài mô hình vẽ ảnh Qwen
+  (môi trường .venv-image, xem docs\user\windows-installation.md, mục 6).
+  Có mọi thứ của bản Lite, thêm 4 nút vẽ ảnh AI trên máy.
+  Nếu máy không đạt yêu cầu, bản Full cũng tự ẩn 4 nút đó và chạy như bản Lite.
+
+Không chắc thì chọn Lite. Dự án và dữ liệu dùng chung được cho cả hai bản, đổi bản
+sau này không mất gì.
+
+
+2. CẦN CHUẨN BỊ
+---------------
+Trong thư mục gói cài có:
+  DailyBeyondEnglishStudio-2.0.0-Source.zip             Mã nguồn - máy nào cũng cần
+  DailyBeyondEnglishStudio-2.0.0-Lite-windows-x64.zip   Ứng dụng bản Lite
+  DailyBeyondEnglishStudio-2.0.0-Full-windows-x64.zip   Ứng dụng bản Full
+  SHA256SUMS.txt                                        Mã kiểm tra tệp
+
+Máy cần: Internet, ít nhất 10 GB ổ trống, khoá API Gemini hoặc OpenRouter (tự đăng ký,
+gói cài không kèm khoá). RAM càng nhiều dựng video càng nhanh; máy thử 24 GB chạy tốt.
+
+Mở PowerShell (không cần quyền Admin), chạy:
+  winget install OpenJS.NodeJS.LTS
+  winget install Gyan.FFmpeg
+
+ĐÓNG PowerShell, mở lại, rồi kiểm tra:
+  node --version        (phải từ 24 trở lên)
+  ffmpeg -version
+  ffprobe -version
+
+
+3. CÀI ĐẶT (làm một lần)
+------------------------
+Bước 1. Tạo thư mục, ví dụ C:\Apps\DailyBeyondEnglishStudio
+        Nên chọn ổ còn nhiều chỗ: video sẽ được lưu trong thư mục này.
+
+Bước 2. Giải nén Source.zip vào thư mục đó. Bên trong phải thấy ngay:
+        backend, frontend, installer
+
+Bước 3. Tạo thư mục con data\tmp\desktop-download rồi giải nén gói Lite HOẶC Full
+        vào đó. Kết quả có:
+        data\tmp\desktop-download\DailyIntelEnglishStudio\DailyIntelEnglishStudio.exe
+
+Bước 4. Mở PowerShell tại thư mục gốc C:\Apps\DailyBeyondEnglishStudio, chạy lần lượt:
+  cd backend\renderer
+  npm ci
+  npx remotion browser ensure
+  npm run build:preview
+  cd ..\..
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\installer\install_desktop.ps1 -StageDirectory .\data\tmp\desktop-download\DailyIntelEnglishStudio
+
+        Nếu PowerShell chặn npm, thay npm bằng npm.cmd.
+        Xong sẽ có biểu tượng "Daily Beyond English Studio" trên Desktop.
+
+Lưu ý: ứng dụng dùng thư mục dự án này để dựng video. Đừng đổi tên hay di chuyển nó
+sau khi cài. Nếu buộc phải chuyển, hãy cài lại Bước 4.
+
+
+4. MỞ LẦN ĐẦU
+-------------
+1. Bấm biểu tượng trên Desktop. Giao diện mở trong trình duyệt tại http://localhost:8000
+2. Cài đặt > Nhà cung cấp AI: nhập khoá API, bấm Lưu, bấm Kiểm tra kết nối.
+3. Cài đặt > AI: chọn Cloud-first (máy yếu nên chọn cái này).
+4. Có thư viện nhân vật từ máy khác: Cài đặt > Dữ liệu & đồng bộ > Nhập một gói,
+   chọn tệp library-<ngày>.zip. Xong mở Thư viện để kiểm tra có đủ nhân vật.
+5. Cài đặt > Chung: chọn Khán giả của kênh (Quốc tế, Việt Nam hoặc Cả hai).
+6. Giọng tiếng Việt chạy trên máy (VieNeu) là tuỳ chọn, tải thêm khoảng 1 GB:
+   powershell -ExecutionPolicy Bypass -File .\installer\setup_vieneu.ps1
+
+
+5. SỬ DỤNG HẰNG NGÀY
+--------------------
+Thanh bên trái:
+  Tạo video   Chọn loại video, hoặc tạo nhiều Shorts một lúc.
+  Hôm nay     Việc đang chờ bạn duyệt, video đang làm, lịch tuần này.
+  Kênh        Kế hoạch đăng và tự động hoá.
+  Video       Mọi dự án: tìm, lọc, mở lại, xem theo bước.
+  Thư viện    Nhân vật, cảnh và ảnh, nhạc, giọng đọc và thương hiệu.
+  Cài đặt     Khoá API, AI, đồng bộ dữ liệu.
+
+Làm một video (7 bước, thanh dưới đáy luôn có nút sang bước tiếp theo):
+  1 Cấu hình   Chọn loại video, chủ đề, nhân vật.
+  2 Kịch bản   AI viết, bạn sửa.
+  3 Bài học    Từ vựng, nội dung học.
+  4 Giọng đọc  Tạo giọng, nghe lại, làm lại câu chưa ưng.
+  5 Video      Xem cảnh, sửa, rồi dựng video.
+  6 Ảnh bìa    Chọn hoặc tạo ảnh bìa.
+  7 YouTube    Tiêu đề, mô tả, thẻ, rồi xuất gói đăng.
+
+
+6. ĐỒNG BỘ GIỮA HAI MÁY
+-----------------------
+Máy vừa sửa: Cài đặt > Dữ liệu & đồng bộ > Xuất gói. Chép tệp sang máy kia, Nhập một gói.
+Gói chứa nhân vật, ảnh, nhạc, kế hoạch kênh. KHÔNG chứa khoá API, dự án và video.
+Gộp chứ không xoá: xoá ở máy này không làm mất ở máy kia. Đừng đưa gói lên nơi công khai.
+
+
+7. CẬP NHẬT BẢN MỚI
+-------------------
+1. Chờ tác vụ đang chạy xong, đóng ứng dụng (Task Manager > DailyIntelEnglishStudio.exe).
+2. Giải nén Source.zip mới đè lên thư mục gốc. Thư mục data được giữ nguyên.
+3. Giải nén gói ứng dụng mới vào data\tmp\desktop-download, chạy lại Bước 4 ở mục 3.
+Trình cài tự sao lưu cơ sở dữ liệu vào data\backups trước khi nâng cấp.
+
+
+8. KHI GẶP LỖI
+--------------
+Bấm biểu tượng không thấy gì     Mở http://localhost:8000; xem data\logs\desktop.log
+Không dựng được video            Kiểm tra node, ffmpeg, ffprobe; chạy lại lệnh npm ở Bước 4
+Dựng video quá chậm, lỗi đồ hoạ  Tạo tệp .env ở thư mục gốc, ghi DIE_REMOTION_GL=auto, mở lại
+Không tạo được kịch bản          Kiểm tra khoá API, Internet, chế độ Cloud-first
+Không thấy nút vẽ ảnh AI         Đúng với bản Lite hoặc máy chưa đủ card/mô hình; xem
+                                 Cài đặt > Chung > Ảnh AI trên máy này
+Nhập gói báo "A job is running"  Chờ tác vụ xong hoặc mở lại ứng dụng rồi nhập lại
+Muốn quay lại trước khi nhập gói Đóng app, chép data\backups\app-before-library-import-....db
+                                 đè lên data\app.db
+
+Dữ liệu của bạn nằm trong thư mục data. Hãy sao lưu thư mục này định kỳ.

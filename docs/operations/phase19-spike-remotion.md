@@ -96,7 +96,7 @@ Three consecutive real renders of the same episode (same subprocess contract, D1
   `VIDEO_WIDTH_STANDARD`/`VIDEO_HEIGHT_STANDARD` and all three ffmpeg background PNGs —
   **no upscale**, per PM's D19.1-c confirmation.
 - **Fallback path unaffected:** `app/services/video_service.py` was not modified by this
-  task. `tests/test_video_studio_browser.py` — 10/10 passed, unchanged, after the
+  task. `backend/tests/test_video_studio_browser.py` — 10/10 passed, unchanged, after the
   `video-renderer/` workspace landed. Full suite: **1175/1175 passed**, `ruff check .` clean
   (same baseline as Phase 18 close-out). `tsc --noEmit` clean on `video-renderer/src/`.
 

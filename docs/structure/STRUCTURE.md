@@ -9,7 +9,7 @@ Current layout, refreshed 2026-10-15 (Phase 46). Module rows are generated from 
 | `backend/ai/models/` | Local model weights, Hugging Face cache (gitignored) |
 | `backend/db/migrations/` | Numbered SQL migrations, applied at startup |
 | `frontend/` | `pages/` (one HTML page per screen) and `static/` (css, js, fonts, brand) |
-| `renderer/` | Remotion (React/TypeScript) video compositions, `public/` assets, Vitest tests |
+| `backend/renderer/` | Remotion (React/TypeScript) video compositions, `public/` assets, Vitest tests |
 | `scripts/` | Maintenance CLIs and `benchmarks/`; nothing the app imports at runtime |
 | `tests/` | pytest suite (unit, API, Playwright browser tests) |
 | `docs/` | `user/` guides, `operations/` runbooks and gate reports, `implementation/` phase plans, `report/`, `structure/`, `brainstorm/` |

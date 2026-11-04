@@ -15,4 +15,4 @@ stretching) and to leave `speakers` empty only for objects, places and crowds.
 Minh (all black) checks a phone, Lan (all white) stretches by a window and eats oatmeal. Outfits and faces are right; the
 man looks at the lens in the phone insert, which is natural for a portrait insert.
 
-Tests: `tests/test_visuals_inserts_character.py` (2), storyboard shot and propose suites green.
+Tests: `backend/tests/test_visuals_inserts_character.py` (2), storyboard shot and propose suites green.

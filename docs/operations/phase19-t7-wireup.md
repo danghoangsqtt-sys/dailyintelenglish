@@ -21,12 +21,12 @@ existing ffmpeg body — same object code as before this task, now reached via
 **Revert-and-confirm-failure done for real** (not optional this round, per the card): with
 `_resolve_renderer` temporarily hardcoded to always return `"remotion"`, both
 `test_default_renderer_still_ffmpeg_never_touches_remotion`
-(`tests/test_video_service.py`) and `test_kill_switch_forces_ffmpeg_even_when_request_wants_remotion`
-(`tests/test_video_service_remotion.py`) failed with genuine `AssertionError`s from the
+(`backend/tests/test_video_service.py`) and `test_kill_switch_forces_ffmpeg_even_when_request_wants_remotion`
+(`backend/tests/test_video_service_remotion.py`) failed with genuine `AssertionError`s from the
 injected "must never be called" guards — not silent passes. Restored, both green again.
 
 **Real correction to the design doc's own count:** the design record claimed
-`tests/test_video_service.py` had "12 test functions" — the real count (confirmed by
+`backend/tests/test_video_service.py` had "12 test functions" — the real count (confirmed by
 running `pytest -v` before writing any code) is **21** existing tests, now **22** with the
 new guard test. All 22 pass unmodified.
 
@@ -153,7 +153,7 @@ live probe (renaming the browser cache away and re-rendering triggered a fully a
 
 **Scope clarification, found while reading the card's own "Allowed files" text carefully:**
 the card's Option 2 packaging bullet says "no bundle change" — meaning this task does not
-modify `daily_intel_english_studio.spec` to add `video-renderer/` as bundled data. A
+modify `installer/daily_intel_english_studio.spec` to add `video-renderer/` as bundled data. A
 packaged `.exe` today therefore still has no working Remotion path (no `video-renderer/`
 directory ships at all) — `check_dependencies.py`'s `check_video_renderer_deps` correctly
 reports this as missing/YELLOW there, with "Standard (ffmpeg) still works" guidance. The
@@ -165,11 +165,11 @@ scopes it out for now.
 ## 9. Full checks
 
 - Python full suite: **1205/1205 passed** (1189 baseline + 16 new: 15 in
-  `tests/test_video_service_remotion.py` + 1 guard test in `tests/test_video_service.py`).
+  `backend/tests/test_video_service_remotion.py` + 1 guard test in `backend/tests/test_video_service.py`).
 - `ruff check .`: **clean** (whole repo).
-- `tests/test_video_service.py`: all **22** tests (21 existing + 1 new) pass unmodified.
-- **3 real, necessary test-assertion updates**, disclosed: `tests/test_video_shell_browser.py`
-  (1) and `tests/test_video_studio_browser.py` (2) asserted the exact JSON body sent to
+- `backend/tests/test_video_service.py`: all **22** tests (21 existing + 1 new) pass unmodified.
+- **3 real, necessary test-assertion updates**, disclosed: `backend/tests/test_video_shell_browser.py`
+  (1) and `backend/tests/test_video_studio_browser.py` (2) asserted the exact JSON body sent to
   `/video/generate` — adding the new `renderer` field to that body (D19.7-f) broke these 3
   real, pre-existing assertions. Fixed by adding `"renderer": "ffmpeg"` to each expected
   payload (the real, correct new default), not by weakening the assertions.
@@ -186,7 +186,7 @@ scopes it out for now.
    used.
 2. **Packaged `.exe` Remotion support:** not implemented this task (D19.7-h's "no bundle
    change" scoping) — a future task must add `video-renderer/`'s production files to
-   `daily_intel_english_studio.spec` and implement the per-user-writable-copy plan before a
+   `installer/daily_intel_english_studio.spec` and implement the per-user-writable-copy plan before a
    packaged install can offer the Enhanced renderer at all.
 3. **Live network-download-failure fallback:** not re-demonstrated live this task (the
    design phase's own probe already produced this evidence with a bad `--browser-executable`

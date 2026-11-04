@@ -75,7 +75,7 @@ Các bộ cài local nằm trong `dist/2.0/`: `DailyBeyondEnglishStudio-2.0.0-Fu
 | Nhu cầu | Cần chuẩn bị |
 |---|---|
 | **Mở ứng dụng** | Windows x64, thư mục có quyền ghi, trình duyệt web và thư mục mã nguồn đúng phiên bản để liên kết runtime. Windows 11 x64 là môi trường đã kiểm thử. |
-| **Dựng/xuất video và xử lý audio** | **Node.js ≥ 24**, npm, phụ thuộc trong `renderer/`, Chrome Headless Shell của Remotion, **FFmpeg và ffprobe** trong PATH. |
+| **Dựng/xuất video và xử lý audio** | **Node.js ≥ 24**, npm, phụ thuộc trong `backend/renderer/`, Chrome Headless Shell của Remotion, **FFmpeg và ffprobe** trong PATH. |
 | **Tạo kịch bản bằng AI cloud** | Internet và API key Gemini hoặc OpenRouter được cấu hình trong Settings. Khả năng sử dụng phụ thuộc tài khoản/model của nhà cung cấp. |
 | **Tạo giọng đọc** | Internet để sử dụng Edge TTS. |
 | **AI văn bản cục bộ — tùy chọn** | Ollama và model tương ứng; xem [hướng dẫn local AI](https://github.com/danghoangsqtt-sys/dailyintelenglish/blob/v1.4.0-rc.1/docs/operations/local-ai.md). |
@@ -88,7 +88,7 @@ Các bộ cài local nằm trong `dist/2.0/`: `DailyBeyondEnglishStudio-2.0.0-Fu
 1. Cài Node.js ≥ 24 và FFmpeg/ffprobe.
 2. Tải mã nguồn đúng tag và gói Windows ở trên; giải nén theo hướng dẫn.
 3. Cài renderer bằng `npm ci`, chuẩn bị trình duyệt bằng `npx remotion browser ensure` trong thư mục `renderer`. Với mã nguồn Phase 49, chạy thêm `npm run build:preview` để có Player trong Step 5.
-4. Chạy `scripts/install_desktop.ps1` với thư mục staging để cài ứng dụng và tạo icon logo.
+4. Chạy `installer/install_desktop.ps1` với thư mục staging để cài ứng dụng và tạo icon logo.
 5. Mở icon **Daily Beyond English Studio**, cấu hình AI trong Settings và thử một tập ngắn.
 
 **[Xem đầy đủ lệnh PowerShell và cách kiểm tra cài đặt →](docs/user/windows-installation.md)**
@@ -148,8 +148,8 @@ Dùng Python **3.14** của môi trường đã kiểm thử, Node.js ≥ 24 và
 git clone --branch v1.4.0-rc.1 --depth 1 https://github.com/danghoangsqtt-sys/dailyintelenglish.git DailyBeyondEnglishStudio
 Set-Location .\DailyBeyondEnglishStudio
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-Push-Location renderer
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+Push-Location backendenderer
 npm ci
 npx remotion browser ensure
 Pop-Location
@@ -163,8 +163,10 @@ Cấu trúc chính tại tag phát hành:
 ```text
 backend/       API, dịch vụ nội dung/media, AI, database
 frontend/      Giao diện studio
-renderer/      Compositions và hiệu ứng Remotion
-scripts/       Công cụ vận hành, build và cài Desktop
+backend/renderer/  Compositions và hiệu ứng Remotion (dựng video)
+backend/tests/ Kiểm thử
+backend/scripts/ Công cụ vận hành
+installer/     Đóng gói, cài Desktop, hướng dẫn sử dụng
 docs/          Tài liệu người dùng và kỹ thuật
 data/          Dự án, media, log và cache cục bộ (không đưa lên Git)
 ```

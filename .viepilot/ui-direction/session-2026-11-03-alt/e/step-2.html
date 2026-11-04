@@ -4,7 +4,7 @@
 <body data-page="videos" data-step="2">
 <main>
   <div class="main8">
-    <div class="tip"><span class="face"><img src="../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp" alt=""></span><p>Mình đã soát lại và <b>sửa câu 9</b> cho đúng chủ đề. Bạn xem lại câu đó nhé.</p><a class="btn sm primary" href="#l9">Xem câu 9</a></div>
+    <div class="tip"><span class="face"><img src="../lina/front/calm__closed.webp" alt=""></span><p>Mình đã soát lại và <b>sửa câu 9</b> cho đúng chủ đề. Bạn xem lại câu đó nhé.</p><a class="btn sm primary" href="#l9">Xem câu 9</a></div>
     <section class="panel" id="script" style="overflow:hidden"></section>
   </div>
   <aside class="side4">
@@ -16,9 +16,9 @@
   </aside>
 </main>
 <script>
-const L = "../../session-2026-11-03-ia/mascot/lina/front/calm__closed.webp";
+const L = "../lina/front/calm__closed.webp";
 const line = (n, txt, tr, sel) => `<div class="line${sel ? " sel" : ""}" id="l${n}"><span class="no num">${n}</span><span class="who"><img src="${L}" alt="">Cô giáo</span>
-  <div class="txt">${txt}${tr ? `<small>${tr}</small>` : ""}</div><button class="btn sm ghost tools" type="button" aria-label="Viết lại câu ${n}"><svg class="i sm" aria-hidden="true"><use href="../../session-2026-11-03-ia/icons.svg#refresh"/></svg></button></div>`;
+  <div class="txt">${txt}${tr ? `<small>${tr}</small>` : ""}</div><button class="btn sm ghost tools" type="button" aria-label="Viết lại câu ${n}"><svg class="i sm" aria-hidden="true"><use href="../icons.svg#refresh"/></svg></button></div>`;
 document.getElementById("script").innerHTML = `<div class="scene-h">Cảnh 1 · Câu bị động là gì <span class="state" style="margin-left:auto;height:24px">Thẻ: bảng so sánh</span></div>`
   + line(1, "Hôm nay mình hiểu câu bị động trong một phút nhé.") + line(2, "Câu chủ động nói ai làm việc gì: \"Workers built the bridge.\"", "Công nhân đã xây cây cầu.")
   + line(3, "Khi người làm không quan trọng, ta đưa vật bị tác động lên đầu câu: \"The bridge was built in 1990.\"", "Cây cầu được xây năm 1990.", 1)

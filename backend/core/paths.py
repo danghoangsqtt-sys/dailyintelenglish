@@ -33,7 +33,7 @@ def get_runtime_root() -> Path:
     configured = os.environ.get("DIE_WORKSPACE_DIR")
     if configured:
         root = Path(configured).expanduser().resolve()
-        if not (root / "renderer/package.json").is_file() or not (root / "backend/ai/image/image_worker.py").is_file():
+        if not (root / "backend/renderer/package.json").is_file() or not (root / "backend/ai/image/image_worker.py").is_file():
             raise RuntimeError("DIE_WORKSPACE_DIR must point to the Studio repository containing renderer and the image worker")
         return root
     return get_project_root()
@@ -46,7 +46,7 @@ BACKEND_DIR = PROJECT_ROOT / "backend"
 AI_DIR = BACKEND_DIR / "ai"
 PROMPTS_DIR = AI_DIR / "prompts"
 MIGRATIONS_DIR = BACKEND_DIR / "db" / "migrations"
-RENDERER_DIR = RUNTIME_ROOT / "renderer"
+RENDERER_DIR = RUNTIME_ROOT / "backend/renderer"
 MODELS_DIR = RUNTIME_ROOT / "backend/ai/models"  # local model weights (gitignored)
 IMAGE_VENV_DIR = RUNTIME_ROOT / ".venv-image"  # the image worker's own Python (torch, diffusers)
 VIENEU_VENV_DIR = RUNTIME_ROOT / ".venv-vieneu"  # Phase 87: the VieNeu TTS worker's own Python (vieneu, faster-whisper)

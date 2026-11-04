@@ -4,7 +4,7 @@
 - **Controlling protocol:** `docs/implementation/phase-14-ai-gateway-resilience.md` §4.4
   (decision rules declared before any run; Amendment C recorded before any run).
 - **Run date:** 2026-09-21 (local matrix 08:07–08:41Z; Gemini matrix 08:41–08:53Z UTC)
-- **Runner:** `scripts/run_ai_operational_trial.py --matrix local|gemini` at code HEAD
+- **Runner:** `backend/scripts/run_ai_operational_trial.py --matrix local|gemini` at code HEAD
   `153aa16` (real in-process `uvicorn` on an isolated port, real HTTP, no mocks, isolated
   `DIE_DATA_DIR`). Every number below is traceable to the evidence files at the end.
 - **Status of this report:** final. The media step crashed in the first pass on a
