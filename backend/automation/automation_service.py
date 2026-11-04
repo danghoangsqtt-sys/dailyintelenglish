@@ -165,6 +165,16 @@ def state_of(episode: dict[str, Any], item: dict[str, Any] | None) -> str:
     return "in_progress" if episode.get("project_id") else "planned"
 
 
+def cover_url(assets: dict[str, Any], vertical: bool) -> str:
+    """The cover a card shows: a Short's 9:16 one (its 16:9 cover squeezed into a tall box showed only a slice, owner
+    2026-11-04), a 16:9 video's 16:9 one; the other size when that one is missing."""
+    for aspect in ("9x16", "16x9") if vertical else ("16x9", "9x16"):
+        asset = assets.get(aspect) or {}
+        if asset.get("jpg") or asset.get("png"):
+            return asset.get("jpg") or asset.get("png")
+    return ""
+
+
 async def board(db: aiosqlite.Connection, today: date, days: int = 14) -> dict[str, Any]:
     """The schedule strip (the next `days` days, late ones on today) and every made or started video, for the studio."""
     from backend.media import thumbnail_service
@@ -189,7 +199,7 @@ async def board(db: aiosqlite.Connection, today: date, days: int = 14) -> dict[s
         rows = [row for row in await thumbnail_service.get_thumbnail_rows(db, episode["project_id"]) if row["is_selected"]]
         if rows:
             record = (await thumbnail_service.public_records(rows[:1]))[0]
-            thumbs[episode["project_id"]] = (record["assets"].get("16x9") or {}).get("jpg") or (record["assets"].get("16x9") or {}).get("png") or ""
+            thumbs[episode["project_id"]] = cover_url(record["assets"], episode["explainer_style"] in SHORT_STYLES)
     cards = []
     for episode in episodes:
         item = latest.get(episode["id"])

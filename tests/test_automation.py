@@ -591,3 +591,12 @@ async def test_a_broken_fact_check_answer_is_asked_once_more():
                                                    "explainer_style": "vox"}, on_step)
     assert flaky.broken == 0 and flaky.done["youtube"]  # the broken answer was asked again, and the video was made
     assert [path for _, path, _ in flaky.calls].count("/explainer-plan/propose") == 1  # no fresh plan was needed
+
+
+def test_a_short_card_shows_its_tall_cover_and_a_video_its_wide_one():
+    from backend.automation.automation_service import cover_url
+    both = {"16x9": {"jpg": "/w.jpg", "png": "/w.png"}, "9x16": {"jpg": "/t.jpg", "png": "/t.png"}}
+    assert cover_url(both, vertical=True) == "/t.jpg"
+    assert cover_url(both, vertical=False) == "/w.jpg"
+    assert cover_url({"16x9": {"png": "/w.png"}}, vertical=True) == "/w.png"  # the other size when one is missing
+    assert cover_url({}, vertical=False) == ""
