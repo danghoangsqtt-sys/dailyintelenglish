@@ -2,7 +2,7 @@
  * Phase 78 (Task 78.2): the sketch of one storyboard beat as the talking-characters video lays it out, from
  * POST /api/projects/{id}/storyboard/preview. Shared by the storyboard review and the Shorts clip cards.
  *
- * The geometry copies the renderer (renderer/src/spriteTimeline.ts `canvasBox`, renderer/src/safeZone.ts `VERTICAL`):
+ * The geometry copies the renderer (backend/renderer/src/spriteTimeline.ts `canvasBox`, backend/renderer/src/safeZone.ts `VERTICAL`):
  *   16:9 -- the scene fills the frame; each sprite box is 1.2x the frame height, as wide as the frame is high, centred
  *           at 27% / 73%, its highest head 5% from the top; an insert's illustration covers the frame.
  *   9:16 -- the picture is the top 830 of 1920 px (fading out from 500), captions sit at 790-1040 between x 216 and 864,

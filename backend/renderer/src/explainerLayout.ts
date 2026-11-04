@@ -1,4 +1,4 @@
-import rules from "../../frontend/static/explainer-layout-rules.json";
+import rules from "../../../frontend/static/explainer-layout-rules.json";
 
 export const EXPLAINER_RULES = rules;
 export type Aspect = "16:9" | "9:16";

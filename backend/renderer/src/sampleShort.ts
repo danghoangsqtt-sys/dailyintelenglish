@@ -3,7 +3,7 @@
  * what the Short will look like before anything is written or voiced. The words are timed evenly (no audio); the real
  * Short is written by the AI and voiced by the narrator. Pure and deterministic, so vitest pins it.
  */
-import rules from "../../frontend/static/explainer-layout-rules.json";
+import rules from "../../../frontend/static/explainer-layout-rules.json";
 import type { EpisodeInputProps, EpisodeLine } from "./types";
 import type { SoloPayload, Visual } from "./soloTypes";
 
