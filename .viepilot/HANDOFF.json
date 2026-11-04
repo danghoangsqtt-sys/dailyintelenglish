@@ -264,7 +264,7 @@
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
-  "current_phase": 96,
+  "current_phase": 97,
   "next_planned_phase": "75",
   "feature_plan": {
     "planned_at": "2026-10-16",
@@ -1183,5 +1183,11 @@
     "installed_from_commit": "c1935a74",
     "installed_backup": "data/backups/desktop-20261104-180425-307",
     "package": "dist/2.0-phase96-20261104"
+  },
+  "phase97_roots_story_load_word": {
+    "status": "implemented_verified",
+    "summary": ".viepilot/phases/97-roots-story-load-word/SUMMARY.md",
+    "installed": false,
+    "pushed": false
   }
 }

@@ -117,6 +117,7 @@ class WordCardEdit(_Card):
     keywords: list[str] = Field(default_factory=list, max_length=4)
     translation_vi: str = Field(default="", max_length=200)
     pause_after_ms: int = Field(default=0, ge=0, le=10000)
+    loop_ms: int = Field(default=0, ge=0, le=30000)
     word: str = Field(min_length=1, max_length=40)
     ipa: str = Field(default="", max_length=60)
     part_of_speech: str = Field(default="", max_length=30)

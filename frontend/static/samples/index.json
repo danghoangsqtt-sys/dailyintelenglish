@@ -218,5 +218,15 @@
     "en": "picstory-en.mp4",
     "poster_en": "picstory-en.jpg",
     "bytes": 493001
+  },
+  "loadword": {
+    "kind": "loadword",
+    "aspect": "9:16",
+    "vi": "loadword-vi.mp4",
+    "poster_vi": "loadword-vi.jpg",
+    "seconds": 4.8,
+    "en": "loadword-en.mp4",
+    "poster_en": "loadword-en.jpg",
+    "bytes": 182481
   }
 }

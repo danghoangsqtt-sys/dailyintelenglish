@@ -33,6 +33,7 @@ export const wordCardSchema = z.object({
   keywords: z.array(z.string()).optional(),
   translation_vi: z.string().optional(),
   pause_after_ms: z.number().optional(),
+  loop_ms: z.number().optional(),
   word: z.string().optional(),
   ipa: z.string().optional(),
   part_of_speech: z.string().optional(),
@@ -120,6 +121,7 @@ export const episodeLineSchema = z.object({
   whatis: wordCardSchema.optional(),
   levelup: wordCardSchema.optional(),
   picstory: wordCardSchema.optional(),
+  loadword: wordCardSchema.optional(),
   /** Phase 87: the beat card of a word-roots Short. */
   roots: rootsCardSchema.optional(),
   /** Phase 88: the beat of an easy-grammar Short. */
@@ -298,7 +300,7 @@ export const episodeInputPropsSchema = z.object({
   hook: z.string().optional(),
   hookAtSec: z.number().optional(),
   /** Phase 65 (ENH-047): a two-character conversation Short drawn from its lines -- "chat" or "wyr" (would you rather). */
-  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards", "roots", "grammar", "wordday", "whatis", "levelup", "picstory"]).optional(),
+  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards", "roots", "grammar", "wordday", "whatis", "levelup", "picstory", "loadword"]).optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;

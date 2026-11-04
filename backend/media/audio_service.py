@@ -16,6 +16,8 @@ import asyncio
 import json
 import math
 import os
+import subprocess
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,7 +25,8 @@ from pathlib import Path
 import aiosqlite
 import numpy as np
 import pyloudnorm as pyln
-from pydub import AudioSegment
+from pydub import AudioSegment
+from pydub.silence import detect_nonsilent
 
 from backend.ai.tts.vocal_cues import caption_text
 from backend.core.config import settings
@@ -74,6 +77,42 @@ def pause_after_ms(line: dict) -> int:
         return max(0, min(10000, int(card.get("pause_after_ms") or 0)))
     except (TypeError, ValueError, AttributeError):
         return 0
+
+
+def loop_ms_of(line: dict) -> int:
+    """Phase 97 (D160): how long a line's voice is looped (the Load the word Short), 0 for every other line."""
+    notes = line.get("language_notes")
+    try:
+        card = (json.loads(notes) if isinstance(notes, str) else notes or {}).get("loadword") or {}
+        return max(0, min(30000, int(card.get("loop_ms") or 0)))
+    except (TypeError, ValueError, AttributeError):
+        return 0
+
+
+LOOP_TEMPOS = (1.0, 1.25, 1.5, 1.75, 2.0)
+
+
+def _at_tempo(clip: AudioSegment, tempo: float) -> AudioSegment:
+    """The clip faster at the same pitch (ffmpeg's atempo)."""
+    if tempo == 1.0:
+        return clip
+    with tempfile.TemporaryDirectory() as folder:
+        source, target = Path(folder) / "in.wav", Path(folder) / "out.wav"
+        clip.export(source, format="wav")
+        subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", str(source), "-filter:a", f"atempo={tempo}", str(target)], check=True)
+        return AudioSegment.from_wav(target)
+
+
+def looped_voice(clip: AudioSegment, total_ms: int) -> AudioSegment:
+    """The word said again and again for `total_ms`, in equal steps from normal speed to twice as fast. The silence around it is cut."""
+    spans = detect_nonsilent(clip, min_silence_len=80, silence_thresh=clip.dBFS - 20)
+    word = clip[spans[0][0]:spans[-1][1]] if spans else clip
+    looped = AudioSegment.silent(duration=0, frame_rate=clip.frame_rate)
+    for step, tempo in enumerate(LOOP_TEMPOS, start=1):
+        fast = _at_tempo(word, tempo) + AudioSegment.silent(duration=40, frame_rate=clip.frame_rate)
+        while len(looped) < total_ms * step / len(LOOP_TEMPOS):
+            looped += fast
+    return looped
 
 
 def _now() -> str:
@@ -171,6 +210,8 @@ def _mix_project_sync(
 
     for line in lines:
         line_audio = AudioSegment.from_file(line["audio_cache_path"])
+        if loop_ms_of(line):
+            line_audio = looped_voice(line_audio, loop_ms_of(line))
         if previous_speaker_id is not None:
             gap_ms = pause_ms + (
                 SILENCE_SAME_SPEAKER_MS

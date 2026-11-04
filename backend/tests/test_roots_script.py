@@ -243,6 +243,47 @@ def test_stray_chinese_characters_are_removed():
     assert clean.words[0].logic == "DE là xuống: ấn xuống thì tâm trạng đi xuống."
 
 
+def _story_family():
+    return {**PRESS, "puzzle": "Vì sao express lại có press?", "puzzle_word": "impress",
+            "story": [{"text": "Ngày xưa người ta in bằng cách ép", "picture": "an old printing press"},
+                      {"text": "Vết ép để lại dấu ấn", "picture": "a stamp on paper"}]}
+
+
+def test_a_puzzle_opens_the_video_and_its_story_comes_before_the_words():
+    beats = build_beats(WordFamily.model_validate(_story_family()), "vi")
+    kinds = [card["beat"] for _, card in beats]
+    assert kinds[:2] == ["puzzle", "wheel"] and "hook" not in kinds and "twins" not in kinds
+    assert beats[0][0] == "Vì sao express lại có press?" and beats[0][1]["word"] == "impress"
+    assert kinds.index("story") < kinds.index("whole") and kinds.count("story") == 2
+    assert beats[kinds.index("story")][1]["word"] == "story 1" and beats[kinds.index("story")][1]["picture"] == "an old printing press"
+
+
+def test_without_a_story_the_opening_is_as_before():
+    for family in (PRESS, {**PRESS, "puzzle": "Vì sao?"}, {**_story_family(), "story": _story_family()["story"][:1]}):
+        kinds = [card["beat"] for _, card in build_beats(WordFamily.model_validate(family), "vi")]
+        assert kinds[:2] == ["hook", "twins"] and "story" not in kinds and "puzzle" not in kinds
+
+
+def test_a_story_comes_only_from_the_checked_list():
+    from backend.content.word_family import with_checked_facts
+
+    sept = {**PRESS, "head": "sept", "origin_lang": "", "origin_form": ""}
+    checked = with_checked_facts(WordFamily.model_validate(sept), "gốc sept", "vi")
+    assert checked.puzzle == "Vì sao September là tháng 9, trong khi gốc SEPT lại là số 7?" and checked.puzzle_word == "september"
+    assert len(checked.story) == 4 and "mười tháng" in checked.story[0].text and checked.origin_form == "septem"
+    beats = build_beats(checked, "vi")
+    assert beats[0][1]["beat"] == "puzzle" and beats[0][1]["word"] == "september"  # even when the AI left the word out
+    assert "meaning" not in beats[0][1]  # the story gives its meaning, not the AI
+    told = with_checked_facts(WordFamily.model_validate({**sept, "words": [{**PRESS["words"][0], "word": "september", "parts": [
+        {"text": "septem", "role": "root", "meaning": ""}, {"text": "ber", "role": "suffix", "meaning": ""}]}, *PRESS["words"]]}), "sept", "vi")
+    assert "september" not in [word.word for word in told.words]  # it is not told a second time with the AI's meaning
+    english = with_checked_facts(WordFamily.model_validate(sept), "sept", "en")
+    assert english.story[0].text.startswith("The old Roman calendar")
+    # what the AI sends is not used: a head without a checked story keeps the usual opening
+    made_up = with_checked_facts(WordFamily.model_validate(PRESS), "press", "vi")
+    assert made_up.puzzle == "" and made_up.story == []
+
+
 def test_the_desktop_build_ships_the_word_roots_data():
     """Phase 87 install check: the packaged app reads backend/content/data/*.json next to its modules."""
     from pathlib import Path

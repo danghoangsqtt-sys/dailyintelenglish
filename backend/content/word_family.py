@@ -52,6 +52,12 @@ class FamilyWord(BaseModel):
         return [name for name in (str(v).strip().lower() for v in value) if name in known][:2]
 
 
+class StoryBeat(BaseModel):
+    """Phase 97 (D158): one sentence of the true story behind a word, with its line drawing."""
+    text: str = Field(min_length=1, max_length=170)
+    picture: str = Field(min_length=3, max_length=160)
+
+
 class WordFamily(BaseModel):
     kind: Literal["root", "prefix", "suffix"]
     head: str = Field(min_length=1, max_length=30)
@@ -64,6 +70,10 @@ class WordFamily(BaseModel):
     words: list[FamilyWord] = Field(min_length=FAMILY_MIN_WORDS, max_length=FAMILY_MAX_WORDS + 3)
     quiz: FamilyWord
     quiz_clue: str = Field(min_length=1, max_length=200)
+    # Phase 97 (D158): only for a true, well-documented origin; empty keeps the usual opening
+    puzzle: str = Field(default="", max_length=150)
+    puzzle_word: str = Field(default="", max_length=30)
+    story: list[StoryBeat] = Field(default_factory=list, max_length=5)
 
 
 @lru_cache(maxsize=1)
@@ -196,6 +206,13 @@ def with_checked_facts(family: WordFamily, topic: str, lang: str) -> WordFamily:
         kind, entry = found
         heads = {_bare(alt) for alt in entry["head"].split("/")}
         given = {_bare(alt) for alt in family.head.split("/")}
+        if entry.get("story") and given & heads:  # Phase 97 (D158): a true story comes only from this checked list, never from the AI
+            update.update(puzzle=entry[f"puzzle_{lang}"], puzzle_word=entry["puzzle_word"],
+                          story=[StoryBeat(text=beat[lang], picture=beat["picture"]) for beat in entry["story"]])
+            # the story tells the puzzle's word itself; the other words come from the checked list when enough of them do
+            others = [word for word in family.words if _bare(word.word) != _bare(entry["puzzle_word"])]
+            listed = [word for word in others if _bare(word.word) in {_bare(item) for item in entry["words"]}]
+            update["words"] = listed if len(listed) >= FAMILY_MIN_WORDS else others
         if given & heads:  # "-tion / -sion" or "-tion" both name the listed "-tion / -sion"
             update.update(kind=kind, head=entry["head"], origin_lang=entry["origin_lang"], origin_form=entry["origin_form"],
                           head_meaning=entry["meaning_vi"] if lang == "vi" else entry["meaning_en"])
@@ -256,8 +273,14 @@ def build_beats(family: WordFamily, lang: str) -> list[tuple[str, dict]]:
     head = _spoken_head(family.head, lang)
     count = len(words) + 1  # the quiz word counts too
     beats: list[tuple[str, dict]] = []
+    wheel = _card("wheel", head=family.head, kind=family.kind, words=[w.word for w in words] + [family.quiz.word])
+    story = family.story[:4] if family.puzzle.strip() and len(family.story) >= 2 else []
 
-    if vi:
+    if story:  # Phase 97 (D158): the puzzle opens the video, the story further on answers it
+        beats.append((family.puzzle.strip(), _card("puzzle", word=family.puzzle_word, head=family.head, kind=family.kind)))
+        beats.append(((f"Sau video này, bạn sẽ hiểu và nhớ được {count} từ tiếng Anh chỉ từ một {kind} duy nhất!" if vi
+                       else f"After this video, you'll remember {count} English words from just one {kind}!"), wheel))
+    elif vi:
         beats.append((f"Bạn có biết {_cap(first.word)} là {first.meaning},", _word_card("hook", first)))
         beats.append((f"nhưng {_cap(first.word)} và {_cap(second.word)} cùng một {kind}?",
                       _card("twins", words=[first.word, second.word], head=family.head, kind=family.kind)))
@@ -287,6 +310,9 @@ def build_beats(family: WordFamily, lang: str) -> list[tuple[str, dict]]:
         beats.append((_sentence(family.head_example_en),
                       _card("head_example", head=family.head, kind=family.kind, meaning=family.head_meaning,
                             example_en=_sentence(family.head_example_en), example_vi=family.head_example_vi)))
+
+    for number, beat in enumerate(story, start=1):
+        beats.append((_sentence(beat.text), _card("story", word=f"story {number}", picture=beat.picture)))
 
     for word in words:
         beats.append((f"{_cap(word.word)}, {word.meaning}.", _word_card("whole", word)))
@@ -320,7 +346,7 @@ def roots_prompt(topic: str, cefr: str, lang: str, owner_words: list[str]) -> st
                  f"from: {', '.join(entry['words'])}.\n")
     words = (f"Use exactly these words, in this order (the last one is the quiz word): "
              f"{json.dumps(owner_words[:FAMILY_MAX_WORDS + 1], ensure_ascii=False)}\n" if owner_words else
-             f"Choose {FAMILY_MIN_WORDS + 1} to {FAMILY_MAX_WORDS} common English words built with this head, useful for "
+             f"Use first every word the topic names. Choose {FAMILY_MIN_WORDS + 1} to {FAMILY_MAX_WORDS} common English words found in a learner's dictionary, that truly come from this head (not words that only look alike), useful for "
              f"{cefr} learners, plus one more for the quiz (not repeated in words).\n")
     return (
         "You prepare one word family for a short English-vocabulary video for learners (Vietnamese learners when the "
@@ -335,7 +361,8 @@ def roots_prompt(topic: str, cefr: str, lang: str, owner_words: list[str]) -> st
         "tượng), never a whole explanation.\n"
         "- parts: never add an empty part; for a suffix family the base part is the letters the word really has "
         "(deci + sion for decision, happi + ness for happiness).\n"
-        "- logic: ONE short sentence that explains how the parts give the meaning, like a memory trick "
+        "- logic: never write the labels ROOT, PREFIX or SUFFIX and never invent an origin; name the parts themselves. "
+        "ONE short sentence that explains how the parts give the meaning, like a memory trick "
         "(e.g. 'COM là cùng nhau, PRESS là ép: ép sát vào nhau thì chiếm ít chỗ hơn, nên compress là nén lại.').\n"
         "- example_en: one short natural B1 sentence with the word; example_vi: its translation.\n"
         "- picture: a simple object scene for a line drawing that shows the meaning, in English, no people's faces "

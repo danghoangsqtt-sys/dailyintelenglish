@@ -8,7 +8,7 @@ import type { EpisodeInputProps, EpisodeLine } from "./types";
 import type { SoloPayload, Visual } from "./soloTypes";
 
 export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards"
-  | "roots" | "whatis" | "levelup" | "picstory"
+  | "roots" | "whatis" | "levelup" | "picstory" | "loadword"
   | "grammar";
 export type SampleIdea = { title: string; brief?: string; vi?: string };  // vi: Phase 92, the example clips' Vietnamese meaning
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
@@ -25,7 +25,7 @@ export function quoted(text: string): string | null {
 const sentence = (text: string) => { const clean = text.trim().replace(/\s+/g, " "); return /[.!?]$/.test(clean) ? clean : `${clean}.`; };
 
 /** The sample segments of a voice-only template (the visuals the AI plan would use). */
-export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory">, idea: SampleIdea): Part[] {
+export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory" | "loadword">, idea: SampleIdea): Part[] {
   const title = idea.title.trim() || "Your Short", brief = (idea.brief || "").trim() || "The AI writes this part from your idea.";
   const card = (cardTitle: string, bullets: string[] = [], emphasis = ""): Visual => ({ kind: "text_card", title: cardTitle, bullets, emphasis }) as Visual;
   const follow = (text: string): Part => ({ visual: card("Daily Beyond English", [], text), lines: [`${text}!`] });
@@ -139,6 +139,14 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, learning: { vocab, idioms: [], audience },
       durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
+  if (template === "loadword") {  // Phase 97: the word looped on a wall of itself, then shown with an example
+    const fields = { word: "compensation", ipa: "/ˌkɑːmpenˈseɪʃn/", part_of_speech: "noun", meaning_en: "money paid for a loss", meaning_vi: "khoản đền bù", audience,
+      example_en: "No amount of compensation can make up for it.", example_vi: "Không khoản đền bù nào bù đắp được." };
+    const say = [["Compensation.", { ...fields, beat: "load" }], ["Compensation.", { ...fields, beat: "reveal" }], [fields.example_en, { ...fields, beat: "example" }]] as const;
+    const lines = timed(say.map(([text]) => ({ text, speakerId: "n", speaker: "Narrator" })), 0.1).map((line, at) => ({ ...line, loadword: say[at][1] }));
+    return { ...common, learning: sampleLearning(template, idea, audience), presentationMode: "classic", shortStyle: "loadword", visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
   if (template === "picstory") {  // Phase 96.4: one picture for each sentence
     const say = [["I take off my shoes.", "shoes", "Tôi cởi giày.", 1], ["I walk on the sand.", "walk sand", "Tôi đi trên cát.", 2]] as const;
     const parts = say.map(([text, keywords, translation_vi, number]) => [text, { beat: "line", number, word: `line ${number}`, keywords: keywords.split(" "), translation_vi, audience,
@@ -237,7 +245,7 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
     return { ...common, presentationMode: "classic", shortStyle: "grammar", visualMode: "podcast_black",
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
-  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory">, idea);
+  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory" | "loadword">, idea);
   const lines: EpisodeLine[] = [], timeline: SoloPayload["timeline"] = [], segments: unknown[] = [];
   let time = 0.3;
   parts.forEach((part, index) => {

@@ -41,7 +41,7 @@ from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
 from backend.content import grammar_lesson
-from backend.content import level_up, object_quiz, picture_story, word_repeat
+from backend.content import level_up, load_word, object_quiz, picture_story, word_repeat
 from backend.content.word_family import WordFamily, build_beats, roots_prompt, with_checked_facts
 from backend.ai.tts.vocal_cues import caption_text
 
@@ -1432,6 +1432,7 @@ _CARD_SHORTS = {
     "wordday": (word_repeat.WordCard, word_repeat.word_prompt, word_repeat.build_beats),
     "whatis": (object_quiz.ObjectQuiz, object_quiz.quiz_prompt, object_quiz.build_beats),
     "levelup": (level_up.LevelUp, level_up.level_prompt, level_up.build_beats),
+    "loadword": (load_word.LoadCard, load_word.load_prompt, load_word.build_beats),
     "picstory": (picture_story.PictureStory, picture_story.story_prompt, picture_story.build_beats),
     "picstory": (picture_story.PictureStory, picture_story.story_prompt, picture_story.build_beats),
 }

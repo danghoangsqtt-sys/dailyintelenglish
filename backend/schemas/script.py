@@ -14,6 +14,7 @@ class LanguageNotesEdit(BaseModel):
     whatis: dict | None = None  # Phase 96: a What is this called? card
     levelup: dict | None = None  # Phase 96: a Basic vs Advanced card
     picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
+    loadword: dict | None = None  # Phase 97: a Load the word card
     picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
     whatis: dict | None = None  # Phase 96: a What is this called? card
     wordday: dict | None = None  # Phase 96: a Word of the day card, kept with its line through Step 2 edits

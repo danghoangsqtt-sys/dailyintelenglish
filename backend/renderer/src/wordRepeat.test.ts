@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { loadPercent, wallCell, wallStep } from "./loadWordMath";
 import { sampleProps } from "./sampleShort";
 import { episodeInputPropsSchema } from "./types";
 import { aroundWord, copiesAt, copyCentre, countAt, COPY_PLACES, levelPhraseSize, levelSaying, storyWords, wordExplains, wordSize } from "./wordRepeatMath";
@@ -29,6 +30,13 @@ describe("Phase 96: the Word of the day Short", () => {
     expect(words[4].key).toBe(true);
     expect(words[1].now).toBe(true);
     expect(storyWords("I take off", [], timing, 1.5).some((word) => word.now)).toBe(false);  // the timing does not match
+  });
+
+  it("counts the bar up to 100 and fills the wall as the word loads", () => {
+    expect([0, 8, 16, 20].map((time) => loadPercent(time, 0, 16))).toEqual([0, 50, 100, 100]);
+    expect(wallStep(1, 2)).toBeGreaterThan(wallStep(0.1, 2));
+    const shown = (progress: number) => Array.from({ length: 200 }, (_, at) => wallCell(at, at % 3, 4, progress).shown).filter(Boolean).length;
+    expect(shown(1)).toBeGreaterThan(shown(0));
   });
 
   it("keeps every copy on the frame", () => {

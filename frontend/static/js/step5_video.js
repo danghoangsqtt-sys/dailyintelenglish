@@ -57,10 +57,10 @@
   const byId = (id) => document.getElementById(id);
 
   // a Short of these styles renders its main video in 9:16 (backend/schemas/project.py SHORT_STYLES)
-  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "chat", "wyr"];
+  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "loadword", "chat", "wyr"];
   // drawn from their script lines (backend LINE_DRAWN_STYLES): nothing to plan on this page
   const LINE_DRAWN = { chat: "Chat Short", wyr: "Would you rather Short", slowpod: "Slow English podcast Short", flashcards: "Vocabulary flashcards Short",
-    roots: "Word roots Short", grammar: "Easy grammar Short", wordday: "Word of the day Short", whatis: "What is this called? Short", levelup: "Basic vs Advanced Short", picstory: "Picture story Short" };
+    roots: "Word roots Short", grammar: "Easy grammar Short", wordday: "Word of the day Short", whatis: "What is this called? Short", levelup: "Basic vs Advanced Short", picstory: "Picture story Short", loadword: "Load the word Short" };
 
   function showError(message) {
     const banner = byId("error-banner");

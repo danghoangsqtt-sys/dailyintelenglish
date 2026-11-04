@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Load the word and the root with a story (Phase 97, 2026-11-04)
+
+- New Short "Load the word": one word said faster and faster on a wall of itself while a bar counts to 100%, then its meaning and an example.
+- Word roots opens with a puzzle and tells a true story for the roots on the checked list (sept, oct, dec).
+
 ### Added — Picture-led Shorts (Phase 96, 2026-11-04)
 
 - Word of the day is now one word said six times over a full-frame picture of it, then one example; the explanation follows the audience.

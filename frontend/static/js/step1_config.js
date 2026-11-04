@@ -43,7 +43,7 @@
   // Phase 59 (ENH-041): a VOX narrator is a character's voice only
   // Phase 63 (ENH-045): VOX and the news / blur Shorts are voice-only (a narrator's voice, nobody on screen)
   // Phase 64/65: + the quick-learning and the interactive Shorts; chat / would-you-rather are two-character conversations
-  const SOLO_SHORTS = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory"];  // Phase 81, 87, 88
+  const SOLO_SHORTS = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "loadword"];  // Phase 81, 87, 88
   const CONVERSATION_SHORTS = ["chat", "wyr"];
   const SHORTS = [...SOLO_SHORTS, ...CONVERSATION_SHORTS];
   const VOICE_ONLY = ["vox", ...SOLO_SHORTS];

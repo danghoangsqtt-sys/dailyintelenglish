@@ -34,6 +34,7 @@ class LanguageNotesOut(BaseModel):
     whatis: dict | None = None  # Phase 96: a What is this called? card
     levelup: dict | None = None  # Phase 96: a Basic vs Advanced card
     picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
+    loadword: dict | None = None  # Phase 97: a Load the word card
     picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
     # Phase 88: an easy-grammar Short's beat (scene header and the cards shown so far)
     grammar: dict | None = None

@@ -40,6 +40,7 @@ TEMPLATES = {
     "presenter": ("Solo presenter", "one presenter explains one useful idea, phrase or tip to camera"),
     "vox": ("Vox (voice over pictures)", "a narrator explains one interesting idea over pictures and on-screen text"),
     # Phase 81 (owner 2026-10-28)
+    "loadword": ("Load the word", "one hard, useful word about the topic, said again and again, faster and faster, then one example"),
     "picstory": ("Picture story", "a tiny first-person story of six to eight short sentences, each one visible action done with the hands or the feet"),
     "levelup": ("Basic vs Advanced", "three to five plain phrases of one theme, each followed twice by the natural phrase native speakers use"),
     "whatis": ("What is this called?", "seven everyday objects of one place or activity whose English names learners often do not know"),
@@ -53,7 +54,7 @@ TEMPLATES = {
                 "one grammar point explained by its essence (e.g. the passive voice, the present perfect) or one mistake "
                 "Vietnamese speakers make (e.g. I very like)"),
 }
-TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "whatis", "levelup", "picstory", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr",
+TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "whatis", "levelup", "picstory", "loadword", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr",
                         "conversation", "presenter", "vox"]
 TWO_CHARACTERS = (*CONVERSATION_SHORT_STYLES, "conversation")
 

@@ -121,6 +121,14 @@
       },
       "from": 0.4,
       "seconds": 6
+    },
+    "loadword": {
+      "idea": {
+        "title": "Load the word",
+        "brief": "a word said again and again"
+      },
+      "from": 0.3,
+      "seconds": 6
     }
   },
   "sources": {

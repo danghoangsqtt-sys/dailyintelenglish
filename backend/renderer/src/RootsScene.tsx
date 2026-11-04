@@ -90,6 +90,15 @@ function Caption({ line, time, unit, gloss }: { line: EpisodeLine; time: number;
   </div>;
 }
 
+/** Phase 97 (D158): a sentence of the word's true story: its line drawing large, wiped in from the left. */
+function StoryPicture({ card, progress, unit }: { card: RootsCard; progress: number; unit: number }) {
+  if (!card.pictureUrl) return null;
+  return <div data-roots-picture="story" style={{ position: "absolute", left: 72 * unit, width: 792 * unit, top: 300 * unit, height: 820 * unit, display: "grid", placeItems: "center",
+    clipPath: `inset(0 ${((1 - progress) * 100).toFixed(1)}% 0 0)` }}>
+    <Img src={resolvedMedia(card.pictureUrl)} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", mixBlendMode: "multiply" }} />
+  </div>;
+}
+
 function Label({ text, unit }: { text: string; unit: number }) {
   return <div style={{ position: "absolute", left: 0, right: 0, top: 250 * unit, textAlign: "center", fontFamily: HAND, color: INK,
     fontSize: 46 * unit }}>{text}</div>;
@@ -113,6 +122,7 @@ function Beat({ props, index, time, unit }: { props: EpisodeInputProps; index: n
   const caption = <Caption line={line} time={time} unit={unit}
     gloss={card.beat === "example" || card.beat === "head_example" ? card.example_vi : undefined} />;
 
+  if (card.beat === "story") return <><StoryPicture card={card} progress={drawProgress(time, since)} unit={unit} />{caption}</>;
   if (card.beat === "twins") {
     const words = card.words || [];
     return <>{block(<>{words.map((item) => <Lettering key={item} segments={headSegments(item, head)} size={fitSize(item, 860, 150)} unit={unit} />)}
@@ -151,6 +161,7 @@ function Beat({ props, index, time, unit }: { props: EpisodeInputProps; index: n
   // hook, whole, split, example: the word stays while its beats go by
   const split = card.beat === "split" || card.beat === "example" ? splitProgress(time, card.beat === "split" ? line.startSec : -10) : 0;
   return <>{card.beat === "hook" ? <Label text={vi ? "Bạn có biết?" : "Did you know?"} unit={unit} /> : null}
+    {card.beat === "puzzle" ? <Label text={vi ? "Vì sao?" : "Why?"} unit={unit} /> : null}
     {block(<><Lettering segments={wordSegments(word, card.parts, card.kind)} size={fitSize(word, 860 - split * 120, 170)} split={split} unit={unit} />
       <Underline progress={underlineProgress(time, since)} width={Math.min(560, 40 + word.length * 55)} unit={unit} />
       {meaningLine(card.meaning)}

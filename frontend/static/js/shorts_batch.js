@@ -8,6 +8,7 @@
     { key: "presenter", name: "Solo presenter", group: "Shorts with characters, a presenter or pictures", cast: 1, desc: "One presenter explains one idea to camera." },
     { key: "vox", name: "Vox", group: "Shorts with characters, a presenter or pictures", cast: 1, desc: "A narrator's voice over pictures and on-screen text." },
     { key: "wordday", name: "Word of the day", group: "Text templates", cast: 1, desc: "One word said six times over its picture, then an example." },
+    { key: "loadword", name: "Load the word", group: "Text templates", cast: 1, desc: "One word said faster and faster until it stays in memory." },
     { key: "picstory", name: "Picture story", group: "Text templates", cast: 1, desc: "One short sentence on each screen, over a picture of that action." },
     { key: "levelup", name: "Basic vs Advanced", group: "Text templates", cast: 1, desc: "A plain phrase, then the natural one twice, over its picture." },
     { key: "whatis", name: "What is this called?", group: "Text templates", cast: 1, desc: "An everyday object, a silent 1-2-3, then its name." },

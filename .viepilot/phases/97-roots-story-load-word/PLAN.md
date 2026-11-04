@@ -12,6 +12,10 @@ D158: this upgrades `roots`; no new kind. The AI may add a `puzzle` and a `story
 well-documented origin**; otherwise the Short is as it is today. The line-art look of the Short stays. It stays 9:16: the long 16:9
 academic video is Phase 89, still planned.
 
+D158 amended after four real runs: asked for a story, the AI gave none, drifted away from the word and invented origins ("seven reeds
+as a compass"). Stories now come **only from the checked list** `word_roots.json`, written by hand: sept, oct and dec so far. The AI is not
+asked for one, so it cannot invent one; more can be added to the list.
+
 ## Sample 2 (25 s): "Nạp từ vào trí nhớ"
 
 One word said over and over, faster and faster, on a wall of that word with its meaning, a bar counting up to 100%, then the word with its
