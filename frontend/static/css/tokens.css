@@ -165,6 +165,11 @@
   .videos-page .project-card-footer { flex-wrap: wrap; }
   .videos-tools .search-box, .videos-tools .search-box input { width: 100%; min-width: 0; margin-left: 0; }
 }
+/* plain search fields and selects of the former pages, in the new look (Phase 93 follow-up) */
+.library-main input[type="search"], .library-main input[type="text"], .library-main select, .main #profile-search {
+  width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elevated); color: var(--text); font-size: 15px; }
+.library-main .field-label { display: block; margin: 10px 0 4px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+@media (max-width: 779px) { .library-main, .main { padding-left: max(16px, env(safe-area-inset-left, 0px)) !important; padding-right: max(16px, env(safe-area-inset-right, 0px)) !important; } }
 @media (max-width: 1280px) { .e-main, .e-side { grid-column: 1 / -1; } }
 @media (max-width: 860px) {
   .e-page { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); gap: 22px; }
