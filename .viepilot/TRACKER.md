@@ -1,5 +1,9 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 98 — Doodle story (2026-11-05)
+
+Status: planned, no code yet. [Plan](phases/98-doodle-story/PLAN.md), [state](phases/98-doodle-story/PHASE-STATE.md). Owner gate: three real videos.
+
 ## Phase 97 — The root with a story, and Load the word (2026-11-04)
 
 Status: implemented_verified (sandbox; not installed or pushed). [Summary](phases/97-roots-story-load-word/SUMMARY.md).
