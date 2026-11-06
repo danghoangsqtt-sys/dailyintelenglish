@@ -5,10 +5,13 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from backend.schemas.project import ExplainerStyle
+from backend.schemas.project import DOODLE_MAX_MINUTES, DOODLE_MIN_MINUTES, DOODLE_MINUTES, DOODLE_SUBJECTS, ExplainerStyle
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.core.constants import CEFR_LEVELS, GENRES
+
+DoodleSubject = Literal["history", "myth", "field", "story"]
+assert set(DoodleSubject.__args__) == set(DOODLE_SUBJECTS)
 
 _URL = re.compile(r"^(https?://\S+)?$")
 
@@ -58,10 +61,25 @@ class SeriesInput(BaseModel):
     cast: list[str] = Field(default_factory=list, max_length=6)
     duration_minutes: float = Field(default=5.0, gt=0, le=30)
     playlist_url: str = Field(default="", max_length=300)
+    # Phase 99 (D168): the story type of a Doodle story series; ignored (None) for every other kind
+    explainer_subject: DoodleSubject | None = None
 
     _genre = field_validator("genre")(lambda cls, value: _genre(value))
     _cefr = field_validator("cefr_level")(lambda cls, value: _cefr(value))
     _url = field_validator("playlist_url")(lambda cls, value: TopicInput.url(value))
+
+    @model_validator(mode="after")
+    def doodle(self) -> "SeriesInput":
+        """Phase 99 (D168): a Doodle series is a Solo voice-over with a story type and 3-12 minutes (8 by default)."""
+        if self.explainer_style != "doodle" or self.presentation_mode != "solo_explainer":
+            self.explainer_subject = None
+            return self
+        self.explainer_subject = self.explainer_subject or "story"
+        if "duration_minutes" not in self.model_fields_set:
+            self.duration_minutes = DOODLE_MINUTES
+        if not DOODLE_MIN_MINUTES <= self.duration_minutes <= DOODLE_MAX_MINUTES:
+            raise ValueError(f"a Doodle story lasts {DOODLE_MIN_MINUTES:g}-{DOODLE_MAX_MINUTES:g} minutes")
+        return self
 
 
 class SeriesPatch(BaseModel):
@@ -78,6 +96,7 @@ class SeriesPatch(BaseModel):
     duration_minutes: float | None = Field(default=None, gt=0, le=30)
     playlist_url: str | None = Field(default=None, max_length=300)
     position: int | None = Field(default=None, ge=0)
+    explainer_subject: DoodleSubject | None = None  # Phase 99 (D168)
 
     _genre = field_validator("genre")(lambda cls, value: _genre(value) if value is not None else value)
     _cefr = field_validator("cefr_level")(lambda cls, value: _cefr(value) if value is not None else value)

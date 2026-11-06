@@ -135,8 +135,9 @@ async def create_series(db: aiosqlite.Connection, topic_id: str, body: SeriesInp
         (series_id, topic_id, body.name.strip(), body.description.strip(), body.genre, body.cefr_level, json.dumps(body.cast),
          body.duration_minutes, body.playlist_url,
          await _next_position(db, "channel_series", "WHERE topic_id = ?", (topic_id,)), now, now))
-    await db.execute("UPDATE channel_series SET presentation_mode=?,explainer_structure=?,explainer_style=? WHERE id=?",
-                     (body.presentation_mode, body.explainer_structure, body.explainer_style, series_id))
+    await db.execute("UPDATE channel_series SET presentation_mode=?,explainer_structure=?,explainer_style=?,explainer_subject=? "
+                     "WHERE id=?", (body.presentation_mode, body.explainer_structure, body.explainer_style,
+                                    body.explainer_subject, series_id))  # Phase 99 (D168): + a Doodle story's type
     return await get_series(db, series_id)
 
 
@@ -151,6 +152,18 @@ async def patch_series(db: aiosqlite.Connection, series_id: str, patch: SeriesPa
         await _check_cast(db, fields["cast"])
         fields["cast_json"] = json.dumps(fields.pop("cast"))
     await _patch(db, "channel_series", series_id, fields)
+    series = await get_series(db, series_id)
+    # Phase 99 (D168): a series that is (or becomes) a Doodle story always has a story type and 3-12 minutes; another kind has none
+    if series.get("explainer_style") == "doodle" and series.get("presentation_mode") == "solo_explainer":
+        from backend.schemas.project import DOODLE_MAX_MINUTES, DOODLE_MIN_MINUTES, DOODLE_MINUTES
+
+        minutes = series["duration_minutes"]
+        if not DOODLE_MIN_MINUTES <= minutes <= DOODLE_MAX_MINUTES:
+            minutes = DOODLE_MINUTES
+        await db.execute("UPDATE channel_series SET explainer_subject = ?, duration_minutes = ? WHERE id = ?",
+                         (series.get("explainer_subject") or "story", minutes, series_id))
+    elif series.get("explainer_subject"):
+        await db.execute("UPDATE channel_series SET explainer_subject = NULL WHERE id = ?", (series_id,))
     return await get_series(db, series_id)
 
 
@@ -325,9 +338,11 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
             genre=series["genre"], accent=speakers[0].accent, speakers=speakers,
             presentation_mode=series["presentation_mode"],
             explainer_structure=series["explainer_structure"] if solo else None, explainer_style=style,
-            # Phase 66: a news episode made from today's news carries its article
+            # Phase 99 (D168): a Doodle story's type
+            **({"explainer_subject": series.get("explainer_subject") or "story"} if style == "doodle" else {}),
+            # Phase 66: a news episode made from today's news carries its article; Phase 99: so does a Doodle story's material
             **({"source_kind": "article", "source_text": episode["source_text"]}
-               if style == "news" and episode.get("source_kind") == "article" and episode.get("source_text") else {})),
+               if style in ("news", "doodle") and episode.get("source_kind") == "article" and episode.get("source_text") else {})),
             commit=False)
         await project_visuals.set_cast(db, project["id"], [
             {"speaker_index": index, "character_id": character_id} for index, character_id in enumerate(series["cast"])])

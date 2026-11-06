@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 TICK_SECONDS = 30
 JOB_POLL_SECONDS = 3
 JOB_TIMEOUT_SECONDS = 1800
+DOODLE_PICTURE_TIMEOUT_SECONDS = 5400  # Phase 99 (D171): ~30 s a picture; an 8-12 minute story draws 60-95 pictures
 MIN_FREE_BYTES = 3 * 1024 ** 3
 KEEP_BACKUPS = 7
 # Phase 66 (owner 2026-10-22): the English-teaching Shorts whose generic "review its knowledge claims" flag the night run
@@ -180,7 +181,7 @@ class Producer:
         if waiting:
             await self.client.call("POST", "/api/visuals/library/activities/approve-batch", {"ids": waiting})
 
-    async def draw(self, project_id: str, path: str) -> bool:
+    async def draw(self, project_id: str, path: str, timeout: float = JOB_TIMEOUT_SECONDS) -> bool:
         """Phase 85: start a local Qwen image job and wait for it; True when it finished. A failure (no image model, a GPU
         error) is logged and the episode goes on with cards / characters instead of pictures."""
         try:
@@ -189,7 +190,7 @@ class Producer:
                 return False
             waited = 0.0
             while job.get("status") in ("pending", "running"):
-                if waited >= JOB_TIMEOUT_SECONDS:
+                if waited >= timeout:
                     raise StepError("The pictures took too long")
                 await self.sleep(JOB_POLL_SECONDS)
                 waited += JOB_POLL_SECONDS
@@ -226,13 +227,21 @@ class Producer:
             plan = view.get("plan")
         if not plan:
             raise StepError("The AI did not propose a visual plan")
-        if plan.get("status") != "approved" and await self.draw(project_id, "explainer-plan/illustrate"):
+        doodle = style == "doodle"
+        subject = (await self.client.call("GET", f"/api/projects/{project_id}") or {}).get("explainer_subject") if doodle else None
+        if plan.get("status") != "approved" and await self.draw(
+                project_id, "explainer-plan/illustrate", DOODLE_PICTURE_TIMEOUT_SECONDS if doodle else JOB_TIMEOUT_SECONDS):
             view = await self.solo_plan(project_id)  # Phase 85: the photo slots now carry Qwen's pictures
             plan = view.get("plan") or plan
+        if doodle and plan.get("status") != "approved" and any(
+                (s.get("visual") or {}).get("kind") == "photo" and not s["visual"].get("asset") for s in plan.get("segments", [])):
+            # Phase 99 (D171): a Doodle story is its pictures -- never rendered with cards in their place
+            raise OwnerStop("Draw or upload the story's pictures on Step 5, then approve the plan")
         # Phase 80: a Solo presenter Short (<= 1 min, a batch Short teaching one phrase or tip) is reviewed like the
         # language templates; a long presenter episode and Vox (knowledge facts) still wait for the owner
         self_review = style in SELF_REVIEW_STYLES or (style == "presenter" and await self.is_short(project_id))
-        if self_review and plan.get("status") != "approved":
+        if (self_review or subject == "story") and plan.get("status") != "approved":
+            # Phase 99 (D170): an original short story is reviewed as a story -- there is no fact to check (D165)
             view, plan = await self.accept_generic_review(project_id, view)
         elif plan.get("status") != "approved" and self.needs_facts(view):
             # Phase 84 (owner 2026-10-28): News, VOX and long presenter videos are checked by the AI fact check; they

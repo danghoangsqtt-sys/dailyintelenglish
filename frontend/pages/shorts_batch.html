@@ -151,6 +151,18 @@
             <option value="vietnamese">Vietnamese — Vietnamese meanings</option><option value="both">Both — English with Vietnamese</option>
           </select></label>
           <label>Direction (optional)<input id="batch-hint" type="text" maxlength="300" placeholder="e.g. at a café, for beginners" /></label>
+          <!-- Phase 99 (D169): a Doodle story batch's type and length -->
+          <div id="doodle-options" class="batch-form-row" hidden>
+            <label class="span-6">Story type<select id="batch-subject">
+              <option value="history">History</option><option value="myth">Myth</option>
+              <option value="field">Specialised subject</option><option value="story" selected>Short story</option>
+            </select></label>
+            <label class="span-6">Length<select id="batch-minutes">
+              <option value="3">3 min</option><option value="4">4 min</option><option value="5">5 min</option><option value="6">6 min</option>
+              <option value="7">7 min</option><option value="8" selected>8 min</option><option value="9">9 min</option>
+              <option value="10">10 min</option><option value="11">11 min</option><option value="12">12 min</option>
+            </select></label>
+          </div>
           <div class="batch-actions"><button class="btn btn-primary" type="submit">✨ Propose ideas</button></div>
         </form>
       </div>

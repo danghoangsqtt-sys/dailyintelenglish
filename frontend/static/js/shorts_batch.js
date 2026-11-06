@@ -7,6 +7,8 @@
     { key: "conversation", name: "Conversation", group: "Shorts with characters, a presenter or pictures", cast: 2, desc: "Two talking characters in an everyday situation." },
     { key: "presenter", name: "Solo presenter", group: "Shorts with characters, a presenter or pictures", cast: 1, desc: "One presenter explains one idea to camera." },
     { key: "vox", name: "Vox", group: "Shorts with characters, a presenter or pictures", cast: 1, desc: "A narrator's voice over pictures and on-screen text." },
+    // Phase 99 (D169): a long 16:9 story series -- not a Short
+    { key: "doodle", name: "Doodle story", group: "Long videos (16:9)", cast: 1, desc: "A whole story in English over hand-drawn pictures: history, myth, a specialised subject or a short story (3–12 min)." },
     { key: "wordday", name: "Word of the day", group: "Text templates", cast: 1, desc: "One word said six times over its picture, then an example." },
     { key: "readalong", name: "Read Along", group: "Text templates", cast: 1, desc: "Read a complete English passage with the narrator." },
     { key: "loadword", name: "Load the word", group: "Text templates", cast: 1, desc: "One word said faster and faster until it stays in memory." },
@@ -27,7 +29,7 @@
     { key: "wyr", name: "Would you rather", group: "Text templates", cast: 2, desc: "Questions answered by the second character." },
   ];
   const TEMPLATES = KINDS.map((kind) => [kind.key, kind.name]);
-  const NO_SAMPLE = ["conversation", "presenter", "vox"];  // made with characters / a presenter / pictures: no silent sample
+  const NO_SAMPLE = ["conversation", "presenter", "vox", "doodle"];  // made with characters / a presenter / pictures: no silent sample
   const POLL_MS = 3000;
   const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
   const state = { tab: "topic", template: "wordday", items: [], stories: [], feeds: [], profiles: [], selected: 0, player: null, timer: null,
@@ -158,10 +160,17 @@
     window.TemplateSamples?.attach(grid, { audience: $("batch-audience").value || state.channelAudience, shorts: true }).then(refreshPreview);
   }
 
+  /** Phase 99 (D169): the story type (and, when saving, the length) of a Doodle story batch; nothing for other kinds. */
+  function doodleFields(withLength) {
+    if (state.template !== "doodle") return {};
+    return { explainer_subject: $("batch-subject").value, ...(withLength ? { duration_minutes: Number($("batch-minutes").value) } : {}) };
+  }
+
   function setTemplate(key) {
     if (state.tab === "news" && key !== "news") setTab("topic");
     state.template = key;
     $("batch-template").value = key;
+    $("doodle-options").hidden = key !== "doodle";  // Phase 99 (D169): a Doodle story's type and length
     document.querySelectorAll("#template-grid .template-card").forEach((card) => card.setAttribute("aria-checked", String(card.dataset.template === key)));
     renderCast();
     refreshPreview();
@@ -267,7 +276,8 @@
     notice("batch-notice", "The AI is writing the ideas…");
     try {
       const { ideas } = await Api.proposeBatchIdeas({ topic: $("batch-topic").value.trim(), template: state.template,
-        count: Number($("batch-count").value), cefr_level: $("batch-level").value, hint: $("batch-hint").value.trim() });
+        count: Number($("batch-count").value), cefr_level: $("batch-level").value, hint: $("batch-hint").value.trim(),
+        ...doodleFields(false) });
       state.items = ideas.map((idea) => ({ ...idea, source_text: "" }));
       state.selected = 0;
       renderItems();
@@ -288,7 +298,7 @@
       const result = await Api.createBatch({ topic_name: $("batch-playlist").value.trim(), series_name: $("batch-series").value.trim(),
         template: state.template, cast, cefr_level: state.tab === "news" ? $("news-level").value : $("batch-level").value,
         start_date: $("batch-start").value, every_days: Number($("batch-every").value) || 1, make_projects: now,
-        ...($("batch-audience").value ? { audience: $("batch-audience").value } : {}),
+        ...($("batch-audience").value ? { audience: $("batch-audience").value } : {}), ...doodleFields(true),
         items: items.map(({ title, brief, source_text }) => ({ title: title.trim(), brief: (brief || "").trim(), source_text: source_text || "" })) });
       notice("batch-notice", `Created: ${result.episodes} Shorts dated ${result.first_date} → ${result.last_date}`
         + (result.projects ? `, ${result.projects} projects made.` : ". Automation makes them before their dates."));

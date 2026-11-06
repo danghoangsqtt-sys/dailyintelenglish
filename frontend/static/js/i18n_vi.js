@@ -1528,6 +1528,22 @@ window.I18N_VI = {
     "Stopped by you; it goes on from this step next time.": "Bạn đã dừng; lần sau sẽ làm tiếp từ bước này.",
     // ---- Phase 59 VOX
     "VOX explainer": "Video VOX",
+    // Phase 99 (D168, D169): the Doodle story in the Channel plan and the batch
+    "Doodle story": "Truyện vẽ tay",
+    "Doodle story (16:9)": "Truyện vẽ tay (16:9)",
+    "Doodle": "Truyện vẽ tay",
+    "Long videos (16:9)": "Video dài (16:9)",
+    "A whole story in English over hand-drawn pictures: history, myth, a specialised subject or a short story (3–12 min).":
+      "Một câu chuyện trọn vẹn bằng tiếng Anh trên tranh vẽ tay: lịch sử, thần thoại, chuyên môn hoặc truyện ngắn (3–12 phút).",
+    "Story type": "Loại truyện",
+    "Story length": "Độ dài truyện",
+    "History": "Lịch sử",
+    "Myth": "Thần thoại",
+    "Specialised subject": "Chuyên môn",
+    "Short story": "Truyện ngắn",
+    "Narrator:": "Người kể:",
+    "Story type saved.": "Đã lưu loại truyện.",
+    "Length saved.": "Đã lưu độ dài.",
     "A voice-over with motion graphics: kinetic text, pictures, charts and maps. Nobody on screen.": "Giọng thuyết minh trên đồ hoạ động: chữ động, ảnh, biểu đồ và bản đồ. Không có ai trên màn hình.",
     "Narrator (voice only)": "Người đọc (chỉ dùng giọng)",
     "narrator: only the voice is used": "người đọc: chỉ dùng giọng",

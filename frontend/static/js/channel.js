@@ -188,7 +188,7 @@
     const cast = series.cast || [];
     const solo = series.presentation_mode === "solo_explainer";
     // Phase 63 (ENH-045): a Solo series can also be VOX or 9:16 Shorts (news, text on blur)
-    const STYLES = {classic:["classic","presenter"],solo_explainer:["solo_explainer","presenter"],vox:["solo_explainer","vox"],
+    const STYLES = {classic:["classic","presenter"],solo_explainer:["solo_explainer","presenter"],vox:["solo_explainer","vox"],doodle:["solo_explainer","doodle"],
       news:["solo_explainer","news"],blur:["solo_explainer","blur"],mistakes:["solo_explainer","mistakes"],
       wordday:["solo_explainer","wordday"],whatis:["solo_explainer","whatis"],levelup:["solo_explainer","levelup"],picstory:["solo_explainer","picstory"],loadword:["solo_explainer","loadword"],readalong:["solo_explainer","readalong"],top5:["solo_explainer","top5"],quiz:["solo_explainer","quiz"],listen:["solo_explainer","listen"],
       slowpod:["solo_explainer","slowpod"],flashcards:["solo_explainer","flashcards"],roots:["solo_explainer","roots"],grammar:["solo_explainer","grammar"],
@@ -197,7 +197,7 @@
       act(()=>Api.updateChannelSeries(series.id,{presentation_mode:presentation,explainer_style:style,
         cast:presentation==="solo_explainer"?cast.slice(0,1):cast}),"Mode saved.");}},
       [el("option",{value:"classic",textContent:"Conversation"}),el("option",{value:"solo_explainer",textContent:"Solo Explainer"}),
-        el("option",{value:"vox",textContent:"VOX explainer"}),el("option",{value:"news",textContent:"Short: English news"}),
+        el("option",{value:"vox",textContent:"VOX explainer"}),el("option",{value:"doodle",textContent:"Doodle story (16:9)"}),el("option",{value:"news",textContent:"Short: English news"}),
         el("option",{value:"blur",textContent:"Short: text on blur"}),el("option",{value:"mistakes",textContent:"Short: Don't say / Say"}),
         el("option",{value:"wordday",textContent:"Short: word of the day"}),el("option",{value:"whatis",textContent:"Short: what is this called?"}),el("option",{value:"levelup",textContent:"Short: basic vs advanced"}),el("option",{value:"picstory",textContent:"Short: picture story"}),el("option",{value:"loadword",textContent:"Short: load the word"}),el("option",{value:"readalong",textContent:"Short: read along"}),el("option",{value:"top5",textContent:"Short: top 5 phrases"}),
         el("option",{value:"quiz",textContent:"Short: countdown quiz"}),el("option",{value:"listen",textContent:"Short: listening challenge"}),
@@ -210,6 +210,14 @@
     const structure=el("select",{"aria-label":"Explainer structure",onchange:event=>act(()=>Api.updateChannelSeries(series.id,{explainer_structure:event.target.value}),"Structure saved.")},
       ["why","how","list"].map(value=>el("option",{value,textContent:value})));
     structure.value=series.explainer_structure || "why";
+    // Phase 99 (D168): a Doodle story series keeps its story type and its length (3-12 minutes)
+    const doodle = mode.value === "doodle";
+    const subject=el("select",{"aria-label":"Story type",onchange:event=>act(()=>Api.updateChannelSeries(series.id,{explainer_subject:event.target.value}),"Story type saved.")},
+      [["history","History"],["myth","Myth"],["field","Specialised subject"],["story","Short story"]].map(([value,textContent])=>el("option",{value,textContent})));
+    subject.value=series.explainer_subject || "story";
+    const minutes=el("select",{"aria-label":"Story length",onchange:event=>act(()=>Api.updateChannelSeries(series.id,{duration_minutes:Number(event.target.value)}),"Length saved.")},
+      [3,4,5,6,7,8,9,10,11,12].map(value=>el("option",{value:String(value),textContent:`${value} min`})));
+    minutes.value=String(Math.round(series.duration_minutes || 8));
     const setCast = (index, value) => {
       const next = [...cast];
       next[index] = value;
@@ -244,8 +252,8 @@
       ]),
     ]);
     // Phase 69 (ENH-051): a badge and a colour for the kind of video the series makes
-    const kind = ["classic", "solo_explainer", "vox"].includes(mode.value) ? (solo ? "solo" : "conversation") : "short";
-    const kindLabel = kind === "short" ? "Short 9:16" : mode.value === "vox" ? "VOX" : solo ? "Solo" : "Conversation";
+    const kind = ["classic", "solo_explainer", "vox", "doodle"].includes(mode.value) ? (solo ? "solo" : "conversation") : "short";
+    const kindLabel = kind === "short" ? "Short 9:16" : mode.value === "vox" ? "VOX" : doodle ? "Doodle" : solo ? "Solo" : "Conversation";
     return el("div", { className: "series-card", id: `series-${series.id}`, dataset: { series: series.id, kind } }, [
       el("div", { className: "series-head" }, [
         el("span", { className: "series-kind", textContent: kindLabel }),
@@ -258,7 +266,7 @@
       ]),
       el("div", { className: "channel-hint", textContent: series.description }),
       el("div", { className: "series-meta" }, [
-        mode, ...(solo?[structure]:[]), level, genre, audienceSelect, "Cast:",
+        mode, ...(doodle?[subject, minutes]:solo?[structure]:[]), level, genre, audienceSelect, doodle ? "Narrator:" : "Cast:",
         castSelect(cast[0], (value) => setCast(0, value), "Speaker 1"),
         ...(!solo?[castSelect(cast[1], (value) => setCast(1, value), "Speaker 2")]:[]),
         saveOnChange(el("input", { className: "inline-input url", value: series.playlist_url || "",

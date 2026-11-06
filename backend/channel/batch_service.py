@@ -19,9 +19,10 @@ from backend.channel import channel_service
 from backend.core import paths
 from backend.core.config import settings
 from backend.core.exceptions import ProviderError, SchemaValidationError, ValidationError
-from backend.schemas.channel import EpisodeInput, SeriesInput, TopicInput
+from backend.schemas.channel import DoodleSubject, EpisodeInput, SeriesInput, TopicInput
 from backend.core.constants import CEFR_LEVELS
-from backend.schemas.project import CONVERSATION_SHORT_STYLES, SHORT_STYLES, short_minutes
+from backend.schemas.project import (CONVERSATION_SHORT_STYLES, DOODLE_MAX_MINUTES, DOODLE_MIN_MINUTES, DOODLE_MINUTES,
+                                     SHORT_STYLES, short_minutes)
 
 # What each template asks of an idea (shown to the AI)
 TEMPLATES = {
@@ -54,8 +55,18 @@ TEMPLATES = {
     "grammar": ("Easy grammar",
                 "one grammar point explained by its essence (e.g. the passive voice, the present perfect) or one mistake "
                 "Vietnamese speakers make (e.g. I very like)"),
+    # Phase 99 (D169): a long 16:9 Doodle story, not a Short -- one whole story per idea, of the chosen story type
+    "doodle": ("Doodle story (16:9, 3-12 minutes)", "one complete story in English told over hand-drawn pictures, with a "
+               "beginning, a middle and an end"),
 }
-TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "whatis", "levelup", "picstory", "loadword", "readalong", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr",
+# Phase 99 (D169): what each Doodle story type asks of an idea
+DOODLE_RULES = {
+    "history": "a real moment of history with a puzzle or striking moment, the people and what they wanted, and what followed",
+    "myth": "one myth or legend, named with the culture that tells it, told as the story says, never as fact",
+    "field": "one everyday mystery of a specialised subject (science, medicine, technology, economics...) and its real answer",
+    "story": "an original short story with an ordinary moment, a want, a problem, a choice and a result; no real people",
+}
+TEMPLATE_KEYS = Literal["doodle", "news", "blur", "mistakes", "wordday", "whatis", "levelup", "picstory", "loadword", "readalong", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "chat", "wyr",
                         "conversation", "presenter", "vox"]
 TWO_CHARACTERS = (*CONVERSATION_SHORT_STYLES, "conversation")
 
@@ -83,6 +94,7 @@ class IdeasRequest(BaseModel):
     count: int = Field(default=7, ge=5, le=10)
     cefr_level: str = "B1"
     hint: str = Field(default="", max_length=300)
+    explainer_subject: DoodleSubject | None = None  # Phase 99 (D169): the Doodle story type ("story" when not given)
 
     @field_validator("cefr_level")
     @classmethod
@@ -109,6 +121,9 @@ class CreateRequest(BaseModel):
     items: list[BatchItem] = Field(min_length=1, max_length=12)
     make_projects: bool = False
     audience: Literal["international", "vietnamese", "both"] | None = None  # Phase 72: None = as the channel
+    # Phase 99 (D169): a Doodle story batch -- its story type and length (3-12 minutes, 8 by default); ignored otherwise
+    explainer_subject: DoodleSubject | None = None
+    duration_minutes: float | None = Field(default=None, ge=DOODLE_MIN_MINUTES, le=DOODLE_MAX_MINUTES)
 
     @field_validator("cefr_level")
     @classmethod
@@ -146,6 +161,8 @@ async def propose_ideas(db: aiosqlite.Connection, request: IdeasRequest, router:
     cursor = await db.execute("SELECT title FROM channel_episodes ORDER BY created_at DESC LIMIT 60")
     avoid = [row[0] for row in await cursor.fetchall()]
     name, rule = TEMPLATES[request.template]
+    if request.template == "doodle":  # Phase 99 (D169)
+        rule = f"{rule}: {DOODLE_RULES[request.explainer_subject or 'story']}"
     prompt = await asyncio.to_thread(lambda: _env.get_template("batch_ideas.txt").render(
         count=request.count, topic=request.topic, hint=request.hint, cefr_level=request.cefr_level, template_name=name,
         template_rule=rule, avoid=avoid))
@@ -190,12 +207,15 @@ async def create_batch(db: aiosqlite.Connection, request: CreateRequest) -> dict
     topic_id = next((row["id"] for row in await cursor.fetchall() if row["name"].strip().lower() == request.topic_name.strip().lower()), None)
     if topic_id is None:
         topic_id = (await channel_service.create_topic(db, TopicInput(name=request.topic_name)))["id"]
+    doodle = request.template == "doodle"  # Phase 99 (D169): a long 16:9 story series, not Shorts
     series = await channel_service.create_series(db, topic_id, SeriesInput(
         name=request.series_name, presentation_mode="classic" if conversation else "solo_explainer",
         # Phase 80: a classic series ignores the style (talking characters), as every classic series does
         explainer_style="presenter" if request.template == "conversation" else request.template, cefr_level=request.cefr_level,
-        cast=request.cast, duration_minutes=short_minutes(None if request.template == "conversation" else request.template),
-        genre="small_talk" if conversation else "informational"))
+        cast=request.cast, duration_minutes=(request.duration_minutes or DOODLE_MINUTES) if doodle
+        else short_minutes(None if request.template == "conversation" else request.template),
+        genre="small_talk" if conversation else "informational",
+        explainer_subject=(request.explainer_subject or "story") if doodle else None))
     if request.audience:
         from backend.content import audience
 
@@ -211,4 +231,4 @@ async def create_batch(db: aiosqlite.Connection, request: CreateRequest) -> dict
             "first_date": dates[0].isoformat(), "last_date": dates[-1].isoformat()}
 
 
-assert set(TEMPLATES) == {*SHORT_STYLES, "conversation", "presenter", "vox"}, "every Shorts template has a batch rule"
+assert set(TEMPLATES) == {*SHORT_STYLES, "conversation", "presenter", "vox", "doodle"}, "every batch template has a rule"
