@@ -8,6 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added - Doodle story in the Channel plan, the batch and automatic videos (Phase 99, 2026-11-06)
+
+- A Channel-plan series can be a Doodle story with its story type (history, myth, specialised subject or short story) and a length of
+  3-12 minutes; its projects carry both (migration 042).
+- The batch page has a "Doodle story" card (16:9, not a Short): ideas of the chosen story type, saved as a dated series of the chosen length.
+- Automatic videos: an original short story is approved without the AI fact check, which refuses fiction; history, a specialised subject and a
+  myth still go through it. A Doodle picture job may run 90 minutes, and a story left without its pictures stops for the owner.
+
 ### Added - Read Along Short (Phase 100)
 
 - A vertical illustrated reading passage with sentence and word highlighting driven by narration timings.

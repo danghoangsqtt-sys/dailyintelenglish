@@ -1,6 +1,6 @@
 # Phase 98 state
 
-Status: in progress (2026-11-05). [Plan](PLAN.md).
+Status: implemented_verified (2026-11-06): official Studio exports of Lantern and Apollo 11 pass; committed on `claude/phase98-99-doodle` (f5be5647). [Plan](PLAN.md).
 
 | Task | Scope | Status |
 |---|---|---|
@@ -11,7 +11,7 @@ Status: in progress (2026-11-05). [Plan](PLAN.md).
 | 98.5 | Truth by kind, editing on Step 5 | Fact check, picture editing and review implemented in source. Workflow awaits live verification. |
 | 98.6 | YouTube word list | Uses the learning pack vocabulary. Original fiction adds a disclosure. |
 | 98.7 | Tests and three real videos for the owner | Renderer type check, preview build and 218 Vitest tests passed. An offline Python regression run passed 256 tests, including 25 Doodle tests. Three VOX HTTP integration fixtures could not start under the offline test loop. Full pytest is pending. The first live myth run passed through script, learning, TTS, storyboard, Qwen and MP4 export in Studio on port 8001. The fiction run also reached MP4 export and passed Studio playback. The history run also reached MP4 export and passed Studio playback. Fiction and history ran short. The owner accepted Icarus and asked to continue with Lantern and Apollo 11. Apollo 11 review and the duration and picture-quality checks remain open. |
-| 98.8 | Verify duration and picture corrections (BUG-056, BUG-057) | in_progress. Corrected narration, three replacement scenes and both offline review MP4s verified. Studio export and Git persistence pending. |
+| 98.8 | Verify duration and picture corrections (BUG-056, BUG-057) | done 2026-11-06: official Studio exports of Lantern and Apollo 11 from the committed code (see below). |
 
 ## First live run
 
@@ -57,3 +57,19 @@ These are offline review exports. The original projects and original MP4s remain
 ## Studio and Git close-out retry
 
 The original Studio rendering path reached the Remotion child process on the approved Lantern smoke fixture and failed at the browser connection again. Git could not create the primary repository index lock. A separate local checkpoint is used to preserve the Phase 98 changes while leaving the primary checkout and final completion tag pending.
+
+## Official Studio export close-out (2026-11-06)
+
+The Remotion connection that failed in the earlier execution environment works on this machine. Both approved projects were exported the
+owner's way, on isolated copies of their approval databases (port 8011/8012, code of `claude/phase98-99-doodle`): the audio regenerated through
+`/audio/generate` (the Doodle fit applied), the stale plan saved as a new revision and approved unchanged, then `/video/generate`.
+The illustration rows were pointed at copied asset folders inside each copy (same bytes; the asset hash check still runs).
+
+| Sample | Narration (target) | Render wall time | MP4 | Checks |
+|---|---:|---:|---|---|
+| The Lantern in the Rain | 179.973 s (180 s) | 154.1 s | 188.900 s, 1920x1080, 30 fps, H.264/AAC, -16.5 LUFS | A/V diff 0.000 s; no black span >= 2 s; no silence >= 3 s inside; SRT 17 cues ending 179.973 s |
+| Apollo 11 | 479.974 s (480 s) | 398.4 s | 488.433 s, 1920x1080, 30 fps, H.264/AAC, -16.5 LUFS | A/V diff 0.000 s; no black span >= 2 s; no silence >= 3 s inside; SRT valid, ending 479.974 s |
+
+Two Lantern frames (40 s, 100 s) were looked at: pictures with the red-scarf hero, no generated lettering, pill captions readable.
+Evidence: `data/tmp/phase98-99-close/{lantern,apollo}-export.txt`, `{lantern,apollo}-verify.json`, `lantern-40s.jpg`, `lantern-100s.jpg`
+(git-ignored, in the worktree that made them). The owner's own view of the corrected videos is still the acceptance gate (D165).
