@@ -44,6 +44,17 @@ two-section story cannot be fixed; a person retried by hand in Phase 98, the nig
   be used naturally is replaced ... not pushed into it"), as long as at least five words remain (D164's 5-8); with fewer the job still
   fails. Dropped words are recorded with the story's words on its first line.
 
+## Amendment 2 (2026-11-06, the second real automatic run, before code)
+
+With D172 the script passed (both sections repaired), but the run showed two more gaps of the automatic path only:
+
+- **D173, the editor keeps a Doodle story's words.** The AI editor (Phase 84.5) rewrote the story and the new first line lost the story's notes
+  (target words and hero look), so the video would have no term cards and the pictures no hero line. For a Doodle story the rewrite now carries
+  the notes onto its first line, and it is rejected (the original kept) when a target word falls below three uses.
+- **D174, a Doodle story from the Channel plan reads at its level's pace.** Its narrator took the profile's speed 1.0, so 338 words lasted
+  115.7 s for a 3-minute story (Step 1 projects get the CEFR speed, B1 0.85, as D164 says). A Doodle series' projects now use the CEFR speed,
+  as slow podcasts use their own (Phase 81).
+
 ## Tasks
 
 - 99.1 **Series and projects:** migration 042, `schemas/channel.py`, `channel_service.create_series/patch/create_projects`, tests in
