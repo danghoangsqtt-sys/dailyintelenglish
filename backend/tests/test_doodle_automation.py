@@ -165,3 +165,16 @@ async def test_a_doodle_picture_job_may_take_longer(monkeypatch):
     monkeypatch.setattr(Producer, "draw", draw)
     await _solo(DoodleClient("story"))
     assert seen == [runner_module.DOODLE_PICTURE_TIMEOUT_SECONDS] and seen[0] > runner_module.JOB_TIMEOUT_SECONDS
+
+
+def test_a_doodle_story_from_the_channel_reads_at_its_level_pace(client):  # noqa: F811
+    """Phase 99 (D174): not the narrator profile's speed -- 338 words lasted 115.7 s for 3 minutes in the real run."""
+    from backend.core.constants import CEFR_DEFAULT_TTS_SPEED
+
+    narrator = locked_character("Nova", "yellow")
+    topic = data(client.post("/api/channel/topics", json={"name": "Paced"}))
+    series = data(client.post(f"/api/channel/topics/{topic['id']}/series", json={
+        "name": "Tales", "presentation_mode": "solo_explainer", "explainer_style": "doodle", "cefr_level": "A2", "cast": [narrator]}))
+    data(client.post(f"/api/channel/series/{series['id']}/episodes", json={"title": "A walk"}))
+    project_id = data(client.post(f"/api/channel/series/{series['id']}/projects"))["created"][0]["project_id"]
+    assert data(client.get(f"/api/projects/{project_id}"))["speakers"][0]["speed"] == CEFR_DEFAULT_TTS_SPEED["A2"]

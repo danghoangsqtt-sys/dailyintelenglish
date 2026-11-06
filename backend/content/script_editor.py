@@ -132,6 +132,8 @@ async def review(db: aiosqlite.Connection, project_id: str, router: AIRouter | N
         prompt = await asyncio.to_thread(_env.get_template("editor_rewrite.txt").render, notes=verdict.notes,
                                          scores=scores, current_words=words_before, **context)
         old_notes = {line["text"].strip(): line.get("language_notes") for line in lines}
+        # Phase 99 (D173): a Doodle story's target words and hero look live on its first line and must survive a rewrite
+        story = ((lines[0].get("language_notes") or {}).get("doodle") or {}) if project.get("explainer_style") == "doodle" else {}
 
         async def attempt(text: str) -> tuple[list[dict], list[str]]:
             try:
@@ -142,7 +144,13 @@ async def review(db: aiosqlite.Connection, project_id: str, router: AIRouter | N
                         "language_notes": old_notes.get(" ".join(line.text.split()))} for line in answer.lines]
             if any(line["speaker_id"] is None for line in written):
                 return written, ["the rewrite named a speaker who is not in the cast"]
-            return written, _rewrite_problems(project, written, target_words)
+            problems = _rewrite_problems(project, written, target_words)
+            if story and written:
+                written[0]["language_notes"] = {**(written[0]["language_notes"] or {}), "doodle": story}
+                short = script_pipeline.doodle_short_terms(story.get("words") or [], [line["text"] for line in written])
+                if short:
+                    problems.append(f"the story's target words must each be said at least three times: {', '.join(short)}")
+            return written, problems
 
         new_lines, problems = await attempt(prompt)
         if problems and all(problem.startswith("total word count") for problem in problems):

@@ -323,6 +323,8 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
 
     # Phase 82: a Short template is written for its own length (a full minute for news / knowledge, 45 s for quick ones)
     duration = short_minutes(style) if style in SHORT_STYLES else series["duration_minutes"]
+    if style == "doodle":  # Phase 99 (D174): a Doodle story is read at its level's pace (D164), like one made in Step 1
+        speakers = [speaker.model_copy(update={"speed": None}) for speaker in speakers]
     if style == "slowpod":  # Phase 81: the narrator reads a slow English podcast slowly, whatever the profile's speed
         from backend.schemas.project import SLOWPOD_SPEED
 

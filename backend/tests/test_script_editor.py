@@ -100,3 +100,40 @@ async def test_the_editor_keeps_a_vox_cold_open(db):
     router, provider = _router({"scores": WEAK, "notes": "Sharper hook."}, {"lines": rewrite})
     await script_editor.review(db, project["id"], router)
     assert "Keep the cold open" in provider.calls[1].prompt and "Keep the greeting at the start" not in provider.calls[1].prompt
+
+
+async def _doodle(db):
+    """Phase 99 (D173): a 3-minute Doodle story whose first line carries its target words and hero look."""
+    project = await project_service.create_project(db, ScriptConfig(
+        name="Story", topic="A lost umbrella", cefr_level="B1", duration_minutes=3, num_speakers=1, genre="storytelling",
+        accent="american", presentation_mode="solo_explainer", explainer_style="doodle", explainer_subject="story",
+        speakers=[SpeakerConfig(name="Lina", gender="female", accent="american")]))
+    speaker = project["speakers"][0]["id"]
+    target = script_pipeline.compute_target_words("B1", 3)
+    words = ["umbrella", "notice", "return", "honest", "rain"]
+    said = " ".join(f"{word} {word} {word}" for word in words) + "."
+    texts = [said, *_sentences(round(target / 10) - 2, start=900)]
+    notes = {"doodle": {"words": words, "hero": "a girl in a yellow coat"}}
+    await script_service.save_script(db, project["id"], [{"speaker_id": speaker, "text": texts[0], "language_notes": notes},
+                                                         *[{"speaker_id": speaker, "text": text} for text in texts[1:]]], {speaker})
+    return project, target, words, said
+
+
+async def test_a_doodle_rewrite_keeps_the_story_words_on_its_first_line(db):
+    project, target, words, said = await _doodle(db)
+    rewrite = [{"speaker": "Lina", "text": "A new first line. " + said}, *[
+        {"speaker": "Lina", "text": text} for text in _sentences(round(target / 10) - 2, start=700)]]
+    router, _ = _router({"scores": WEAK, "notes": "Show, don't tell."}, {"lines": rewrite})
+    assert (await script_editor.review(db, project["id"], router))["outcome"] == "rewritten"
+    first = (await script_service.get_script(db, project["id"]))[0]
+    assert first["text"].startswith("A new first line.") and first["language_notes"]["doodle"]["words"] == words
+
+
+async def test_a_doodle_rewrite_that_drops_a_word_below_three_uses_is_refused(db):
+    project, target, words, _said = await _doodle(db)
+    before = [line["text"] for line in await script_service.get_script(db, project["id"])]
+    rewrite = [{"speaker": "Lina", "text": text} for text in _sentences(round(target / 10), start=700)]  # none of the words
+    router, _ = _router({"scores": WEAK, "notes": "Shorter sentences."}, {"lines": rewrite})
+    result = await script_editor.review(db, project["id"], router)
+    assert result["outcome"] == "kept_original" and "target words" in result["rejected_reason"]
+    assert [line["text"] for line in await script_service.get_script(db, project["id"])] == before
