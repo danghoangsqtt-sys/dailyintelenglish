@@ -626,6 +626,23 @@ def doodle_short_terms(terms: list[str], texts: list[str]) -> list[str]:
     return [term for term in terms if term_uses(term, texts) < DOODLE_TERM_USES]
 
 
+def doodle_shortfall(terms: list[str], texts: list[str]) -> list[str]:
+    """Phase 99 (D172): each short target word once per use it still lacks, so a rewrite that adds uses counts as progress
+    even before a word reaches three."""
+    return [term for term in terms for _ in range(max(0, DOODLE_TERM_USES - term_uses(term, texts)))]
+
+
+DOODLE_MIN_TERMS = 5  # D164: a Doodle story teaches 5-8 words; fewer than this after the repairs fails the script
+
+
+def settle_doodle_terms(terms: list[str], texts: list[str]) -> tuple[list[str], list[str]]:
+    """Phase 99 (D172): (the target words the story keeps, the words it drops) after its word repairs. A word said fewer than
+    three times is dropped, never forced in; with fewer than five words left nothing is kept and the script fails."""
+    short = doodle_short_terms(terms, texts)
+    kept = [term for term in terms if term not in short]
+    return (kept, short) if len(kept) >= DOODLE_MIN_TERMS else ([], short)
+
+
 def _word_forms(word: str) -> str:
     """A regex for a word and its simple inflections: plural, -ed and -ing (with the e-drop, y→i and a doubled last
     consonant), e.g. "deliver" matches delivers/delivered/delivering, "study" studies/studied."""
@@ -784,7 +801,7 @@ def _source_context(project: dict) -> dict:
 async def _vocabulary_repair(
     router: "AIRouter", project: dict, outline: ScriptOutline, all_lines: list[SectionLineOut], target_words: int,
     known_speaker_ids: set[str], num_speakers: int, db, job_id: str, words: list[str] | None = None,
-    missing_of=missing_vocabulary, ask: str = "",
+    missing_of=missing_vocabulary, ask: str = "", section_index: int | None = None,
 ) -> list[SectionLineOut]:
     """Phase 57 (ENH-039): one repair round when the script misses words of the owner's vocabulary list. Phase 98: also a
     Doodle story's target words said too rarely (`words`, `missing_of`, `ask`).
@@ -805,12 +822,13 @@ async def _vocabulary_repair(
     def mentions(spec: OutlineSectionSpec) -> int:
         return len(missing) - len(missing_vocabulary(missing, [spec.objective]))  # how many the objective names
 
-    target_spec, target_lines = max(reversed(ordered), key=lambda item: mentions(item[0]))
+    chosen = [item for item in ordered if item[0].index == section_index]  # Phase 99 (D172): a section named by the caller
+    target_spec, target_lines = chosen[0] if chosen else max(reversed(ordered), key=lambda item: mentions(item[0]))
     measured = section_word_count(target_lines)
     spec = target_spec.model_copy(update={"target_words": measured})
     min_words = round(measured * (1 - SCRIPT_SECTION_WORD_TOLERANCE))
     max_words = round(measured * (1 + SCRIPT_SECTION_WORD_TOLERANCE))
-    errors = [ask.format(words=", ".join(missing)) if ask else
+    errors = [ask.format(words=", ".join(dict.fromkeys(missing))) if ask else
               f"the owner's vocabulary list is not fully used: use each of these words or phrases naturally at least "
               f"once in this section: {', '.join(missing)}",
               f"keep this section's length between {min_words} and {max_words} words and keep its meaning and order"]
@@ -1959,20 +1977,26 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         all_lines = await fill_translations(router, all_lines)
     if project.get("explainer_style") == "doodle":
         terms = outline.target_terms
-        all_lines = await _vocabulary_repair(
-            router, project, outline, all_lines, target_words, known_speaker_ids, num_speakers, db, job_id, words=terms,
-            missing_of=doodle_short_terms, ask="this story must use these target words more often: say each of them at least three "
-            "times in this section, naturally, as part of what happens: {words}")
-        texts = [line.text for line in all_lines]
-        missing = doodle_short_terms(terms, texts)
-        if missing:
+        # Phase 99 (D172): every section gets one chance, in story order, to say the words still short more often
+        for spec in outline.sections:
+            if not doodle_short_terms(terms, [line.text for line in all_lines]):
+                break
+            all_lines = await _vocabulary_repair(
+                router, project, outline, all_lines, target_words, known_speaker_ids, num_speakers, db, job_id, words=terms,
+                missing_of=doodle_shortfall, section_index=spec.index,
+                ask="this story must use these target words more often: say each of them two or more times in this section, "
+                "naturally, as part of what happens: {words}")
+        kept, missing = settle_doodle_terms(terms, [line.text for line in all_lines])
+        if not kept:
             await _fail(db, job_id, "doodle_vocabulary_incomplete", [
                 f"Use each target term at least three times: {', '.join(missing)}"
             ])
             return
+        # D172: a word the story could not use three times is dropped from its target words, never forced in
+        notes = {"words": kept, "hero": outline.hero, **({"dropped": missing} if missing else {})}
         first = all_lines[0]
         all_lines = [first.model_copy(update={"language_notes": first.language_notes.model_copy(
-            update={"doodle": {"words": terms, "hero": outline.hero}})}), *all_lines[1:]]
+            update={"doodle": notes})}), *all_lines[1:]]
 
     server_lines = [
         {

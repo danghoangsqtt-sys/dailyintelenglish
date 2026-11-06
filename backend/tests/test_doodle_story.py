@@ -250,3 +250,31 @@ def test_a_short_story_says_it_is_fiction_in_the_description():
     assert composed["description"].startswith("This story is fiction")
     history = youtube_service.compose(package, {**project, "explainer_subject": "history"}, [], None, None)
     assert "fiction" not in history["description"]
+
+
+def test_the_shortfall_counts_each_use_a_word_still_lacks():
+    """Phase 99 (D172): a rewrite that adds uses is progress even before a word reaches three."""
+    texts = ["The wax melted. Wax again.", "An island."]
+    assert script_pipeline.doodle_shortfall(["wax", "island", "wing"], texts) == ["wax", "island", "island", "wing", "wing", "wing"]
+    assert script_pipeline.doodle_shortfall(["wax"], texts + ["More wax."]) == []
+
+
+def test_a_word_the_story_could_not_use_three_times_is_dropped_when_five_remain():
+    """Phase 99 (D172): never forced in; with fewer than five words left the script still fails."""
+    said = " ".join(f"{word} {word} {word}." for word in ("escape", "wax", "wing", "island", "trial"))
+    kept, dropped = script_pipeline.settle_doodle_terms(["escape", "wax", "wing", "island", "trial", "labyrinth"], [said])
+    assert kept == ["escape", "wax", "wing", "island", "trial"] and dropped == ["labyrinth"]
+    kept, dropped = script_pipeline.settle_doodle_terms(["escape", "wax", "wing", "island", "labyrinth", "minotaur"],
+                                                        ["escape escape escape wax wax wax wing wing wing island island island"])
+    assert kept == [] and dropped == ["labyrinth", "minotaur"]
+    kept, dropped = script_pipeline.settle_doodle_terms(["escape", "wax", "wing", "island", "trial"], [said])
+    assert (kept, dropped) == (["escape", "wax", "wing", "island", "trial"], [])
+
+
+def test_the_doodle_word_repair_walks_every_section():
+    """Phase 99 (D172): one repair per section in story order (the first real automatic run failed with one repair)."""
+    import inspect
+
+    source = inspect.getsource(script_pipeline)
+    assert "for spec in outline.sections:" in source and "section_index=spec.index" in source
+    assert "missing_of=doodle_shortfall" in source
