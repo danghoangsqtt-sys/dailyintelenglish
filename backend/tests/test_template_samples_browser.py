@@ -46,7 +46,7 @@ async def test_the_batch_cards_show_a_clip_that_opens_a_larger_example(browser_i
     page = await browser_instance.new_page(viewport={"width": 1400, "height": 1000})
     await page.goto(f"{live_server_url}/shorts-batch")
     await page.locator("#template-grid .sample-thumb").nth(15).wait_for(state="attached")
-    assert await page.locator("#template-grid .sample-thumb").count() == 20
+    assert await page.locator("#template-grid .sample-thumb").count() == 22  # Phase 100: + read along; Phase 99: + Doodle story
     card = page.locator("#template-grid [data-template='grammar']")
     await card.hover()
     await page.wait_for_function("!document.querySelector(\"#template-grid [data-template='grammar'] video\").paused")
@@ -65,7 +65,7 @@ async def test_step1_cards_have_clips_and_reduced_motion_keeps_the_poster(browse
     page = await context.new_page()
     await page.goto(f"{live_server_url}/step1")
     await page.locator("[data-mode='vox'] .sample-thumb").wait_for(state="attached")
-    assert await page.locator("[data-template] .sample-thumb").count() == 17
+    assert await page.locator("[data-template] .sample-thumb").count() == 18  # Phase 100: + read along
     await page.locator("[data-mode='shorts']").click()
     card = page.locator("[data-template='roots']")
     await card.hover()
