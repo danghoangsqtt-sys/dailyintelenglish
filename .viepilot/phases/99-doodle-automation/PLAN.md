@@ -31,6 +31,19 @@ below follow Phase 98 (D161-D167) and the way earlier kinds joined the channel (
   keep 30 minutes. A Doodle story whose pictures cannot be drawn (no GPU model, Lite) stops for the owner instead of rendering without
   pictures.
 
+## Amendment (2026-11-06, found by the first real automatic run, before code)
+
+The first automatic 3-minute short story (cloud AI) stopped twice at the script with `doodle_vocabulary_incomplete` ("Use each target
+term at least three times: belongings, notice, get off, honesty", then "faded, lost and found"). The production database has the same
+error twice. Cause: after the sections are written, one repair rewrites **one** section, so four words short of three uses across a
+two-section story cannot be fixed; a person retried by hand in Phase 98, the night run cannot.
+
+- **D172, the target words are repaired across the story.** The Doodle word repair walks every section once, in story order, asking for the
+  words still short; a rewrite is kept when it lowers the total shortfall (uses missing to reach three) and the script still validates.
+  A word that is still short after that is dropped from the story's target words, never forced in (Phase 98's own rule: "a word that cannot
+  be used naturally is replaced ... not pushed into it"), as long as at least five words remain (D164's 5-8); with fewer the job still
+  fails. Dropped words are recorded with the story's words on its first line.
+
 ## Tasks
 
 - 99.1 **Series and projects:** migration 042, `schemas/channel.py`, `channel_service.create_series/patch/create_projects`, tests in
@@ -38,6 +51,9 @@ below follow Phase 98 (D161-D167) and the way earlier kinds joined the channel (
   unchanged).
 - 99.2 **Batch:** `batch_service.TEMPLATES["doodle"]`, request fields, the idea prompt, `create_batch` for a 16:9 Doodle series; tests.
 - 99.3 **Night runner:** story skips the fact check, picture timeout, no-picture stop; tests with the existing fake client.
+- 99.3b **Word repair (D172):** `script_pipeline._vocabulary_repair` takes a chosen section and keeps a rewrite that lowers the total
+  shortfall; the Doodle branch walks every section and drops words still short when five or more remain; tests in
+  `backend/tests/test_doodle_story.py` style.
 - 99.4 **UI:** the Channel-plan series form and the batch page offer Doodle story with the four story types and 3-12 minutes;
   Vietnamese copy in `i18n_vi.js`; a browser test.
 - 99.5 **Verification:** full pytest, Vitest, renderer type check; one real automatic run of a 3-minute Doodle story from a Channel-plan
