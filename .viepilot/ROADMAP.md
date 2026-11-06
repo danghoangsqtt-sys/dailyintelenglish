@@ -1,8 +1,16 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 100 — Read Along Short (2026-11-06)
+
+Status: implemented; committed with Phase 98. [State](phases/100-read-along-short/PHASE-STATE.md). A vertical illustrated passage with sentence and word highlighting.
+
+## Phase 99 — Doodle story in the Channel plan, the batch and automatic videos (2026-11-06)
+
+Status: implemented_verified (2026-11-06; full pytest 2434 passed; one automatic 3-minute story verified; not installed or pushed). [State](phases/99-doodle-automation/PHASE-STATE.md). [Plan](phases/99-doodle-automation/PLAN.md).
+
 ## Phase 98 — Doodle story: history, myth, a specialised subject or a short story, in English (2026-11-05)
 
-Status: in progress. [Plan](phases/98-doodle-story/PLAN.md). A whole story over hand-drawn pictures, 16:9, 3-12 minutes, with 5-8 target words woven into it. Task 98.8 verifies measured narration and targeted picture corrections.
+Status: implemented_verified (2026-11-06; official Studio exports pass). [Plan](phases/98-doodle-story/PLAN.md). A whole story over hand-drawn pictures, 16:9, 3-12 minutes, with 5-8 target words woven into it. Task 98.8 verifies measured narration and targeted picture corrections.
 
 ## Phase 97 — The root with a story, and Load the word (2026-11-04)
 

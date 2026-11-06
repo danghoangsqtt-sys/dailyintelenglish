@@ -266,10 +266,14 @@
   "status": "desktop_2_0_0_installed_omnivoice_local_setup_pending",
   "current_phase": 98,
   "phase98_doodle_story": {
-    "status": "in_progress",
+    "status": "implemented_verified",
     "plan": ".viepilot/phases/98-doodle-story/PLAN.md",
     "state": ".viepilot/phases/98-doodle-story/PHASE-STATE.md",
-    "next_task": "Owner rated Apollo 11 quality quite good. Task 98.8 measured corrected narration at 179.973 s (Lantern) and 479.974 s (Apollo 11). Offline 1080p review MP4s verified (Lantern 188.900 s, Apollo 488.433 s). Apollo has seven cards in its isolated snapshot. Verify the official Studio export where Remotion can connect and complete Git persistence before closing Phase 98."
+    "next_task": "Owner watches the corrected Lantern and Apollo 11 exports; install from claude/phase98-99-doodle when the owner asks.",
+    "studio_exports": "Lantern 179.973 s narration / 188.900 s MP4; Apollo 11 479.974 s / 488.433 s; 1080p H.264/AAC, no black or silent spans",
+    "commit": "f5be5647 (workspace work) + 799fd44b (close-out docs)",
+    "pushed": false,
+    "installed": false
   },
   "next_planned_phase": "75",
   "feature_plan": {
@@ -1198,5 +1202,35 @@
     "installed_from_commit": "ebeee750",
     "installed_backup": "data/backups/desktop-20261104-234448-370",
     "package": "dist/2.0-phase97b-20261104"
+  },
+  "phase99_doodle_automation": {
+    "status": "implemented_verified",
+    "plan": ".viepilot/phases/99-doodle-automation/PLAN.md",
+    "state": ".viepilot/phases/99-doodle-automation/PHASE-STATE.md",
+    "decisions": [
+      "D168",
+      "D169",
+      "D170",
+      "D171",
+      "D172",
+      "D173",
+      "D174"
+    ],
+    "branch": "claude/phase98-99-doodle",
+    "full_pytest": "2434 passed",
+    "vitest": "220 passed",
+    "typecheck": "clean",
+    "ruff": "2 errors already present at b94e1e7f (duplicate qwen_moment_prompt in recipes.py, redefined client fixture in test_automation.py)",
+    "automatic_run": "3-minute short story: waiting_review in 1123.5 s, MP4 151.767 s 1080p verified",
+    "known_limit": "Doodle narration shorter than chosen (143.3 s for 3 min); the Read Along script is served by the local model",
+    "pushed": false,
+    "installed": false
+  },
+  "phase100_read_along": {
+    "status": "implemented_verified",
+    "state": ".viepilot/phases/100-read-along-short/PHASE-STATE.md",
+    "automatic_run": "A2 'My Morning Walk' waiting_review, MP4 24.733 s 1080x1920 verified",
+    "pushed": false,
+    "installed": false
   }
 }

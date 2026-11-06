@@ -1,8 +1,16 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 100 — Read Along Short (2026-11-06)
+
+Status: implemented, committed with Phase 98 (f5be5647) on `claude/phase98-99-doodle`. [State](phases/100-read-along-short/PHASE-STATE.md). An automatic Studio export is checked in the Phase 98/99 close-out.
+
+## Phase 99 — Doodle story in the Channel plan, the batch and automatic videos (2026-11-06)
+
+Status: implemented_verified (2026-11-06; full pytest 2434 passed; one automatic 3-minute story verified; not installed or pushed). [State](phases/99-doodle-automation/PHASE-STATE.md). [Plan](phases/99-doodle-automation/PLAN.md). D168-D174; three real automatic runs found and fixed D172-D174.
+
 ## Phase 98 — Doodle story (2026-11-05)
 
-Status: in progress. [Plan](phases/98-doodle-story/PLAN.md), [state](phases/98-doodle-story/PHASE-STATE.md). Icarus accepted; owner rated Apollo 11 quality quite good. Task 98.8 verified corrected narration, replacement pictures and both offline MP4s. Official Studio export and Git persistence remain open.
+Status: implemented_verified (2026-11-06). [Plan](phases/98-doodle-story/PLAN.md), [state](phases/98-doodle-story/PHASE-STATE.md). Icarus accepted; owner rated Apollo 11 quality quite good. Official Studio exports pass: Lantern 179.973 s narration / 188.900 s MP4, Apollo 11 479.974 s / 488.433 s, 1080p H.264/AAC, no black or silent spans. Committed on `claude/phase98-99-doodle`.
 
 ## Phase 97 — The root with a story, and Load the word (2026-11-04)
 
