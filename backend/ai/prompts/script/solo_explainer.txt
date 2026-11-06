@@ -1,3 +1,4 @@
+{% if explainer_style | default('') != 'doodle' %}
 ## Solo Explainer — {{ explainer_structure | upper }}
 This is an English knowledge explainer addressed directly to the viewer by ONE presenter.
 Explain the subject itself, using the chosen CEFR level as the language ceiling.
@@ -35,6 +36,7 @@ give a concrete example, note a common mistake, and finish with a concise recap 
 {% else %}
 LIST structure: introduce the topic; explain a small ordered set of distinct ideas, each
 with its own example; connect the ideas and finish with the central takeaway and sign-off.
+{% endif %}
 {% endif %}
 
 Apply this structure ACROSS the episode, respecting the planned section count and all
@@ -103,6 +105,34 @@ surprise; finish with a one-line takeaway and one line inviting the viewer to fo
 Never attribute a quote to a real person unless the owner gave it. This SHORT format replaces the
 structure above and the OPENING and CLOSING below.
 {% endif %}
+{% elif explainer_style == 'doodle' %}
+## Doodle Story
+One narrator tells ONE WHOLE STORY in spoken English over hand-drawn pictures. It is a story, not a lesson and not a list of
+facts: it has a beginning, a middle and an end, and every sentence moves it on. No greeting, no welcome, no channel name at the
+start: the first sentence is already the story.
+{% if explainer_subject == 'history' %}KIND: HISTORY. The arc, once: a puzzle or a striking moment; the world at that time; the people
+and what they wanted; the turn; what followed; the answer to the opening puzzle. Only widely known events, people and dates, or those in the
+owner's material. Say "historians are not sure" where that is true. Never invent what a real person said or thought.
+{% elif explainer_subject == 'myth' %}KIND: MYTH. The arc, once: the question the myth answers; the world; the hero and the wish; the
+trial; the price; the meaning. Name the culture that tells it early on ("The ancient Greeks told this story..."). Tell it as a story people tell
+("the story says"), never as fact, and do not add events the myth does not have.
+{% elif explainer_subject == 'field' %}KIND: A SPECIALISED SUBJECT. The arc, once: an everyday mystery; the wrong explanation most people
+give; the investigation; ONE key idea with one comparison anyone can picture; the answer; why it matters. Real, widely accepted knowledge only; never
+invent a study, a figure or a named expert.
+{% else %}KIND: AN ORIGINAL SHORT STORY. Invent it. The arc, once: an ordinary moment and something the main character wants; the problem;
+things get worse; a choice; the result; a last line that echoes the first. No real people and no real events. One simple main character with a first
+name. Frame it once, in the opening, as an imagined story (for example, "Imagine a girl named Mai"). Keep later scenes inside the story world.
+{% endif %}
+ENGLISH INSIDE THE STORY: the objective names the target words. They are part of what happens, and what they mean is clear from the
+story itself. Never stop the story to teach ("today's word is", "this means"). Use them in different sentences spread through the
+episode.
+PICTURES: the listener sees one drawing for every sentence or two, so tell things that can be drawn: a place, a person doing something, an
+object. Keep most sentences under 18 words, one to three sentences per line.
+KEEP THEM LISTENING: every minute or so, a small question or a turn that makes the listener want the next part; each time in new words.
+Numbers come with an everyday comparison ("as tall as a ten-storey building"). If real people died, tell it plainly and with respect.
+THE END: in the last 30 to 45 seconds, retell how the story ended in a few simple sentences that use the target words once more.
+End on the story, without channel promotion or a goodbye.
+This DOODLE STORY format replaces the OPENING and CLOSING below.
 {% elif explainer_style == 'vox' %}
 VOX FORMULA ({{ 'a vertical Short under one minute' if short_format else 'a narrated episode' }}): a voice over pictures, like a
 viral Vox explainer -- evidence first, then context. The WHOLE episode follows this order ONCE{{ '' if short_format else

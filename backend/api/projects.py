@@ -333,8 +333,11 @@ async def regenerate_script_line(
         live_line = await script_service.get_script_line(db, project_id, payload.line_id)
         if live_line["text"] != current_line["text"] or live_line["speaker_id"] != current_line["speaker_id"]:
             raise ConflictError("Script line changed while AI was regenerating it; retry with the latest text")
+        notes = new_line.language_notes.model_dump()
+        if live_project.get("explainer_style") == "readalong":
+            notes["readalong"] = (live_line["language_notes"] or {}).get("readalong")
         updated = await script_service.update_script_line(
-            db, project_id, payload.line_id, new_line.text, new_line.language_notes.model_dump(),
+            db, project_id, payload.line_id, new_line.text, notes,
             commit=False,
         )
         await _sync_status_after_script_change(db, project_id)

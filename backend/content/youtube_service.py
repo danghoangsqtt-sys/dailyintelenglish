@@ -420,6 +420,10 @@ def compose(package: dict | None, project: dict, script_lines: list[dict], learn
         return None
     result = {**package, "summary": package["description"], "music_credit": credit}
     result["description"] = compose_description(package, learning, credit, episode, project.get("audience_effective") or "both")
+    if project.get("explainer_style") == "doodle" and project.get("explainer_subject") == "story":  # D165: said plainly
+        vietnamese = project.get("audience_effective") == "vietnamese"
+        note = "Đây là truyện hư cấu, không dựa trên người hay sự kiện có thật." if vietnamese else "This story is fiction: its people and events are made up."
+        result["description"] = f"{note}\n\n{result['description']}"[:DESCRIPTION_LIMIT]
     result["audience"] = project.get("audience_effective") or "both"
     result["episode"] = episode
     result["hashtags_text"] = " ".join(f"#{tag}" for tag in package.get("hashtags") or [])

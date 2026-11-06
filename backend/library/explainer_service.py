@@ -27,12 +27,12 @@ from backend.ai.llm.prompt_loader import render_explainer_prompt
 from backend.ai.llm.validation import parse_and_validate
 from backend.db.transactions import read_transaction, write_transaction as _write_transaction
 from backend.library import explainer_assets, explainer_stage, presenter_asset_plan
-from backend.library.explainer_timing import ScriptIndex, resolve_timeline
+from backend.library.explainer_timing import ScriptIndex, SpeechTimeline, resolve_timeline
 from backend.media import audio_service
 from backend.schemas.project import SHORT_STYLES, VOICE_ONLY_STYLES
 from backend.schemas.explainer import (
     VOX_KINDS, ExplainerApproval, ExplainerPlan, ExplainerPlanPatch, ExplainerProposal, ExplainerProposalRequest,
-    ExplainerSegment, PresenterReference, ProposedExplainerSegment, VoxExplainerProposal,
+    DoodlePicture, DoodlePictures, DoodleProposal, ExplainerSegment, PresenterReference, ProposedExplainerSegment, VoxExplainerProposal,
 )
 
 if TYPE_CHECKING:
@@ -42,9 +42,15 @@ if TYPE_CHECKING:
 _PROPOSAL = TypeAdapter(ExplainerProposal)
 # Phase 59 (ENH-041): a VOX video (voice-over, motion graphics) proposes every visual kind and no presenter gestures
 _VOX_PROPOSAL = TypeAdapter(VoxExplainerProposal)
+_DOODLE_PROPOSAL = TypeAdapter(DoodleProposal)  # Phase 98
+_DOODLE_PICTURES = TypeAdapter(DoodlePictures)
 
 
 VOX_MAX_SEGMENT_WORDS = 24  # Phase 86: about 8 s of narration at a learner's pace
+DOODLE_SEGMENT_WORDS = 10  # Phase 98: a sentence end this far into a picture may end it (the sample averages 16 words)
+DOODLE_MAX_SEGMENT_SECONDS = 12
+_SENTENCE_END = (".", "!", "?")
+_LABEL_LEAK = re.compile(r"doodle|illustration|sketch|title|picture|caption", re.IGNORECASE)
 VOX_CLOSING = re.compile(r"\bfollow daily beyond english\b|\bsubscribe\b|thanks? (you )?for watching", re.IGNORECASE)
 
 
@@ -59,6 +65,11 @@ def is_short(project_or_source: dict) -> bool:
     from backend.schemas.project import is_short_video
 
     return project_or_source.get("explainer_style") in SHORT_STYLES or is_short_video(project_or_source)
+
+
+def is_doodle(project_or_source: dict) -> bool:
+    """Phase 98: a Doodle story -- code cuts the narration into pictures and the AI only describes them."""
+    return project_or_source.get("explainer_style") == "doodle"
 
 
 def stage_owner(source: dict) -> str:
@@ -117,7 +128,8 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
     source = {
         "project": {key: project.get(key) for key in ("id", "presentation_mode", "explainer_structure", "topic", "cefr_level", "language_features")}
         # Phase 59: only a VOX project adds these keys, so every Solo fingerprint stays exactly as approved
-        | ({"explainer_style": project.get("explainer_style"), "source_text": project.get("source_text") or ""} if vox else {}),
+        | ({"explainer_style": project.get("explainer_style"), "source_text": project.get("source_text") or ""} if vox else {})
+        | ({"explainer_subject": project.get("explainer_subject")} if is_doodle(project) else {}),  # Phase 98
         "speaker": {key: speaker.get(key) for key in ("id", "speaker_index", "tts_engine", "voice_id", "accent", "gender", "voice_description", "speed", "pitch", "volume")},
         "lines": [{key: line.get(key) for key in ("id", "speaker_id", "text", "audio_cache_path")} for line in lines],
         "cast": member, "presenter": presenter.model_dump(),
@@ -142,8 +154,13 @@ def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]
     """Report actionable blockers while keeping an incomplete plan editable as a draft."""
     issues = []
     try:
-        ScriptIndex(snapshot["lines"]).validate_coverage(segments)
-        resolve_timeline(ScriptIndex(snapshot["lines"]), snapshot["audio"]).segments(segments)
+        index = ScriptIndex(snapshot["lines"])
+        spans = index.validate_coverage(segments)
+        timings = resolve_timeline(index, snapshot["audio"]).segments(segments)
+        if is_doodle(snapshot["source"]["project"]):
+            for (start, end), timing in zip(spans, timings, strict=True):
+                if end - start > VOX_MAX_SEGMENT_WORDS or timing["end_sec"] - timing["start_sec"] > DOODLE_MAX_SEGMENT_SECONDS:
+                    issues.append(f"Segment {timing['id']}: split this picture at 24 words or 12 seconds")
     except ValidationError as exc:
         issues.append(str(exc))
     vox = is_vox(snapshot["source"]["project"])
@@ -459,7 +476,83 @@ async def list_illustrations(db: aiosqlite.Connection, project_id: str) -> list[
 
 
 def _proposal_adapter(source: dict) -> TypeAdapter:
-    return _VOX_PROPOSAL if is_vox(source["project"]) else _PROPOSAL
+    return _DOODLE_PROPOSAL if is_doodle(source["project"]) else _VOX_PROPOSAL if is_vox(source["project"]) else _PROPOSAL
+
+
+def doodle_spans(lines: list[dict], timing: SpeechTimeline | None = None) -> list[dict]:
+    """Phase 98 (D167): the narration cut into pictures by code: a picture ends at a sentence end once it has enough words,
+    or at the last comma (else the last word) before the limit. Pictures are never asked of the AI's word anchors: dozens
+    of them in one answer is what a long plan would fail on."""
+    index = ScriptIndex(lines)
+    tokens = index.tokens
+    cuts, start = [], 0
+    while start < len(tokens):
+        end, limit = None, min(start + VOX_MAX_SEGMENT_WORDS, len(tokens))
+        if timing:
+            while limit > start + 1 and timing.boundaries[limit] - timing.boundaries[start] > DOODLE_MAX_SEGMENT_SECONDS:
+                limit -= 1
+        for at in range(start, limit):
+            if tokens[at].text.rstrip("\"'”’)").endswith(_SENTENCE_END) and at + 1 - start >= DOODLE_SEGMENT_WORDS:
+                end = at + 1
+                break
+        if end is None:
+            commas = [at + 1 for at in range(start + 6, limit - 1) if tokens[at].text.endswith((",", ";", ":"))]
+            sentences = [at + 1 for at in range(start + 3, limit - 1) if tokens[at].text.rstrip("\"'”’)").endswith(_SENTENCE_END)]
+            end = limit if limit == len(tokens) else (sentences or commas or [limit])[-1]
+        cuts.append((start, end))
+        start = end
+    if len(cuts) > 1 and cuts[-1][1] - cuts[-1][0] < 4:  # a stray last word or two stay with the picture before
+        first, last = cuts[-2][0], cuts[-1][1]
+        if last - first <= VOX_MAX_SEGMENT_WORDS and (
+            not timing or timing.boundaries[last] - timing.boundaries[first] <= DOODLE_MAX_SEGMENT_SECONDS
+        ):
+            cuts[-2:] = [(first, last)]
+    spans = []
+    for number, (first, last) in enumerate(cuts, start=1):
+        begin, finish = index._start_anchor(first), index._end_anchor(last)
+        spans.append({"id": f"pic-{number}", "narration": " ".join(token.text for token in tokens[first:last]),
+                      "start": begin.model_dump(), "end": finish.model_dump(), "line_ids": index.line_ids(begin, finish)})
+    return spans
+
+
+def doodle_prompt_text(picture: DoodlePicture) -> str:
+    """The picture's description with at most three short labels; one that names the picture itself (the sample's fault) or
+    runs to a sentence is dropped rather than refusing the whole answer."""
+    labels = [label for label in picture.labels if len(label) <= 30 and not _LABEL_LEAK.search(label)][:3]
+    said = "; ".join(f'hand-lettered label reading exactly "{label}"' for label in labels)
+    text = picture.description.rstrip(". ")
+    return f"{text}; {said}" if said else text
+
+
+def doodle_wire(text: str, spans: list[dict], subject: str = "") -> str:
+    """The AI's pictures joined with the code's spans into the stored proposal shape. A picture left out is drawn from its
+    narration, but an answer missing more than one picture in ten is asked for again."""
+    answer = parse_and_validate(text, _DOODLE_PICTURES)
+    by_id = {picture.id: picture for picture in answer.pictures}
+    missing = [span["id"] for span in spans if span["id"] not in by_id]
+    if len(missing) * 10 > len(spans):
+        raise ValidationError(f"Give one picture for every id: {', '.join(missing[:10])} are missing")
+    segments = []
+    for span in spans:
+        picture = by_id.get(span["id"])
+        if picture and subject in ("myth", "story"):
+            picture = picture.model_copy(update={"labels": []})
+        prompt = doodle_prompt_text(picture) if picture else span["narration"]
+        segments.append({"id": span["id"], "intent": span["narration"][:300], "line_ids": span["line_ids"], "start": span["start"],
+                         "end": span["end"], "visual": {"kind": "photo", "asset": None, "prompt": prompt[:1600], "caption": "",
+                                                        "fit": "cover", "important_regions": []},
+                         "scene": None, "gestures": [], "source_notes": ""})
+    return json.dumps({"segments": segments})
+
+
+async def doodle_notes(db: aiosqlite.Connection, project_id: str) -> dict:
+    """Phase 98: {"words": [...], "hero": "..."} kept on a Doodle story's first line; empty when that line was removed."""
+    async with db.execute("SELECT language_notes FROM script_lines WHERE project_id=? ORDER BY line_index LIMIT 1", (project_id,)) as cursor:
+        row = await cursor.fetchone()
+    try:
+        return (json.loads(row["language_notes"] or "{}") if row else {}).get("doodle") or {}
+    except (TypeError, ValueError):
+        return {}
 
 
 _NUMBER = re.compile(r"(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?")
@@ -545,11 +638,15 @@ def vox_fact_issues(source: dict, segments: list[ExplainerSegment]) -> list[str]
     return issues
 
 
-def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: dict, lines: list[dict]) -> list[ExplainerSegment]:
+def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: dict, lines: list[dict], spans: list[dict] | None = None) -> list[ExplainerSegment]:
+    doodle = is_doodle(snapshot["source"]["project"])
+    if doodle and '"pictures"' in text:  # the stored checkpoint already has the segments
+        subject = snapshot["source"]["project"].get("explainer_subject") or ""
+        text = doodle_wire(text, spans if spans is not None else doodle_spans(lines), subject)
     wire = parse_and_validate(text, _proposal_adapter(snapshot["source"]))
     segments = merge_proposal(previous, [ExplainerSegment.model_validate(item.model_dump()) for item in wire.segments])
     segments = ScriptIndex(lines).snap(segments)  # Phase 84: an off-by-a-word anchor no longer fails the whole plan
-    if is_vox(snapshot["source"]["project"]):  # Phase 86: a VOX picture changes at least every ~8 s; it ends on the recap
+    if is_vox(snapshot["source"]["project"]) and not doodle:  # Phase 86: VOX ends on the recap
         segments = ScriptIndex(lines).split_long(segments, VOX_MAX_SEGMENT_WORDS)
         segments = ScriptIndex(lines).merge_closing(segments, VOX_CLOSING)
     ScriptIndex(lines).validate_coverage(segments)
@@ -565,6 +662,8 @@ def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: di
         facts = vox_fact_issues({**snapshot["source"], "lines": lines}, segments)
         if facts:
             raise ValidationError("; ".join(facts))
+    if doodle and snapshot["source"]["project"].get("explainer_subject") == "story":  # D165: an invented story has no facts to review
+        segments = [segment.model_copy(update={"needs_fact_review": False}) for segment in segments]
     return segments
 
 
@@ -645,6 +744,9 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
     error = ""
     last_output = ""
     try:
+        doodle = is_doodle(captured["source"]["project"])
+        index = ScriptIndex(source["lines"])
+        spans = doodle_spans(source["lines"], resolve_timeline(index, source["audio"])) if doodle else None
         for attempt in range(EXPLAINER_PROPOSAL_REPAIR_ATTEMPTS + 1):
             if segments is not None:
                 break
@@ -652,15 +754,18 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
                 if not await _job_guard(db, job, captured):
                     return
                 await ai_job_service.update_progress(db, job["id"], "repair" if attempt else "proposal", 40 if attempt else 15, commit=False)
-            index = ScriptIndex(source["lines"])
-            adapter = _proposal_adapter(captured["source"])
+            adapter = _DOODLE_PICTURES if doodle else _proposal_adapter(captured["source"])
+            async with read_transaction():
+                notes = await doodle_notes(db, job["project_id"]) if doodle else {}
             prompt = await render_explainer_prompt(
                 vox=is_vox(captured["source"]["project"]),
+                subject=captured["source"]["project"].get("explainer_subject") or "", hero=notes.get("hero") or "",
+                terms=notes.get("words") or [],
                 style=captured["source"]["project"].get("explainer_style") or "",
                 source_text=captured["source"]["project"].get("source_text", ""),
                 topic=source["project"]["topic"], cefr_level=source["project"]["cefr_level"],
                 structure=source["project"]["explainer_structure"],
-                lines=_prompt_lines(index, source["lines"]),
+                lines=spans if doodle else _prompt_lines(index, source["lines"]),
                 previous=captured["previous"], assets=captured["available_assets"], previous_error=error,
                 previous_output=last_output, output_schema=adapter.json_schema(),
                 scenes=captured.get("available_scenes", []), activities=captured.get("available_activities", []),
@@ -684,7 +789,7 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
                 }, commit=False)
             last_output = response.text
             try:
-                segments = _proposed_segments(response.text, old_segments, captured, source["lines"])
+                segments = _proposed_segments(response.text, old_segments, captured, source["lines"], spans)
             except (SchemaValidationError, SchemaError, ValidationError) as exc:
                 error = str(exc)[:500]
         if segments is None:
@@ -706,7 +811,7 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
             if fresh["status"] == "running":
                 await ai_job_service.transition_status(db, job["id"], "validating", commit=False)
             # Phase 63: a Short is 9:16 only
-            first = ["9:16"] if is_short(captured["source"]["project"]) else ["16:9", "9:16"]
+            first = ["9:16"] if is_short(captured["source"]["project"]) else ["16:9"] if is_doodle(captured["source"]["project"]) else ["16:9", "9:16"]
             await publish_draft(db, job["project_id"], segments, previous.aspects if previous else first, captured["expected_revision"])
             await ai_job_service.transition_status(db, job["id"], "complete", commit=False)
     except (NotFoundError, ValidationError, ConflictError) as exc:

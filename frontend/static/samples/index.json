@@ -228,5 +228,25 @@
     "en": "loadword-en.mp4",
     "poster_en": "loadword-en.jpg",
     "bytes": 204630
+  },
+  "doodle": {
+    "kind": "doodle",
+    "aspect": "16:9",
+    "vi": "doodle.mp4",
+    "en": "doodle.mp4",
+    "poster_vi": "doodle.jpg",
+    "poster_en": "doodle.jpg",
+    "seconds": 7,
+    "bytes": 113584
+  },
+  "readalong": {
+    "kind": "readalong",
+    "aspect": "9:16",
+    "vi": "readalong-vi.mp4",
+    "poster_vi": "readalong-vi.jpg",
+    "seconds": 5,
+    "en": "readalong-vi.mp4",
+    "poster_en": "readalong-vi.jpg",
+    "bytes": 234100
   }
 }

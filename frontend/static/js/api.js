@@ -294,6 +294,8 @@ const Api = (() => {
     previewExplainerPlan: (projectId, aspect) => request(`/api/projects/${projectId}/explainer-plan/preview?aspect=${encodeURIComponent(aspect)}`),
     saveExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan`, json("PATCH", body)),
     proposeExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/propose`, json("POST", body)),
+    illustrateExplainerPlan: (projectId) => request(`/api/projects/${projectId}/explainer-plan/illustrate`, { method: "POST" }),  // Phase 98
+    factCheckExplainerPlan: (projectId) => request(`/api/projects/${projectId}/explainer-plan/fact-check`, { method: "POST" }),
     approveExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/approve`, json("POST", body)),
     listExplainerAssets: (projectId) => request(`/api/projects/${projectId}/explainer/assets`),
     getExplainerStageChoices: (projectId) => request(`/api/projects/${projectId}/explainer-plan/stage-choices`),

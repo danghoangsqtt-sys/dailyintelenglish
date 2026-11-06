@@ -102,7 +102,7 @@ def _render_presentation_block_sync(presentation_mode: str, explainer_structure:
     except TemplateNotFound as exc:
         raise ValidationError(f"Prompt template not found: {exc}") from exc
     subject = explainer_subject or "topic"
-    if subject not in ("field", "product", "topic", "howto"):
+    if subject not in ("field", "product", "topic", "howto", "history", "myth", "story"):  # Phase 98: + a Doodle story's kinds
         raise ValidationError("Solo subject must be field, product, topic or howto")
     return template.render(explainer_structure=structure, explainer_subject=subject, explainer_style=explainer_style or "",
                            short_format=short)
@@ -452,7 +452,8 @@ async def render_explainer_prompt(*, vox: bool = False, **fields) -> str:
     """Render the bounded Solo proposal/repair template outside the event loop (Phase 59: the VOX variant)."""
     def render() -> str:
         try:
-            return _storyboard_env.get_template("explainer_vox.txt" if vox else "explainer.txt").render(**fields)
+            name = "explainer_doodle.txt" if fields.get("style") == "doodle" else "explainer_vox.txt" if vox else "explainer.txt"  # Phase 98
+            return _storyboard_env.get_template(name).render(**fields)
         except TemplateNotFound as exc:
             raise ValidationError("The Solo explainer prompt template is missing") from exc
     return await asyncio.to_thread(render)

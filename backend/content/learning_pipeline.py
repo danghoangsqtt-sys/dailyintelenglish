@@ -154,13 +154,19 @@ def trim_over_counts(pack: LearningPackOut) -> LearningPackOut:
                                    "questions": pack.questions[:LEARNING_MAX_QUESTIONS]})
 
 
-def validate_pack(pack: LearningPackOut, transcript: str, short: bool = False, solo: bool = False) -> list[str]:
+def validate_pack(
+    pack: LearningPackOut, transcript: str, short: bool = False, solo: bool = False,
+    *, required_vocabulary: tuple[str, ...] = (),
+) -> list[str]:
     """All hard checks combined. Empty list means the pack is valid."""
+    present = {item.word.lower() for item in pack.vocabulary}
+    missing = [word for word in required_vocabulary if word.lower() not in present]
     return (
         validate_counts(pack, short, solo)
         + validate_grounding(pack, transcript)
         + validate_duplicates(pack)
         + validate_answers(pack)
+        + [f"Add the vocabulary entry '{word}' with the exact headword" for word in missing]
     )
 
 
@@ -248,6 +254,8 @@ def _required_vocabulary(project: dict, transcript: str) -> list[str]:
 
     if project.get("explainer_style") == "flashcards":
         return flashcard_words(transcript)
+    if project.get("explainer_style") == "doodle":  # Phase 98: the story's target words get its IPA and meanings
+        return list(project.get("doodle_words") or [])
 
     words = _source_context(project)["source_words"]
     if not words:
@@ -466,7 +474,6 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         script_lines = await script_service.get_script(db, project_id)
-
     if compute_config_hash(project, job["operation"]) != job["config_hash"]:
         async with write_transaction(db):
             await ai_job_service.mark_stale(db, job_id, commit=False)
@@ -485,6 +492,9 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
     # its own before/after hash instead of trusting that DB column.
     script_hash_at_start = learning_service.compute_script_hash(script_lines)
     transcript = "\n".join(line["text"] for line in script_lines)
+    if project.get("explainer_style") == "doodle":
+        notes = (script_lines[0].get("language_notes") or {}).get("doodle") or {}
+        project = {**project, "doodle_words": notes.get("words") or []}
 
     try:
         pack = await _generate_pack(router, project, transcript, db, job_id)
@@ -497,7 +507,10 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
 
     dropped_items: list[dict] = []
     pack = trim_over_counts(pack)
-    errors = validate_pack(pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
+    short = is_short_video(project)
+    solo = project.get("presentation_mode") == "solo_explainer"
+    required = tuple(project.get("doodle_words") or ())
+    errors = validate_pack(pack, transcript, short, solo, required_vocabulary=required)
     if errors:
         try:
             repaired_pack = await _repair_pack(router, transcript, pack, errors, db, job_id)
@@ -508,7 +521,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
             await _fail_provider(db, job_id, exc)
             return
         repaired_pack = trim_over_counts(repaired_pack)
-        repaired_errors = validate_pack(repaired_pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
+        repaired_errors = validate_pack(repaired_pack, transcript, short, solo, required_vocabulary=required)
         if repaired_errors:
             # Task 14.11 (D15): drop items that still fail grounding/answer checks
             # rather than failing the whole pack outright -- but only when dropping
@@ -520,7 +533,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
                 await _fail(db, job_id, "pack_validation_failed", repaired_errors)
                 return
             reduced_pack = drop_items(repaired_pack, removable)
-            final_errors = validate_pack(reduced_pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
+            final_errors = validate_pack(reduced_pack, transcript, short, solo, required_vocabulary=required)
             if final_errors:
                 dropped_summary = [
                     f"dropped {item['kind']} {item['key']!r}: {item['reason']}" for item in removable

@@ -13,6 +13,7 @@ import { WordRepeatScene } from "./WordRepeatScene";
 import { ObjectQuizScene } from "./ObjectQuizScene";
 import { LevelUpScene } from "./LevelUpScene";
 import { PictureStoryScene } from "./PictureStoryScene";
+import { ReadAlongScene } from "./ReadAlongScene";
 import { LoadWordScene } from "./LoadWordScene";
 import { GrammarScene } from "./GrammarScene";
 import {resolvedMedia} from "./Presenter";
@@ -30,6 +31,7 @@ import { podcastLayer, type VisualMode } from "./podcastLayout";
 import { VERTICAL } from "./safeZone";
 import { captionLayout } from "./motionLayout";
 import { captionMotion, learningMotion, readingProgress, speakingMeter, wordAccent } from "./verticalMotion";
+import { DoodleScene } from "./DoodleScene";
 import { explains } from "./learnMath";
 import type {
   Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, Layout,
@@ -483,10 +485,12 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           solo.style === "quiz" || solo.style === "listen" ? <InteractScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           solo.style === "mistakes" || solo.style === "wordday" || solo.style === "top5" ? <LearnScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           solo.style === "blur" ? <BlurScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
+          solo.style === "doodle" ? <DoodleScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           solo.style === "vox" ? <VoxScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           <SoloScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" />}
         </> : shortStyle === "slowpod" ? <SlowPodScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle === "loadword" ? <LoadWordScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
+        : shortStyle === "readalong" ? <ReadAlongScene {...{lines,title,audioPath,soundtrackPath}} />
         : shortStyle === "picstory" ? <PictureStoryScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle === "levelup" ? <LevelUpScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />
         : shortStyle === "whatis" ? <ObjectQuizScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" />

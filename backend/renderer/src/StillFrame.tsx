@@ -3,12 +3,14 @@ import { AbsoluteFill } from "remotion";
 import { AudioWindowContent, MIDNIGHT_BACKGROUND } from "./Episode";
 import type { EpisodeInputProps } from "./types";
 import { SoloScene } from "./SoloScene";
+import { DoodleScene } from "./DoodleScene";
 import { VoxScene } from "./VoxScene";
 import { NewsScene } from "./NewsScene";
 import { BlurScene } from "./BlurScene";
 import { LearnScene } from "./LearnScene";
 import { InteractScene } from "./InteractScene";
 import { ChatScene } from "./ChatScene";
+import { ReadAlongScene } from "./ReadAlongScene";
 
 /**
  * Task 19.6 (D19.6-f): a separate composition that renders the exact same audio-window
@@ -21,6 +23,7 @@ import { ChatScene } from "./ChatScene";
  * one -- see task-19.6.md's D19.6-f finding).
  */
 export const StillFrame: React.FC<EpisodeInputProps> = (props) => {
+  if (props.shortStyle === "readalong") return <ReadAlongScene {...props} audioPath="" />;
   if (props.shortStyle) return <ChatScene {...props}/>;  // Phase 65: a conversation Short
   if (props.presentationMode === "solo_explainer") {
     // Phase 63: each voice-only style has its own scene (a VOX/Short payload has no presenter for SoloScene)
@@ -29,6 +32,7 @@ export const StillFrame: React.FC<EpisodeInputProps> = (props) => {
     if (style === "blur") return <BlurScene {...props}/>;
     if (style === "mistakes" || style === "wordday" || style === "top5") return <LearnScene {...props}/>;
     if (style === "quiz" || style === "listen") return <InteractScene {...props}/>;
+    if (style === "doodle") return <DoodleScene {...props}/>;
     if (style === "vox") return <VoxScene {...props}/>;
     return <SoloScene {...props}/>;
   }

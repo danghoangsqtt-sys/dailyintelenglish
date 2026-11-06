@@ -1,6 +1,7 @@
 """The image prompts. Phase 44 (D123): only Qwen draws, so only its sentence prompts remain (illustrations, plates, the
 topic picture, the AI-scene thumbnail) plus the outside-AI prompt of an activity picture."""
 
+import re
 from collections.abc import Mapping
 
 # The kinds of picture a character profile keeps (the profile slots still use these names).
@@ -46,6 +47,36 @@ def qwen_collage_prompt(description: str) -> str:
     return ("Editorial paper cut-out collage illustration on warm kraft paper, like a magazine explainer: " f"{what}. "
             "Cut-out objects with torn paper edges and soft shadows, muted warm colours with one green accent, simple and "
             "uncluttered, landscape composition. No faces, no people in close-up, no text, no letters, no logo, no watermark.")
+
+
+DOODLE_STYLE = ("Hand-drawn ink doodle illustration on aged warm parchment paper, wobbly black pen outlines of even thickness, flat "
+                "muted earth colours (ochre, sand, olive, dusty blue, rust brown) with small accents of fresh green and warm yellow, "
+                "light paper grain. Clear uncluttered composition, landscape 16:9.")
+_DOODLE_FIGURES = ("When people are part of the action, draw them as simple stick figures with round heads, dot eyes, "
+                   "thin limbs and plain clothing.")
+
+
+_DOODLE_LABEL = re.compile(r'; hand-lettered label reading exactly "[^"]+"')
+
+
+def qwen_doodle_prompt(description: str, hero: str = "", *, allow_labels: bool = True) -> str:
+    """Phase 98 (D166): keep a recurring hero and limit drawn text to explicit label directives."""
+    what = " ".join(str(description or "").split())
+    if not allow_labels:
+        what = _DOODLE_LABEL.sub("", what)
+    what = what.rstrip(". ") or "a simple scene that fits the story"
+    who = (f" {_DOODLE_FIGURES} The main character is {hero.strip().rstrip('.')} whenever they appear."
+           if hero.strip() else " Draw only the people explicitly described in the scene.")
+    words = " Only the labels written in quotes may appear as words." if _DOODLE_LABEL.search(what) else " No words or letters anywhere."
+    return f"{DOODLE_STYLE} {what}.{who}{words} No title, no caption, no signature, no logo, no watermark, no frame."
+
+
+def qwen_read_along_prompt(description: str) -> str:
+    """One wide illustration above the full reading passage."""
+    return (f"Wide landscape illustration for an English reading lesson: {description}. "
+            "Warm hand-drawn 2D cartoon, clean outlines, soft daylight, pastel colours. "
+            "Compose the action and characters' heads in the middle horizontal band. "
+            "No writing, no speech bubbles, no captions, no watermark.")
 
 
 def qwen_word_prompt(description: str) -> str:

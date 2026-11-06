@@ -19,19 +19,21 @@ export type GeometrySegment = {id: string; presenter: SegmentLayout["presenter"]
   text: {font: number; titleFont: number; padding: number; gap: number; columns: number}; transition: string};
 export type SoloPayload = {plan: {project_id: string; revision: number; status: string; source_fingerprint: string; segments: SoloSegment[]; aspects: string[]};
   /** Phase 59: "vox" = voice-over with motion graphics (no presenter); absent for the presenter video. */
-  style?: "vox" | "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen";  // Phase 63: the news and blur Shorts are voice-only too, on the VOX proof
+  style?: "vox" | "doodle" | "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen";  // Phase 63: the news and blur Shorts are voice-only too, on the VOX proof
   geometry: {rules_version: number; style?: "vox"; presenter_metrics: FrontMetrics;
     aspects: Record<string, {safe: Rect; caption: Rect; header: Rect; board?: Rect; segments: GeometrySegment[]}>};
   timeline: {id: string; start_sec: number; end_sec: number; gestures?: {gesture: Gesture; at_sec: number}[]}[];
   pictures: Record<string, string>; photos: Record<string, string>;
+  /** Phase 98: a Doodle story's target words, in the order they were chosen. */
+  terms?: string[];
   /** Phase 55: Scene Library plates and Activity Library pictures, keyed by their IDs. */
   scenes?: Record<string, string>; activities?: Record<string, string>};
 
 export const soloPayloadSchema = z.custom<SoloPayload>((value) => {
   if (!value || typeof value !== "object") return false;
   const data = value as SoloPayload;
-  const vox = ["vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen"].includes(data.style ?? "");  // Phase 59: nobody on screen -- no presenter metrics, no front pictures
-  return !!data.plan && Array.isArray(data.plan.segments) && data.plan.segments.length > 0 && data.plan.segments.length <= 60 &&
+  const vox = ["vox", "doodle", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen"].includes(data.style ?? "");  // Phase 59: nobody on screen -- no presenter metrics, no front pictures
+  return !!data.plan && Array.isArray(data.plan.segments) && data.plan.segments.length > 0 && data.plan.segments.length <= 150 &&
     !!data.geometry && [1, 2].includes(data.geometry.rules_version) && (vox ? data.geometry.style === "vox" : !!data.geometry.presenter_metrics) &&
     Array.isArray(data.timeline) && data.timeline.length === data.plan.segments.length &&
     !!data.pictures && Object.keys(data.pictures).length === (vox ? 0 : 21) && !!data.photos;

@@ -21,6 +21,9 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% elif short_style | default('') in ('slowpod', 'flashcards') %}
 - This is the FIRST section of a SHORT (a vertical video under one minute): its first line is exactly the one the
   SHORT format above gives (the podcast greeting / the deck name), then its lines in that format.
+{% elif doodle | default(false) %}
+- This is the FIRST section of a DOODLE STORY: its first sentence is already the story (a striking moment, a puzzle or a question). No
+  greeting, no welcome, no introduction of the narrator, no channel name.
 {% elif voice_over | default(false) %}
 - This is the FIRST section of a VOX episode: its first line is the COLD OPEN of the VOX FORMULA (an English example
   said aloud and one curious question), then the PROMISE line. No greeting, no welcome, no introduction.
@@ -45,6 +48,9 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% if is_last_section and short_style | default('') %}
 - This is the LAST section of a SHORT: end with one short line inviting the viewer to
   follow Daily Beyond English for more{% if short_style == 'news' %} English news{% endif %} (no long thanks, no goodbye speech).
+{% elif is_last_section and doodle | default(false) %}
+- This is the LAST section of a DOODLE STORY: finish the story, answer or echo its opening, retell the ending in a few simple
+  sentences that use the target words once more. End on the story itself. Never greet, thank, or ask the audience to follow or subscribe in any section.
 {% elif is_last_section and voice_over | default(false) %}
 - This is the LAST section of a VOX episode: the CALLBACK to the opening example with the answer in plain words, one
   TIP, then one short line inviting the viewer to follow Daily Beyond English (no long thanks, no goodbye speech).
@@ -53,6 +59,15 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
   wrap-up, and END with a short, warm closing spoken to the viewers: thank them
   for watching, invite them to like, subscribe and leave a comment, and say
   goodbye / see you next time. Keep this closing to a few short lines.
+{% endif %}
+{% if doodle | default(false) and target_terms | default([]) %}
+- TARGET WORDS of this story: {{ target_terms | join(', ') }}. Use the terms assigned to this section in separate sentences about different
+  actions, decisions, or consequences. Each term must be spoken at least three times across the story. Spread the uses through the planned beats.
+  In the last section, reuse terms that fit the resolution and callback. Keep the ending a scene with a consequence, without a vocabulary list.
+- Fill this section's word budget with distinct story beats. Each beat needs a concrete event and what it changes. Count only the spoken lines.
+{% if section_index > 1 %}
+- Begin with the next event after the previous section. Treat its introduction, setup, and vocabulary as already heard.
+{% endif %}
 {% endif %}
 {% if section_index > 1 and not short_style | default('') %}
 - This is NOT the first section: do NOT greet, welcome or introduce anyone again -- the episode is already running.
@@ -111,6 +126,15 @@ use a category at all is controlled ONLY by the list below:
 ## Source Material: the Owner's Dialogue
 The episode is based on this dialogue. Use the part of it that matches this section's objective, keeping its ideas and
 useful expressions, rewritten for CEFR {{ cefr_level }} and the speakers above; do not copy it word for word.
+
+"""
+{{ source_text }}
+"""
+{% elif source_kind | default('') == 'article' and doodle | default(false) %}
+
+## Source Material from the Owner
+Follow this material, retold in your OWN words for CEFR {{ cefr_level }} (never copy its sentences). Facts, names, numbers and dates that
+are not in it must be widely known and stable.
 
 """
 {{ source_text }}

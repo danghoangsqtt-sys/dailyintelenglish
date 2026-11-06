@@ -76,11 +76,13 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
              "audioPath": f"/api/projects/{project_id}/audio/download?format=mp3", "fps": 30,
              "width": spec["width"], "height": spec["height"], "title": snapshot["project"]["name"],
              "topic": snapshot["project"]["topic"], "cefrLevel": snapshot["project"]["cefr_level"], "chapters": [],
-             "introSec": 0, "outroSec": 0, "outroText": "", "captionStyle": "outline", "visualMode": "podcast_black",
+             "introSec": 0, "outroSec": 0, "outroText": "", "captionStyle": "pill" if plans.is_doodle(snapshot["project"]) else "outline", "visualMode": "podcast_black",
              "layout": "vertical" if aspect == "9:16" else "horizontal", "presentationMode": "solo_explainer",
              "durationSeconds": timeline[-1]["end_sec"],
              "solo": {"plan": plan.model_dump(), "geometry": geometry, "timeline": timeline,
                       **({"style": snapshot["project"].get("explainer_style") or "vox"} if vox else {}),
+                      **({"terms": (await plans.doodle_notes(db, project_id)).get("words") or []}
+                         if snapshot["project"].get("explainer_style") == "doodle" else {}),
                       "pictures": {key: f"/api/visuals/profiles/{plan.presenter.profile_id}/assets/{value['asset_id']}/content"
                                    for key, value in (front or {"pictures": {}})["pictures"].items()},
                       "photos": {f"{item['id']}:{item['version']}": explainer_assets.public(item)["preview_url"] for item in assets},

@@ -34,7 +34,7 @@ class FactVerdict(BaseModel):
 
 
 class FactCheck(BaseModel):
-    segments: list[FactVerdict] = Field(min_length=1, max_length=60)
+    segments: list[FactVerdict] = Field(min_length=1, max_length=150)  # Phase 98: a long Doodle story
 
 
 _ADAPTER = TypeAdapter(FactCheck)
@@ -56,12 +56,14 @@ async def check(db: aiosqlite.Connection, project_id: str, router: AIRouter | No
     if not plan:
         raise ValidationError("Propose the visual plan first: the fact check reads its segments")
     project = await project_service.get_project(db, project_id)
+    if explainer_service.is_doodle(project) and project.get("explainer_subject") == "story":
+        raise ValidationError("Original fiction is reviewed as a story and does not require a fact check")
     texts = {line["id"]: line["text"] for line in await script_service.get_script(db, project_id)}
     segments = [{"id": segment["id"], "narration": " ".join(texts.get(line_id, "") for line_id in segment["line_ids"]).strip(),
                  "screen": screen_text(segment.get("visual") or {})} for segment in plan["segments"]]
     prompt = await asyncio.to_thread(
         _env.get_template("fact_check.txt").render, topic=project["topic"], style=project.get("explainer_style") or "",
-        source=(project.get("source_text") or "")[:SOURCE_LIMIT], today=date.today().isoformat(), segments=segments)
+        subject=project.get("explainer_subject") or "", source=(project.get("source_text") or "")[:SOURCE_LIMIT], today=date.today().isoformat(), segments=segments)
     router = router or build_ai_router_from_settings()
     try:
         result = await router.generate(GenerationRequest(prompt=prompt, json_schema=FactCheck.model_json_schema(),

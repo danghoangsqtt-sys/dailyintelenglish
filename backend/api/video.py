@@ -61,7 +61,10 @@ async def generate_video(
         result = await video_service.generate_video(
             project_id,
             audio_job,
-            caption_style=payload.caption_style,
+            caption_style=(
+                "pill" if project.get("explainer_style") == "doodle" and "caption_style" not in payload.model_fields_set
+                else payload.caption_style
+            ),
             visual_mode=payload.visual_mode,
             still_scene_id=payload.still_scene_id,
             db=db,

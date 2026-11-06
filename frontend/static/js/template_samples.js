@@ -11,9 +11,11 @@ const TemplateSamples = (() => {
     conversation: "Two characters talk through an everyday situation; 16:9 lessons of 5–15 minutes.",
     presenter: "One presenter explains one idea to camera; 16:9 or a Short.",
     vox: "A narrator's voice over pictures and on-screen text; explains why or how.",
+    doodle: "A complete English story over hand-drawn pictures, with vocabulary in context.",
     news: "One news story in simple English; a Short under a minute.",
     blur: "One short story or idea in big text on a blurred background.",
     mistakes: "A common mistake and the natural way to say it.",
+    readalong: "Read a complete English passage with the narrator.",
     loadword: "One word said faster and faster until it stays in memory.",
     picstory: "One short sentence on each screen, over a picture of that action.",
     levelup: "A plain phrase, then the natural one twice, over its picture.",
@@ -29,7 +31,7 @@ const TemplateSamples = (() => {
     chat: "A text-message chat between two people; read along.",
     wyr: "Would you rather: two choices, a timer and the answer.",
   };
-  const MODES = { classic: "conversation", solo_explainer: "presenter", vox: "vox" };
+  const MODES = { classic: "conversation", solo_explainer: "presenter", vox: "vox", doodle: "doodle" };
   const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   let index = null, language = "vi", dialog = null, vertical = false;
   // owner 2026-11-03: on the Shorts batch page the conversation, presenter and VOX kinds are vertical Shorts, so their

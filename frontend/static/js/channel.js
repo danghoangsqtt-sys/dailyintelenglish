@@ -190,7 +190,7 @@
     // Phase 63 (ENH-045): a Solo series can also be VOX or 9:16 Shorts (news, text on blur)
     const STYLES = {classic:["classic","presenter"],solo_explainer:["solo_explainer","presenter"],vox:["solo_explainer","vox"],
       news:["solo_explainer","news"],blur:["solo_explainer","blur"],mistakes:["solo_explainer","mistakes"],
-      wordday:["solo_explainer","wordday"],whatis:["solo_explainer","whatis"],levelup:["solo_explainer","levelup"],picstory:["solo_explainer","picstory"],loadword:["solo_explainer","loadword"],top5:["solo_explainer","top5"],quiz:["solo_explainer","quiz"],listen:["solo_explainer","listen"],
+      wordday:["solo_explainer","wordday"],whatis:["solo_explainer","whatis"],levelup:["solo_explainer","levelup"],picstory:["solo_explainer","picstory"],loadword:["solo_explainer","loadword"],readalong:["solo_explainer","readalong"],top5:["solo_explainer","top5"],quiz:["solo_explainer","quiz"],listen:["solo_explainer","listen"],
       slowpod:["solo_explainer","slowpod"],flashcards:["solo_explainer","flashcards"],roots:["solo_explainer","roots"],grammar:["solo_explainer","grammar"],
       chat:["classic","chat"],wyr:["classic","wyr"]};
     const mode = el("select", {"aria-label":"Series presentation mode", onchange:event=>{const [presentation,style]=STYLES[event.target.value];
@@ -199,7 +199,7 @@
       [el("option",{value:"classic",textContent:"Conversation"}),el("option",{value:"solo_explainer",textContent:"Solo Explainer"}),
         el("option",{value:"vox",textContent:"VOX explainer"}),el("option",{value:"news",textContent:"Short: English news"}),
         el("option",{value:"blur",textContent:"Short: text on blur"}),el("option",{value:"mistakes",textContent:"Short: Don't say / Say"}),
-        el("option",{value:"wordday",textContent:"Short: word of the day"}),el("option",{value:"whatis",textContent:"Short: what is this called?"}),el("option",{value:"levelup",textContent:"Short: basic vs advanced"}),el("option",{value:"picstory",textContent:"Short: picture story"}),el("option",{value:"loadword",textContent:"Short: load the word"}),el("option",{value:"top5",textContent:"Short: top 5 phrases"}),
+        el("option",{value:"wordday",textContent:"Short: word of the day"}),el("option",{value:"whatis",textContent:"Short: what is this called?"}),el("option",{value:"levelup",textContent:"Short: basic vs advanced"}),el("option",{value:"picstory",textContent:"Short: picture story"}),el("option",{value:"loadword",textContent:"Short: load the word"}),el("option",{value:"readalong",textContent:"Short: read along"}),el("option",{value:"top5",textContent:"Short: top 5 phrases"}),
         el("option",{value:"quiz",textContent:"Short: countdown quiz"}),el("option",{value:"listen",textContent:"Short: listening challenge"}),
         el("option",{value:"slowpod",textContent:"Short: slow English podcast"}),el("option",{value:"flashcards",textContent:"Short: vocabulary flashcards"}),
         el("option",{value:"roots",textContent:"Short: word roots, prefixes & suffixes"}),

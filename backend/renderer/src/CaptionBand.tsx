@@ -33,10 +33,11 @@ export function CaptionBand({
   const tokens = useMemo(() => withScriptPunctuation(buildKaraokeTokens(line), line.text), [line]);
   // Task 20.2d: the selected treatment only overrides textShadow (and optionally wraps the
   // span in a box) -- font/size/color/alignment stay the D19.3-b base style.
+  const pill = captionStyle === "pill";
   const spec = captionStyleSpec(captionStyle);
   const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}) };
   const baseDensity = captionLayout(layout);
-  const density = stationary && layout !== "vertical" ? {...baseDensity,fontSize:28,speakerSize:16,maxWords:12,maxCharacters:72} : baseDensity;
+  const density = pill ? {...baseDensity,maxWords:5,maxCharacters:30} : stationary && layout !== "vertical" ? {...baseDensity,fontSize:28,speakerSize:16,maxWords:12,maxCharacters:72} : baseDensity;
   const pages = useMemo(() => paginateCaptionTokens(tokens, density.maxWords, density.maxCharacters, protectedPhrases),
     [tokens, density.maxWords, density.maxCharacters, protectedPhrases]);
     const now = currentTimeSec * 1000;
@@ -55,18 +56,18 @@ export function CaptionBand({
         textAlign: "center" }}>
         <div style={{ fontFamily: "Arial, sans-serif", fontSize: density.speakerSize, fontWeight: 700, color: "#E1C76D",
           letterSpacing: 2, marginBottom: 8 }}>{line.speaker}</div>
-        <div style={{ ...textStyle, fontSize: density.fontSize, lineHeight: 1.3, fontWeight: 700 }}>
+        <div style={{ ...textStyle, fontSize: density.fontSize, lineHeight: 1.3, fontWeight: 700, textTransform: pill ? "uppercase" : undefined }}>
           {shown.length ? shown.map((token, index) => {
             const accent = wordAccent(now, token.fromMs, token.toMs, variant);
             return (
             <React.Fragment key={`${token.fromMs}-${token.text}`}>
               <span style={{ display: "inline-block", padding: "0 3px", borderRadius: 8,
-                color: index === activeIndex ? "#102519" : "#FFFFFF",
-                background: index === activeIndex ? "#FFD54A" : "transparent",
+                color: index === activeIndex && !pill ? "#102519" : "#FFFFFF",
+                background: index === activeIndex ? (pill ? "#0B0B0B" : "#FFD54A") : "transparent",
                 textShadow: index === activeIndex ? "none" : textStyle.textShadow,
                 maxWidth: stationary ? "100%" : undefined, overflowWrap: stationary ? "anywhere" : undefined,
                 transform: stationary ? undefined : `translateY(${accent.y.toFixed(2)}px) scale(${accent.scale.toFixed(4)})`,
-                boxShadow: index === activeIndex ? `0 2px ${accent.glow.toFixed(1)}px rgba(255,213,74,0.28)` : undefined }}>
+                boxShadow: index === activeIndex && !pill ? `0 2px ${accent.glow.toFixed(1)}px rgba(255,213,74,0.28)` : undefined }}>
                 {token.text.trim()}
               </span>{index < shown.length - 1 ? " " : ""}
             </React.Fragment>

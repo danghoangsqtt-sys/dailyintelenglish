@@ -123,6 +123,14 @@ def test_fixture_1_valid_pack_passes_all_checks():
     assert learning_pipeline.validate_pack(_pack(), TRANSCRIPT) == []
 
 
+def test_doodle_vocabulary_must_have_an_entry_for_each_script_term():
+    pack = _pack()
+    assert learning_pipeline.validate_pack(pack, TRANSCRIPT, required_vocabulary=("Remotely",)) == []
+    assert learning_pipeline.validate_pack(pack, TRANSCRIPT, required_vocabulary=("remote", "remotely")) == [
+        "Add the vocabulary entry 'remote' with the exact headword",
+    ]
+
+
 def test_fixture_2_ungrounded_example_sentence_fails():
     pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "This sentence is invented."}])
     errors = learning_pipeline.validate_pack(pack, TRANSCRIPT)

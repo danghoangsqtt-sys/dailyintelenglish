@@ -35,6 +35,8 @@ class LanguageNotesOut(BaseModel):
     levelup: dict | None = None  # Phase 96: a Basic vs Advanced card
     picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
     loadword: dict | None = None  # Phase 97: a Load the word card
+    readalong: dict | None = None  # Phase 100: the shared title and illustration
+    doodle: dict | None = None  # Phase 98: on a Doodle story's first line, its target words and its hero's look
     picstory: dict | None = None  # Phase 96: a picture-for-each-sentence card
     # Phase 88: an easy-grammar Short's beat (scene header and the cards shown so far)
     grammar: dict | None = None
@@ -316,6 +318,17 @@ async def save_script(
     lines = [{**line, "text": caption_text(line["text"])} for line in lines]
     if any(not line["text"].strip() for line in lines):
         raise ValidationError("Script lines must contain spoken dialogue.")
+    shared_reading_card = next((line["language_notes"]["readalong"] for line in lines
+                                if (line.get("language_notes") or {}).get("readalong")), None)
+    if shared_reading_card:
+        from backend.content.read_along import checked_sentences
+
+        try:
+            checked_sentences([line["text"] for line in lines])
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        for line in lines:
+            line["language_notes"] = {**(line.get("language_notes") or {}), "readalong": shared_reading_card}
     # Phase 91 (D133): a line whose position, speaker and text are unchanged keeps its id and its voice, so a Step 2
     # edit makes only the changed lines' voice again (it used to make every line's voice again)
     cursor = await db.execute(
@@ -368,6 +381,14 @@ async def update_script_line(
     text = caption_text(text)
     if not text.strip():
         raise ValidationError("Script lines must contain spoken dialogue.")
+    if (language_notes or {}).get("readalong"):
+        from backend.content.read_along import checked_sentences
+
+        lines = await get_script(db, project_id)
+        try:
+            checked_sentences([text if line["id"] == line_id else line["text"] for line in lines])
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
     cursor = await db.execute(
         "UPDATE script_lines SET text = ?, language_notes = ?, "
         "audio_cache_path = NULL, duration_seconds = NULL "

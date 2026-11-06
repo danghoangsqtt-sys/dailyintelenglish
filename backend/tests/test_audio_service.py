@@ -117,6 +117,40 @@ async def test_mix_project_aggregates_word_boundaries_onto_mixed_timeline(tmp_pa
     assert last_word["end_sec"] == pytest.approx(result["timestamps"][1]["end_sec"], abs=0.02)
 
 
+async def test_doodle_mix_fits_narration_and_calibrates_the_stretched_timeline_once(tmp_path):
+    lines = _lines_for(tmp_path, [("sp1", 440), ("sp1", 550)])
+    for line in lines:
+        _write_word_sidecar(line["audio_cache_path"], [{"text": "Hi", "offset_sec": 0.05, "duration_sec": 0.25}])
+    baseline = await audio_service.mix_project({**PROJECT, "_attempt_id": "baseline"}, lines)
+    target = baseline["duration_seconds"] / 0.88
+    project = {**PROJECT, "explainer_style": "doodle", "duration_minutes": target / 60}
+    fitted = await audio_service.mix_project(project, lines)
+    scale = fitted["duration_seconds"] / baseline["duration_seconds"]
+
+    assert fitted["duration_seconds"] == pytest.approx(target, abs=0.05)
+    assert fitted["timestamps"][-1]["end_sec"] == fitted["duration_seconds"]
+    assert len(AudioSegment.from_wav(fitted["wav_path"])) / 1000 == pytest.approx(fitted["duration_seconds"], abs=0.001)
+    calibrated = audio_service.calibrate_word_timestamps(baseline, {})
+    for index, line in enumerate(calibrated["timestamps"]):
+        assert fitted["timestamps"][index]["start_sec"] == pytest.approx(line["start_sec"] * scale)
+        source_word = calibrated["word_timestamps"][index]["words"][0]
+        actual_word = fitted["word_timestamps"][index]["words"][0]
+        assert actual_word["start_sec"] == pytest.approx(source_word["start_sec"] * scale, abs=0.000001)
+        assert actual_word["end_sec"] == pytest.approx(source_word["end_sec"] * scale, abs=0.000001)
+    assert audio_service.calibrate_word_timestamps(fitted, {}) == fitted
+
+
+@pytest.mark.parametrize(("style", "target"), [("vox", 1.7), ("doodle", 3.0), ("doodle", 1.0)])
+async def test_mix_keeps_the_original_tempo_outside_the_doodle_fit_range(tmp_path, style, target):
+    lines = _lines_for(tmp_path, [("sp1", 440), ("sp1", 550)])
+    project = {**PROJECT, "explainer_style": style, "duration_minutes": target / 60}
+
+    result = await audio_service.mix_project(project, lines)
+
+    assert result["duration_seconds"] == pytest.approx(1.5, abs=0.002)
+    assert "timing_recipe" not in result["word_timestamps"][0]
+
+
 async def test_mix_project_word_timestamps_empty_for_line_with_no_sidecar(tmp_path):
     """No `.words.json` sidecar (a line synthesized before Task 19.2)
     produces an empty `words` array for that line -- never `null`, never a crash."""

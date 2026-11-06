@@ -83,7 +83,7 @@ async def upload_picture(project_id: str, word: str = Form(min_length=1, max_len
     style = (await project_service.get_project(db, project_id)).get("explainer_style")
     if style not in short_pictures.CARD_STYLES:
         raise ValidationError("This kind of video has no pictures to upload")
-    path = await short_pictures.upload(project_id, word, await file.read())
+    path = await short_pictures.upload(project_id, word, await file.read(), style=style)
     return ok({"word": word, "url": beats_service.picture_url(project_id, path.name)})
 
 

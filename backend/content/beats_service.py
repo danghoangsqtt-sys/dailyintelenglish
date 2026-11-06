@@ -110,6 +110,7 @@ def _compact(value):
 class WordCardEdit(_Card):
     """Phase 96: a Word of the day card as edited on the video."""
     beat: str = "repeat"
+    title: str = Field(default="", max_length=60)
     repeat: int = Field(default=1, ge=1, le=6)
     number: int = Field(default=1, ge=1, le=20)
     basic: str = Field(default="", max_length=60)

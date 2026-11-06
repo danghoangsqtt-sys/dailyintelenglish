@@ -9,7 +9,7 @@ import type { SoloPayload, Visual } from "./soloTypes";
 
 export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards"
   | "roots" | "whatis" | "levelup" | "picstory" | "loadword"
-  | "grammar";
+  | "grammar" | "readalong";
 export type SampleIdea = { title: string; brief?: string; vi?: string };  // vi: Phase 92, the example clips' Vietnamese meaning
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
 const WORD_SEC = 0.34, LINE_GAP = 0.3, SEGMENT_GAP = 0.2, FPS = 30, GAP = 0.015;
@@ -25,7 +25,7 @@ export function quoted(text: string): string | null {
 const sentence = (text: string) => { const clean = text.trim().replace(/\s+/g, " "); return /[.!?]$/.test(clean) ? clean : `${clean}.`; };
 
 /** The sample segments of a voice-only template (the visuals the AI plan would use). */
-export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory" | "loadword">, idea: SampleIdea): Part[] {
+export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory" | "loadword" | "readalong">, idea: SampleIdea): Part[] {
   const title = idea.title.trim() || "Your Short", brief = (idea.brief || "").trim() || "The AI writes this part from your idea.";
   const card = (cardTitle: string, bullets: string[] = [], emphasis = ""): Visual => ({ kind: "text_card", title: cardTitle, bullets, emphasis }) as Visual;
   const follow = (text: string): Part => ({ visual: card("Daily Beyond English", [], text), lines: [`${text}!`] });
@@ -139,6 +139,22 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, learning: { vocab, idioms: [], audience },
       durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
+  if (template === "readalong") {
+    const sentences = [
+      "On Monday, I had a long list of things to do.",
+      "I looked at the list and felt tired before I began.",
+      "My friend said, “Choose one small task first.”",
+      "I wrote one email and crossed it off my list.",
+      "Then I made a cup of tea and started the next task.",
+      "By lunch, the work felt easier.",
+      "Now I still make lists, but I take them one step at a time.",
+    ];
+    const readalong = {title: "One Task at a Time", pictureUrl: "samples/levelup.jpg"};
+    const lines = timed(sentences.map((text) => ({text, speakerId: "n", speaker: "Narrator"})), 0.3)
+      .map((line) => ({...line, readalong}));
+    return {...common, chapters: [], presentationMode: "classic", shortStyle: "readalong", visualMode: "podcast_black",
+      speakers: [{id: "n", name: "Narrator", gender: "female"}], lines, durationSeconds: lines.at(-1)!.endSec + 0.6};
+  }
   if (template === "loadword") {  // Phase 97: the word looped on a wall of itself, then shown with an example
     const fields = { word: "compensation", ipa: "/ˌkɑːmpenˈseɪʃn/", part_of_speech: "noun", meaning_en: "money paid for a loss", meaning_vi: "khoản đền bù", audience,
       example_en: "No amount of compensation can make up for it.", example_vi: "Không khoản đền bù nào bù đắp được.",
@@ -247,7 +263,7 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
     return { ...common, presentationMode: "classic", shortStyle: "grammar", visualMode: "podcast_black",
       speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
-  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory" | "loadword">, idea);
+  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards" | "roots" | "grammar" | "whatis" | "levelup" | "picstory" | "loadword" | "readalong">, idea);
   const lines: EpisodeLine[] = [], timeline: SoloPayload["timeline"] = [], segments: unknown[] = [];
   let time = 0.3;
   parts.forEach((part, index) => {

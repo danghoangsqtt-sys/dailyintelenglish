@@ -21,6 +21,7 @@ from backend.ai.image.runner import ImageJobRunner
 
 SIZE = (1344, 768)
 logger = logging.getLogger(__name__)
+DOODLE_GROUP = 20  # Phase 98 (D166): each group loads the model once (about 85 s) and is saved, so a late failure keeps the rest
 QWEN_MISSING = "The local image model (Qwen-Image-2.1-Turbo) is not installed on this computer"
 
 
@@ -49,25 +50,48 @@ async def explainer_illustrations(job: dict, runner: ImageJobRunner) -> dict:
     """Phase 85 (owner 2026-10-28): Qwen draws every photo slot of a Solo / VOX plan that has no picture, from the slot's
     own description; each picture becomes the project's illustration, is set on its segment, and is kept in the Activity
     Library as an approved generic picture tagged "qwen" (the owner chose: used right away, kept for later videos)."""
-    from backend.library import activity_library_service as activity_library
-    from backend.library import explainer_service
-    from backend.schemas.explainer import ExplainerPlanPatch
-
     from backend.content import project_service
+    from backend.library import explainer_service
 
     db = runner.get_db()
     project_id = job["target_id"]
     view = await explainer_service.get_plan(db, project_id)
     todo = explainer_photo_slots(view.get("plan"))
     async with read_transaction():
-        style = (await project_service.get_project(db, project_id)).get("explainer_style")
+        project = await project_service.get_project(db, project_id)
+    style = project.get("explainer_style")
     prompt_of = recipes.qwen_collage_prompt if style == "vox" else recipes.qwen_illustration_prompt  # Phase 86
     if not todo:
         return {"drawn": []}
+    doodle = style == "doodle"
+    if doodle:
+        hero = ""
+        has_recurring_hero = project.get("explainer_subject") in ("myth", "story")
+        if has_recurring_hero:
+            async with read_transaction():
+                hero = (await explainer_service.doodle_notes(db, project_id)).get("hero") or ""
+        prompt_of = lambda description: recipes.qwen_doodle_prompt(description, hero, allow_labels=not has_recurring_hero)  # noqa: E731
+    group = DOODLE_GROUP if doodle else len(todo)
+    drawn: list[str] = []
+    for start in range(0, len(todo), group):
+        drawn += await _draw_explainer_group(job, runner, db, project_id, todo[start:start + group], prompt_of, not doodle,
+                                             len(drawn), len(todo))
+    await runner.boundary(job["id"], "illustrations ready", 99)
+    return {"drawn": sorted(drawn)}
+
+
+async def _draw_explainer_group(job: dict, runner: ImageJobRunner, db, project_id: str, todo: list[dict], prompt_of, keep_in_library: bool,
+                                done: int, total: int) -> list[str]:
+    """One group of photo slots: drawn, imported, and set on their segments. Phase 98: a Doodle story's pictures stay out of the
+    Activity Library, which other videos draw from."""
+    from backend.library import activity_library_service as activity_library
+    from backend.library import explainer_service
+    from backend.schemas.explainer import ExplainerPlanPatch
+
     folder = settings.DATA_DIR / "visuals" / project_id / "explainer_drafts"
     await asyncio.to_thread(folder.mkdir, parents=True, exist_ok=True)
     paths = {segment["id"]: folder / f"{segment['id']}.png" for segment in todo}
-    await runner.boundary(job["id"], f"illustrations 0/{len(todo)}", 0)
+    await runner.boundary(job["id"], f"illustrations {done}/{total}", round(99 * done / total))
     await _qwen_pictures(get_image_engine(), [
         {"prompt": prompt_of(segment["visual"].get("prompt") or segment["visual"].get("caption") or segment.get("intent") or ""),
          "seed": random.randint(1, 2**31 - 1), "width": SIZE[0], "height": SIZE[1], "output_path": str(paths[segment["id"]])}
@@ -79,14 +103,15 @@ async def explainer_illustrations(job: dict, runner: ImageJobRunner) -> dict:
         content = await asyncio.to_thread(path.read_bytes)
         try:
             assets[segment["id"]] = (await explainer_service.import_illustration(db, project_id, content, path.name))["asset"]
-            label = " ".join((segment["visual"].get("prompt") or segment.get("intent") or "illustration").split()[:6])
-            try:
-                async with write_transaction(db):
-                    row = await activity_library.upload_activity_bytes(db, path.name, content,
-                                                                       {"activity": label, "context_tags": ["qwen"]})
-                    await activity_library.set_review(db, row["id"], "approved")
-            except (ConflictError, ValidationError) as exc:  # the library copy is a convenience; the video has its picture
-                logger.info("explainer_illustration_library_skipped segment=%s reason=%s", segment["id"], exc)
+            if keep_in_library:
+                label = " ".join((segment["visual"].get("prompt") or segment.get("intent") or "illustration").split()[:6])
+                try:
+                    async with write_transaction(db):
+                        row = await activity_library.upload_activity_bytes(db, path.name, content,
+                                                                           {"activity": label, "context_tags": ["qwen"]})
+                        await activity_library.set_review(db, row["id"], "approved")
+                except (ConflictError, ValidationError) as exc:  # the library copy is a convenience; the video has its picture
+                    logger.info("explainer_illustration_library_skipped segment=%s reason=%s", segment["id"], exc)
         finally:
             await asyncio.to_thread(path.unlink, missing_ok=True)
     view = await explainer_service.get_plan(db, project_id)
@@ -96,8 +121,7 @@ async def explainer_illustrations(job: dict, runner: ImageJobRunner) -> dict:
     await explainer_service.save_plan(db, project_id, ExplainerPlanPatch.model_validate({
         "expected_revision": plan["revision"], "expected_source_fingerprint": view["current_source_fingerprint"],
         "segments": segments, "aspects": plan["aspects"]}))
-    await runner.boundary(job["id"], "illustrations ready", 99)
-    return {"drawn": sorted(assets)}
+    return list(assets)
 
 
 async def scene_preview(job: dict, runner: ImageJobRunner) -> dict:

@@ -11,7 +11,8 @@ from backend.core.constants import (
 
 
 # Phase 57 (ENH-039): the structure a Solo presentation starts with for each subject (the owner can change it)
-SUBJECT_STRUCTURES = {"field": "list", "product": "list", "topic": "why", "howto": "how"}
+SUBJECT_STRUCTURES = {"field": "list", "product": "list", "topic": "why", "howto": "how",
+                      "history": "why", "myth": "why", "story": "why"}  # Phase 98: a Doodle story's kinds of story
 
 
 class LanguageFeatures(BaseModel):
@@ -123,19 +124,22 @@ class SpeakerUpdate(BaseModel):
 # rather (a two-character conversation, drawn from its script lines)
 # Phase 81: + the slow English podcast and vocabulary flashcards (one narrator, drawn from their script lines)
 SOLO_SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots",
-                     "grammar", "whatis", "levelup", "picstory", "loadword")
+                     "grammar", "whatis", "levelup", "picstory", "loadword", "readalong")
 # Phase 87 (D125/D126): the academic Shorts -- Vietnamese explanation in a VieNeu voice, up to three minutes
 ACADEMIC_STYLES = ("roots", "grammar")  # Phase 88: + the easy-grammar Short
 CONVERSATION_SHORT_STYLES = ("chat", "wyr")
-VOICE_ONLY_STYLES = ("vox",) + SOLO_SHORT_STYLES
+VOICE_ONLY_STYLES = ("vox", "doodle") + SOLO_SHORT_STYLES  # Phase 98: + the Doodle story
 SHORT_STYLES = SOLO_SHORT_STYLES + CONVERSATION_SHORT_STYLES
-ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards",
-                         "roots", "grammar", "chat", "wyr", "whatis", "levelup", "picstory", "loadword"]
+ExplainerStyle = Literal["presenter", "vox", "doodle", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards",
+                         "roots", "grammar", "chat", "wyr", "whatis", "levelup", "picstory", "loadword", "readalong"]
 # drawn from their script lines by the renderer: no visual plan to propose or approve
-LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards", "roots", "grammar", "wordday", "whatis", "levelup", "picstory", "loadword")
-CARD_STYLES = ("wordday", "whatis", "levelup", "picstory", "loadword")  # Phase 96: line cards in language_notes.<style>, with pictures
+LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards", "roots", "grammar", "wordday", "whatis", "levelup", "picstory", "loadword", "readalong")
+CARD_STYLES = ("wordday", "whatis", "levelup", "picstory", "loadword", "readalong")  # Phase 96: line cards in language_notes.<style>, with pictures
 SLOWPOD_SPEED = 0.8  # Phase 81: the slow English podcast narrator's default speed
 SHORT_MAX_MINUTES = 1.0
+# Phase 98 (D161, D162): a Doodle story is a long 16:9 video telling one whole story of one of these four kinds
+DOODLE_SUBJECTS = ("history", "myth", "field", "story")
+DOODLE_MIN_MINUTES, DOODLE_MAX_MINUTES, DOODLE_MINUTES = 3.0, 12.0, 8.0
 ACADEMIC_SHORT_MAX_MINUTES = 3.0  # Phase 87 (D126)
 ACADEMIC_SHORT_MINUTES = 2.0
 # Phase 82 (owner 2026-10-28): knowledge / news Shorts use a full minute to carry their message (57 s + the 2 s end card);
@@ -180,7 +184,7 @@ class ScriptConfig(BaseModel):
     presentation_mode: Literal["classic", "solo_explainer"] = "classic"
     explainer_structure: Literal["why", "how", "list"] | None = None
     # Phase 57 (ENH-039): what a Solo presentation presents; None for a conversation
-    explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
+    explainer_subject: Literal["field", "product", "topic", "howto", "history", "myth", "story"] | None = None
     # Phase 59 (ENH-041): a Solo presentation with the presenter on screen, or a VOX voice-over with motion graphics;
     # Phase 63 (ENH-045): or a 9:16 Short -- English news, or text on a blurred background
     explainer_style: ExplainerStyle | None = None
@@ -237,6 +241,17 @@ class ScriptConfig(BaseModel):
         if self.presentation_mode == "solo_explainer":
             if self.num_speakers != 1:
                 raise ValueError("Solo Explainer requires exactly one presenter.")
+            if self.explainer_style == "doodle":  # Phase 98 (D161, D162)
+                if "duration_minutes" not in self.model_fields_set:
+                    self.duration_minutes = DOODLE_MINUTES
+                if self.explainer_subject is None:
+                    self.explainer_subject = "history"
+                if self.explainer_subject not in DOODLE_SUBJECTS:
+                    raise ValueError("A Doodle story is history, a myth, a specialised subject or a short story.")
+                if not DOODLE_MIN_MINUTES <= self.duration_minutes <= DOODLE_MAX_MINUTES:
+                    raise ValueError("A Doodle story lasts 3 to 12 minutes.")
+            elif self.explainer_subject in ("history", "myth", "story"):
+                raise ValueError("History, myth and short story belong to a Doodle story.")
             if self.explainer_subject is None:
                 self.explainer_subject = "topic"
             if self.explainer_style is None:
@@ -257,7 +272,7 @@ class ScriptConfig(BaseModel):
         else:
             self.explainer_subject = None
             self.explainer_style = None
-        if self.source_kind == "article" and self.explainer_style != "news":
+        if self.source_kind == "article" and self.explainer_style not in ("news", "doodle"):  # Phase 98: a Doodle story's material
             raise ValueError("a news article is used by an English news Short only")
         if len(self.speakers) != self.num_speakers:
             raise ValueError(
@@ -278,7 +293,7 @@ class TopicIdeasRequest(BaseModel):
     """Phase 57 (ENH-039): ask the AI for six video ideas."""
 
     presentation_mode: Literal["classic", "solo_explainer"] = "classic"
-    explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
+    explainer_subject: Literal["field", "product", "topic", "howto", "history", "myth", "story"] | None = None
     cefr_level: str = "B1"
     hint: str = Field(default="", max_length=200)
     audience: Literal["international", "vietnamese", "both"] | None = None  # Phase 72: None = the channel audience
@@ -308,7 +323,7 @@ class ProjectUpdate(BaseModel):
     num_speakers: int | None = Field(default=None, ge=MIN_SPEAKERS, le=MAX_SPEAKERS)
     presentation_mode: Literal["classic", "solo_explainer"] | None = None
     explainer_structure: Literal["why", "how", "list"] | None = None
-    explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
+    explainer_subject: Literal["field", "product", "topic", "howto", "history", "myth", "story"] | None = None
     explainer_style: ExplainerStyle | None = None
     genre: str | None = None
     accent: str | None = None

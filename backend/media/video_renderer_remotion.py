@@ -736,7 +736,7 @@ async def render_via_remotion(
     from backend.schemas.project import is_short_video
 
     voices = await _add_brand(project_id, input_props, short=is_short_video(project),
-                              cold_open=project.get("explainer_style") == "vox")
+                              cold_open=project.get("explainer_style") in ("vox", "doodle"))
     soundtrack = await _build_soundtrack(staging_key, audio_job, input_props, voices)
     if soundtrack is not None:
         input_props["soundtrackPath"] = soundtrack

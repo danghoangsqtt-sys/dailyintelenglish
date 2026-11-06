@@ -13,7 +13,17 @@ YouTube channel for {{ audience_line | default('international and Vietnamese lea
 - Split the episode into exactly {{ num_sections }} sections of roughly equal
   length, each covering one clear step or sub-topic that builds toward the whole
   episode. The total of every section's `target_words` MUST equal {{ target_words }}.
-{% if voice_over | default(false) %}
+{% if doodle | default(false) %}
+- This is a DOODLE STORY: one whole story with one beginning, one middle and one end. Follow the arc of its kind below: the
+  sections are its steps in order, and no section starts the story again. The first section's objective opens straight on the
+  story (no welcome); the last section ends with the retelling of the ending. Do not plan any channel promotion or audience sign-off.
+- BEFORE the sections, choose `target_terms`: 5 to 8 English words or short phrases at CEFR {{ cefr_level }} or one step above, that this story
+  truly needs and a learner would want to keep (the words it could not be told without; not names, not words every learner knows). Every section's objective
+  describes the sequence of distinct beats needed to fill its word budget and assigns at least three natural spoken uses of each term
+  across at least two sections. Plan the resolution itself and a short callback in the final section.
+- `hero`: for myth and fiction only, how the main character looks in the drawings, in at most ten plain words ("a stick figure with a red scarf").
+  Return an empty string for history, specialised subjects, or stories with no main character.
+{% elif voice_over | default(false) %}
 - This is a VOX episode (a narrator over pictures, the viral explainer formula), written as ONE section. Its objective
   lists, in order: the COLD OPEN example and its curious question; the promise; then exactly
   {{ vox_blocks | default(4) }} EVIDENCE examples, each NAMED (the English word, phrase or sentence) with what it shows;
@@ -50,6 +60,15 @@ sections so they follow it. {% if presentation_mode | default('classic') == 'sol
 """
 {{ source_text }}
 """
+{% elif source_kind | default('') == 'article' and doodle | default(false) %}
+
+## Source Material from the Owner
+The story comes from this material: follow what it says, retold in new words for CEFR {{ cefr_level }} (never copied). Facts, names, numbers
+and dates that are not in it must be widely known and stable.
+
+"""
+{{ source_text }}
+"""
 {% elif source_kind | default('') == 'article' %}
 
 ## Source Material: the News Article
@@ -74,7 +93,9 @@ Return ONLY a JSON object (no markdown fences, no commentary) with this shape:
 
 ```json
 {
-  "title": "A short episode title",
+  "title": "A short episode title",{% if doodle | default(false) %}
+  "target_terms": ["5 to 8 words or short phrases"],
+  "hero": "a stick figure with a red scarf",{% endif %}
   "sections": [
     {"index": 1, "objective": "one sentence describing what this section covers", "target_words": 0},
     {"index": 2, "objective": "...", "target_words": 0}

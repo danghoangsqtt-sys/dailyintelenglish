@@ -2,7 +2,7 @@
 
 ## Phase 98 — Doodle story (2026-11-05)
 
-Status: planned, no code yet. [Plan](phases/98-doodle-story/PLAN.md), [state](phases/98-doodle-story/PHASE-STATE.md). Owner gate: three real videos.
+Status: in progress. [Plan](phases/98-doodle-story/PLAN.md), [state](phases/98-doodle-story/PHASE-STATE.md). Icarus accepted; owner rated Apollo 11 quality quite good. Task 98.8 verified corrected narration, replacement pictures and both offline MP4s. Official Studio export and Git persistence remain open.
 
 ## Phase 97 — The root with a story, and Load the word (2026-11-04)
 

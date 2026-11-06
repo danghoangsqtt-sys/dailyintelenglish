@@ -27,10 +27,11 @@ from backend.media.roots_pictures import picture_key, roots_folder
 
 logger = logging.getLogger(__name__)
 PICTURE_SIZE = (768, 1344)  # 9:16 for the full frame
+READ_ALONG_SIZE = (1344, 768)
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 # The look of each kind of Short; one seed per video keeps a video's pictures alike
 PROMPTS = {"wordday": recipes.qwen_word_prompt, "whatis": recipes.qwen_object_prompt, "levelup": recipes.qwen_moment_prompt, "picstory": recipes.qwen_firstperson_prompt,
-           "loadword": recipes.qwen_word_prompt}  # its cards have no picture: the wall of words is the picture
+           "loadword": recipes.qwen_word_prompt, "readalong": recipes.qwen_read_along_prompt}  # its cards have no picture: the wall of words is the picture
 CARD_STYLES = tuple(PROMPTS)
 
 
@@ -53,7 +54,8 @@ async def _draw(project_id: str, style: str, wanted: dict[str, str]) -> None:
         logger.info("short_pictures_skipped project_id=%s missing=%d (no image engine)", project_id, len(wanted))
         return
     seed = random.randint(1, 2**31 - 1)
-    items = [{"prompt": PROMPTS[style](description), "seed": seed, "width": PICTURE_SIZE[0], "height": PICTURE_SIZE[1],
+    width, height = READ_ALONG_SIZE if style == "readalong" else PICTURE_SIZE
+    items = [{"prompt": PROMPTS[style](description), "seed": seed, "width": width, "height": height,
               "output_path": str(picture_file(project_id, word))} for word, description in wanted.items()]
     await asyncio.to_thread(roots_folder(project_id).mkdir, parents=True, exist_ok=True)
     try:
@@ -100,10 +102,10 @@ async def redraw(project_id: str, style: str, word: str, description: str) -> Pa
     raise ValidationError("The picture could not be drawn now (the local image model is not available or out of memory)")
 
 
-def _fitted_png(content: bytes, path: Path) -> None:
+def _fitted_png(content: bytes, path: Path, size: tuple[int, int]) -> None:
     try:
         with Image.open(io.BytesIO(content)) as image:
-            picture = ImageOps.fit(ImageOps.exif_transpose(image).convert("RGB"), PICTURE_SIZE, Image.Resampling.LANCZOS)
+            picture = ImageOps.fit(ImageOps.exif_transpose(image).convert("RGB"), size, Image.Resampling.LANCZOS)
     except (UnidentifiedImageError, OSError, ValueError) as exc:
         raise ValidationError("This file is not a picture that can be read") from exc
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -112,10 +114,11 @@ def _fitted_png(content: bytes, path: Path) -> None:
     staged.replace(path)
 
 
-async def upload(project_id: str, word: str, content: bytes) -> Path:
-    """D153: a picture made elsewhere takes this word's place (a Lite computer, or an outside AI); cropped to 9:16."""
+async def upload(project_id: str, word: str, content: bytes, *, style: str | None = None) -> Path:
+    """Fit an uploaded illustration to the template's picture dimensions."""
     if not content or len(content) > MAX_UPLOAD_BYTES:
         raise ValidationError("The picture must be a file of at most 20 MB")
     path = picture_file(project_id, word)
-    await asyncio.to_thread(_fitted_png, content, path)
+    size = READ_ALONG_SIZE if style == "readalong" else PICTURE_SIZE
+    await asyncio.to_thread(_fitted_png, content, path, size)
     return path

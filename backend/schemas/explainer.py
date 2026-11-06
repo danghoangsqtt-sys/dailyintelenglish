@@ -247,6 +247,10 @@ class SegmentLocks(StrictModel):
     layout_9_16: bool = False
 
 
+# Phase 98: a 12-minute Doodle story has about 94 pictures; the AI's own proposals stay at 60 for every other kind.
+MAX_PLAN_SEGMENTS = 150
+
+
 class ExplainerSegment(StrictModel):
     """A contiguous script span, its illustration and the two independent layouts."""
 
@@ -295,7 +299,7 @@ class ExplainerPlan(StrictModel):
     status: Literal["draft", "approved", "stale"] = "draft"
     source_fingerprint: RevisionHash
     presenter: PresenterReference
-    segments: list[ExplainerSegment] = Field(min_length=1, max_length=60)
+    segments: list[ExplainerSegment] = Field(min_length=1, max_length=MAX_PLAN_SEGMENTS)
     aspects: list[Aspect] = Field(default_factory=lambda: ["16:9", "9:16"], min_length=1, max_length=2)
     issues: list[Annotated[str, StringConstraints(max_length=500)]] = Field(default_factory=list, max_length=100)
 
@@ -313,9 +317,9 @@ class ExplainerPlanPatch(StrictModel):
 
     expected_revision: int = Field(ge=1)
     expected_source_fingerprint: RevisionHash
-    segments: list[ExplainerSegment] = Field(min_length=1, max_length=60)
+    segments: list[ExplainerSegment] = Field(min_length=1, max_length=MAX_PLAN_SEGMENTS)
     aspects: list[Aspect] = Field(default_factory=lambda: ["16:9", "9:16"], min_length=1, max_length=2)
-    unlock_fields: dict[Identifier, list[LockGroup]] = Field(default_factory=dict, max_length=60)
+    unlock_fields: dict[Identifier, list[LockGroup]] = Field(default_factory=dict, max_length=MAX_PLAN_SEGMENTS)
 
     @model_validator(mode="after")
     def bounded_unlocks(self) -> "ExplainerPlanPatch":
@@ -387,3 +391,23 @@ class VoxExplainerProposal(StrictModel):
         if len({segment.id for segment in self.segments}) != len(self.segments):
             raise ValueError("Segment IDs must be unique.")
         return self
+
+
+class DoodleProposal(StrictModel):
+    """Phase 98: a Doodle story's segments as stored in the proposal checkpoint (built by code from the AI's pictures)."""
+
+    segments: list[VoxProposedSegment] = Field(min_length=1, max_length=MAX_PLAN_SEGMENTS)
+
+
+class DoodlePicture(StrictModel):
+    """Phase 98: the AI describes one picture; which words it covers is decided by code from the sentences."""
+
+    id: Identifier
+    description: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+    labels: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]] = Field(default_factory=list, max_length=6)
+
+
+class DoodlePictures(StrictModel):
+    """The Doodle story proposal schema sent to the model."""
+
+    pictures: list[DoodlePicture] = Field(min_length=1, max_length=MAX_PLAN_SEGMENTS)

@@ -42,7 +42,7 @@ pictures, white captions unreadable on cream paper.
   this kind only; the channel's cast is never drawn. Story and myth keep the same hero through a short look line repeated in every prompt ("a
   stick figure with a red scarf"). Labels are English, at most three per picture, and given exactly; the plan's prompt holds a description, never
   a title of the picture. Doodle pictures do **not** go in the Activity Library (`pipelines.py` keeps every Qwen picture there today and they would
-  appear in other videos). Qwen draws in groups of 10 and saves each group, because a job now loses all its pictures if it fails late.
+  appear in other videos). Qwen saves each group before starting the next one. The implementation uses groups of 20 to reduce model reloads.
 - **D167, the picture on screen.** Full frame, still, a 0.4 s crossfade, a new picture at most every 24 spoken words and 12 s. New caption style
   `pill` (capitals, 3-5 words, spoken word in a black pill, with an outline so it reads on paper): the default of this kind, offered as an option
   elsewhere, with `outline` still the default of every other kind. No music by default; the existing music choice still works.
@@ -58,7 +58,7 @@ Pictures are about one for every 16 words at about 30 s each. B1: 3 min about 24
   with a sample clip.
 - 98.2 **Script:** target words first (`learning_pipeline.py`), the arc prompts in `script/solo_explainer.txt`, one arc through a long script
   (`script_pipeline.py`), and the checks: one opening and one ending, words said 3 times, length, the ending answers the opening.
-- 98.3 **Plan and pictures:** `storyboard/explainer_doodle.txt`, the split at 24 words, `qwen_doodle_prompt` with the hero's look, groups of 10, no
+- 98.3 **Plan and pictures:** `storyboard/explainer_doodle.txt`, the split at 24 words, `qwen_doodle_prompt` with the hero's look, groups of 20, no
   library copy, a check that no prompt carries a picture's title.
 - 98.4 **On screen:** `DoodleScene.tsx` (full frame, crossfade, term card, recap), the `pill` caption with paging of 3-5 words, the renderer's wiring,
   the 12 s check.

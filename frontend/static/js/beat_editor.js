@@ -47,7 +47,7 @@ const BeatEditor = (() => {
       const base = clone(state.view.props);
       base.lines.forEach((line, index) => {
         const c = state.lines[index].card;
-        if (["grammar", "roots", "wordday", "whatis", "levelup", "picstory", "loadword"].includes(key())) {
+        if (["grammar", "roots", "wordday", "whatis", "levelup", "picstory", "loadword", "readalong"].includes(key())) {
           const picture = line[key()]?.pictureUrl;
           line[key()] = { ...clone(c), ...(picture ? { pictureUrl: picture } : {}) };
         } else if (key() === "slowpod") line.translation = c.translation_vi || "";  // Phase 91
@@ -120,7 +120,7 @@ const BeatEditor = (() => {
       mutate(card(index));
       if (key() === "grammar") applyGrammar(index, before, card(index));
       else if (key() === "roots") applyRoots(index, before, card(index));
-      else if (["wordday", "whatis", "levelup", "loadword"].includes(key())) {  // Phase 96: the lines of one word carry the same card
+      else if (["wordday", "whatis", "levelup", "loadword", "readalong"].includes(key())) {  // Phase 96: the lines of one word carry the same card
         state.lines.forEach((line, at) => {
           if (at === index || line.card.word !== before.word) return;
           const { beat, repeat, number, pause_after_ms, loop_ms } = line.card;
@@ -249,6 +249,7 @@ const BeatEditor = (() => {
         roots: () => rootsForm(c),
         loadword: () => field("word", c.word, "Word") + field("ipa", c.ipa, "IPA") + field("meaning_en", c.meaning_en, "English explanation")
           + field("meaning_vi", c.meaning_vi, "Vietnamese explanation") + field("example_en", c.example_en, "Example") + field("example_vi", c.example_vi, "Translation"),
+        readalong: () => field("title", c.title, "Passage title") + field("picture", c.picture, "Picture description") + pictureTools(),
         picstory: () => (c.beat === "line" ? field("translation_vi", c.translation_vi, "Vietnamese translation") : "") + field("picture", c.picture, "Picture description") + pictureTools(),
         levelup: () => field("basic", c.basic, "Basic phrase") + field("advanced", c.advanced, "Advanced phrase") + field("meaning_en", c.meaning_en, "English explanation")
           + field("meaning_vi", c.meaning_vi, "Vietnamese explanation") + field("picture", c.picture, "Picture description") + pictureTools(),

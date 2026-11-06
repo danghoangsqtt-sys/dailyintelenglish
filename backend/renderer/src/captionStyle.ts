@@ -6,7 +6,7 @@ import type React from "react";
  * rejected a framed "window" layout as wasted space. `outline` (film/streaming-subtitle
  * convention) is the default by the owner's explicit preference.
  */
-export const CAPTION_STYLES = ["outline", "box", "shade"] as const;
+export const CAPTION_STYLES = ["outline", "box", "shade", "pill"] as const;
 export type CaptionStyle = (typeof CAPTION_STYLES)[number];
 
 /** The pre-20.2d soft glow, kept in every style (D19.3-b's look is the base layer). */

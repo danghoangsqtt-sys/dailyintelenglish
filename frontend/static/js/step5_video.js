@@ -24,10 +24,11 @@
 
   // Task 20.2d: caption treatment, remembered per browser.
   const CAPTION_STYLE_STORAGE_KEY = "die-caption-style";
-  const CAPTION_STYLES = ["outline", "box", "shade"];
+  const CAPTION_STYLES = ["outline", "box", "shade", "pill"];
   const CAPTION_STYLE_TOOLTIPS = {
     outline: "White text with a black outline, like film and streaming subtitles. Readable on any background.",
     box: "Text on a semi-transparent dark box, like YouTube captions. The most readable on very busy images.",
+    pill: "Short groups of uppercase words with the spoken word on a dark pill.",
     shade: "Outlined text plus a soft dark shade over the bottom of the picture.",
   };
 
@@ -57,10 +58,10 @@
   const byId = (id) => document.getElementById(id);
 
   // a Short of these styles renders its main video in 9:16 (backend/schemas/project.py SHORT_STYLES)
-  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "loadword", "chat", "wyr"];
+  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "loadword", "readalong", "chat", "wyr"];
   // drawn from their script lines (backend LINE_DRAWN_STYLES): nothing to plan on this page
   const LINE_DRAWN = { chat: "Chat Short", wyr: "Would you rather Short", slowpod: "Slow English podcast Short", flashcards: "Vocabulary flashcards Short",
-    roots: "Word roots Short", grammar: "Easy grammar Short", wordday: "Word of the day Short", whatis: "What is this called? Short", levelup: "Basic vs Advanced Short", picstory: "Picture story Short", loadword: "Load the word Short" };
+    roots: "Word roots Short", grammar: "Easy grammar Short", wordday: "Word of the day Short", whatis: "What is this called? Short", levelup: "Basic vs Advanced Short", picstory: "Picture story Short", loadword: "Load the word Short", readalong: "Read Along Short" };
 
   function showError(message) {
     const banner = byId("error-banner");
@@ -695,18 +696,23 @@
     }
   }
 
+  function captionStyleKey() {
+    return state.project?.explainer_style === "doodle" ? CAPTION_STYLE_STORAGE_KEY + "-doodle" : CAPTION_STYLE_STORAGE_KEY;
+  }
+
   function readStoredCaptionStyle() {
+    const fallback = state.project?.explainer_style === "doodle" ? "pill" : "outline";
     try {
-      const stored = localStorage.getItem(CAPTION_STYLE_STORAGE_KEY);
-      return CAPTION_STYLES.includes(stored) ? stored : "outline";
+      const stored = localStorage.getItem(captionStyleKey());
+      return CAPTION_STYLES.includes(stored) ? stored : fallback;
     } catch {
-      return "outline"; // localStorage unavailable — default to the film-style outline
+      return fallback; // localStorage unavailable — default to the film-style outline
     }
   }
 
   function storeCaptionStyle(captionStyle) {
     try {
-      localStorage.setItem(CAPTION_STYLE_STORAGE_KEY, captionStyle);
+      localStorage.setItem(captionStyleKey(), captionStyle);
     } catch {
       /* localStorage unavailable — the choice just won't persist across reloads */
     }
@@ -838,6 +844,14 @@
       state.audioReady = false; // 404 (no audio yet) is expected, not an error to surface
     }
 
+    const narration = Number(state.audioJob?.duration_seconds);
+    const durationTarget = Number(state.project.duration_minutes) * 60;
+    if (state.project.explainer_style === "doodle" && state.audioReady && narration > 0 && durationTarget > 0) {
+      const duration = byId("doodle-audio-duration");
+      duration.textContent = "Narration: " + formatTime(narration) + " / Target: " + formatTime(durationTarget);
+      duration.hidden = false;
+    }
+
     if (!state.audioReady && state.project.presentation_mode !== "solo_explainer") {
       byId("loading-panel").hidden = true;
       byId("empty-state").hidden = false;
@@ -897,7 +911,7 @@
       byId("storyboard-section").hidden = true;
       byId("solo-explainer-section").hidden = false;
       const soloEditor = await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId,
-        { style: state.project.explainer_style || "presenter", topic: state.project.topic || "" });
+        { style: state.project.explainer_style || "presenter", topic: state.project.topic || "", subject: state.project.explainer_subject });
       await mountLinePanel(byId("solo-explainer-section"), () => soloEditor?.rebase?.());
     } else {
       await loadProjectVisuals();

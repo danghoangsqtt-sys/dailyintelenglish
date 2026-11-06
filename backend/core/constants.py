@@ -3,6 +3,7 @@
 # Audio timing
 SILENCE_SAME_SPEAKER_MS = 300
 SILENCE_DIFFERENT_SPEAKER_MS = 500
+DOODLE_MIN_NARRATION_TEMPO = 0.82  # A larger shortfall needs more script, even for Doodle.
 TARGET_LOUDNESS_LUFS = -16
 MUSIC_DUCKING_MAX_DBFS = -18
 # Task 22.4 (D51): the smart music bed (backend/media/music_bed.py). Starting values; the owner's

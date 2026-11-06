@@ -8,6 +8,16 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added - Read Along Short (Phase 100)
+
+- A vertical illustrated reading passage with sentence and word highlighting driven by narration timings.
+
+### Changed - Doodle story verification (Phase 98, 2026-11-06)
+
+- Fit moderately short Doodle narration to its selected duration with pitch-preserving audio processing. Word and scene timing follow the fitted audio.
+- Keep generated lettering out of new and redrawn myth and fiction illustrations. Ask for named historical equipment and draw only people described in the scene.
+- Require the story's selected vocabulary headwords in a Doodle learning pack so the renderer can display all of its word cards.
+
 ### Added — Load the word and the root with a story (Phase 97, 2026-11-04)
 
 - New Short "Load the word": one word said faster and faster on a wall of itself while a bar counts to 100%, then its meaning and an example.

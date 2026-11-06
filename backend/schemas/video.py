@@ -13,7 +13,7 @@ class GenerateVideoRequest(BaseModel):
     """
 
     # Task 20.2d (D20.2d-a/b): "outline" (film-subtitle style) is the owner-preferred default.
-    caption_style: Literal["outline", "box", "shade"] = "outline"
+    caption_style: Literal["outline", "box", "shade", "pill"] = "outline"
     # Phase 30 (ENH-021): what is behind the captions -- a black screen, one still of a scene's plate, or (Phase 32, the
     # default since Phase 44 / D123) the two characters as talking sprites over the scene plates with generic inserts.
     # The drawn-shot "illustrated" video was removed with RealVisXL (D123).

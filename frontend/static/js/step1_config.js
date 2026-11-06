@@ -43,10 +43,12 @@
   // Phase 59 (ENH-041): a VOX narrator is a character's voice only
   // Phase 63 (ENH-045): VOX and the news / blur Shorts are voice-only (a narrator's voice, nobody on screen)
   // Phase 64/65: + the quick-learning and the interactive Shorts; chat / would-you-rather are two-character conversations
-  const SOLO_SHORTS = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "loadword"];  // Phase 81, 87, 88
+  const SOLO_SHORTS = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "roots", "grammar", "whatis", "levelup", "picstory", "loadword", "readalong"];  // Phase 81, 87, 88
   const CONVERSATION_SHORTS = ["chat", "wyr"];
   const SHORTS = [...SOLO_SHORTS, ...CONVERSATION_SHORTS];
-  const VOICE_ONLY = ["vox", ...SOLO_SHORTS];
+  const VOICE_ONLY = ["vox", "doodle", ...SOLO_SHORTS];  // Phase 98: + the Doodle story
+  const isDoodle = () => state.presentationMode === "solo_explainer" && state.explainerStyle === "doodle";
+  const DOODLE_PRESETS = [3, 5, 8, 12];
   const voiceOnly = () => state.presentationMode === "solo_explainer" && VOICE_ONLY.includes(state.explainerStyle);
   const conversationShort = () => state.presentationMode === "classic" && CONVERSATION_SHORTS.includes(state.explainerStyle);
   const isShort = () => (state.presentationMode === "solo_explainer" && SOLO_SHORTS.includes(state.explainerStyle)) || conversationShort();
@@ -59,7 +61,7 @@
   // knowledge / news Shorts are written for a full minute (backend MESSAGE_SHORT_STYLES)
   const MESSAGE_SHORTS = ["news", "blur", "mistakes", "top5"];
   const shortDefault = () => (ACADEMIC_SHORTS.includes(state.shortsTemplate) ? 2 : MESSAGE_SHORTS.includes(state.shortsTemplate) ? 0.95 : 0.75);
-  const presets = () => (!isShort() ? DURATION_PRESETS : ACADEMIC_SHORTS.includes(state.shortsTemplate) ? ACADEMIC_PRESETS : SHORT_PRESETS);
+  const presets = () => (isDoodle() ? DOODLE_PRESETS : !isShort() ? DURATION_PRESETS : ACADEMIC_SHORTS.includes(state.shortsTemplate) ? ACADEMIC_PRESETS : SHORT_PRESETS);
   const presetLabel = (minutes) => (isShort() ? `${Math.round(minutes * 60)} s` : `${minutes} min`);
   const MIN_SPEAKERS = 1;
   const MAX_SPEAKERS = 6;
@@ -369,7 +371,8 @@
     const duration = Number(project.duration_minutes);
     if (Number.isFinite(duration) && duration > 0) {
       state.duration = duration;
-      state.customDurationActive = !DURATION_PRESETS.includes(duration);
+      const durationPresets = project.explainer_style === "doodle" ? DOODLE_PRESETS : DURATION_PRESETS;
+      state.customDurationActive = !durationPresets.includes(duration);
     }
     state.genre = project.genre || state.genre;
     state.presentationMode = project.presentation_mode || "classic";
@@ -412,18 +415,23 @@
     if (solo) { count.value = 1; syncSpeakersToCount(1); renderSpeakerCards(); }
     if (conversationShort() && state.speakers.length !== 2) { count.value = 2; syncSpeakersToCount(2); renderSpeakerCards(); }
     document.querySelectorAll("#type-cards .type-card").forEach((card) => {
-      const mode = isShort() ? "shorts" : state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : state.presentationMode;
+      const mode = isShort() ? "shorts" : state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : isDoodle() ? "doodle" : state.presentationMode;
       card.setAttribute("aria-checked", String(card.dataset.mode === mode));
     });
-    document.getElementById("subject-cards").hidden = !solo || isShort();
+    document.getElementById("subject-cards").hidden = !solo || isShort() || isDoodle();
+    document.getElementById("doodle-subjects").hidden = !isDoodle();
+    document.getElementById("today-news-btn").hidden = isDoodle();
+    document.querySelectorAll("#doodle-subjects [data-doodle-subject]").forEach((card) => {
+      card.setAttribute("aria-checked", String(card.dataset.doodleSubject === state.explainerSubject));
+    });
     document.getElementById("shorts-templates").hidden = !isShort();
     document.querySelectorAll("#shorts-templates [data-template]").forEach((card) => {
       card.setAttribute("aria-checked", String(card.dataset.template === state.shortsTemplate));
     });
     // a news Short may start from an article; a blur Short from a topic or AI ideas only
-    const news = isShort() && state.shortsTemplate === "news";
+    const news = (isShort() && state.shortsTemplate === "news") || isDoodle();  // Phase 98: a Doodle story's material is pasted the same way
     document.querySelectorAll("input[name=source_kind]").forEach((input) => {
-      input.closest("label").hidden = isShort() ? input.value !== "article" : input.value === "article";
+      input.closest("label").hidden = isShort() || isDoodle() ? input.value !== "article" : input.value === "article";
     });
     if (news && state.sourceKind !== "article") state.sourceKind = "article";
     if (!news && state.sourceKind === "article") state.sourceKind = "dialogue";
@@ -448,7 +456,9 @@
     document.getElementById("material-panel").hidden = !material;
     const vocabulary = state.sourceKind === "vocabulary";
     const article = state.sourceKind === "article";
-    document.getElementById("source-text-label").textContent = article
+    document.getElementById("source-text-label").textContent = isDoodle()
+      ? "Paste your material or your own story, or read an article from a link (check the text before you continue)"
+      : article
       ? "Paste the news article, or read it from a link (check the text before you continue)"
       : vocabulary
       ? "Paste the words or phrases to learn (one per line; “word - meaning” keeps only the word)"
@@ -460,7 +470,9 @@
     if (!verbatimAllowed) state.sourceUse = "rewrite";
     document.getElementById("source-use-row").hidden = !verbatimAllowed;
     document.querySelectorAll("input[name=source_use]").forEach((input) => { input.checked = input.value === state.sourceUse; });
-    document.getElementById("source-hint").textContent = article
+    document.getElementById("source-hint").textContent = isDoodle()
+      ? "The AI tells the story in new words for the level and follows your material."
+      : article
       ? "The AI tells the news in its own simple words for the level, using only the facts in the article."
       : vocabulary
       ? "The AI writes a new script that uses every word on the list."
@@ -531,7 +543,8 @@
   }
 
   // Phase 57 (ENH-039): the structure each kind of presentation starts with; the owner can still change it
-  const SUBJECT_STRUCTURES = { field: "list", product: "list", topic: "why", howto: "how" };
+  const SUBJECT_STRUCTURES = { field: "list", product: "list", topic: "why", howto: "how", history: "why", myth: "why", story: "why" };
+  const DOODLE_SUBJECTS = ["history", "myth", "field", "story"];
 
   function setupSources() {
     document.querySelectorAll("#type-cards .type-card").forEach((card) => card.addEventListener("click", () => {
@@ -539,11 +552,21 @@
       const wasShort = isShort();
       const mode = card.dataset.mode;
       const conversation = mode === "shorts" && CONVERSATION_SHORTS.includes(state.shortsTemplate);
-      state.presentationMode = conversation ? "classic" : mode === "vox" || mode === "shorts" ? "solo_explainer" : mode;
-      state.explainerStyle = mode === "vox" ? "vox" : mode === "shorts" ? state.shortsTemplate : "presenter";
+      const wasDoodle = isDoodle();
+      state.presentationMode = conversation ? "classic" : mode === "vox" || mode === "shorts" || mode === "doodle" ? "solo_explainer" : mode;
+      state.explainerStyle = mode === "vox" ? "vox" : mode === "doodle" ? "doodle" : mode === "shorts" ? state.shortsTemplate : "presenter";
+      // Phase 98: a Doodle story has its own kinds and lengths; leaving it restores the others
+      if (isDoodle() && !wasDoodle) {
+        if (!DOODLE_SUBJECTS.includes(state.explainerSubject) || state.explainerSubject === "field") state.explainerSubject = "history";
+        state.duration = 8; state.customDurationActive = false;
+      }
+      if (!isDoodle() && wasDoodle) {
+        state.explainerSubject = "topic"; state.explainerStructure = "why";
+        state.duration = DURATION_PRESETS[1]; state.customDurationActive = false;
+      }
       // Phase 63: a Short lasts 30-60 s; going back to a long video restores a long length
       if (isShort() && !wasShort) { state.duration = shortDefault(); state.customDurationActive = false; }
-      if (!isShort() && wasShort) { state.duration = DURATION_PRESETS[1]; state.customDurationActive = false; }
+      if (!isShort() && wasShort && !isDoodle()) { state.duration = DURATION_PRESETS[1]; state.customDurationActive = false; }
       renderPresentation();
       renderSpeakerCards();
     }));
@@ -558,6 +581,11 @@
     }));
     document.getElementById("source-link-btn").addEventListener("click", readLink);
     document.getElementById("today-news-btn").addEventListener("click", showTodayNews);
+    document.querySelectorAll("#doodle-subjects [data-doodle-subject]").forEach((card) => card.addEventListener("click", () => {
+      state.explainerSubject = card.dataset.doodleSubject;
+      state.explainerStructure = SUBJECT_STRUCTURES[state.explainerSubject];
+      renderPresentation();
+    }));
     document.querySelectorAll("#subject-cards .subject-card").forEach((card) => card.addEventListener("click", () => {
       state.explainerSubject = card.dataset.subject;
       state.explainerStructure = SUBJECT_STRUCTURES[state.explainerSubject];

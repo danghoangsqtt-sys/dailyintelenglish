@@ -8,13 +8,13 @@
       ["slowpod", "Slow English podcast", "One sentence per screen with its translation"], ["flashcards", "Vocabulary flashcards", "8–10 words on one topic"]]],
     ["characters", "Characters and presenter", "characters from the library", "9:16", [["conversation_short", "Conversation", "Two characters talk"], ["presenter_short", "Presenter", "One idea explained to camera"],
       ["vox_short", "VOX", "A narrated story over pictures"], ["chat", "Chat", "Two characters text each other"]]],
-    ["quick", "Quick text templates", "under a minute", "9:16", [["loadword", "Load the word", "One word, faster and faster"], ["picstory", "Picture story", "A picture for each sentence"], ["levelup", "Basic vs Advanced", "A plain phrase, then the natural one"], ["wordday", "Word of the day", "One word said six times over its picture"], ["mistakes", "Don't say / Say", "A common mistake and the natural way"],
+    ["quick", "Quick text templates", "under a minute", "9:16", [["readalong", "Read Along", "A full English passage with word highlighting"], ["loadword", "Load the word", "One word, faster and faster"], ["picstory", "Picture story", "A picture for each sentence"], ["levelup", "Basic vs Advanced", "A plain phrase, then the natural one"], ["wordday", "Word of the day", "One word said six times over its picture"], ["mistakes", "Don't say / Say", "A common mistake and the natural way"],
       ["news", "English news", "One story in simple English"], ["top5", "Top 5 phrases", "Five ways to say one thing"], ["blur", "Text on blur", "Big words over a blurred picture"], ["listen", "Listening challenge", "Hear it, then see it"]]],
     ["interactive", "Interactive", "viewers answer in the comments", "9:16", [["whatis", "What is this called?", "An object, a 1-2-3, its name"], ["quiz", "Countdown quiz", "Viewers comment the answer"], ["wyr", "Would you rather", "Two choices, viewers vote"]]],
-    ["long", "16:9 videos", "for the main channel", "16:9", [["conversation", "Conversation", "Characters talk, scene by scene"], ["presenter", "Presenter", "A presenter explains one topic"], ["vox", "VOX", "A narrated explainer with pictures"]]],
+    ["long", "16:9 videos", "for the main channel", "16:9", [["conversation", "Conversation", "Characters talk, scene by scene"], ["presenter", "Presenter", "A presenter explains one topic"], ["vox", "VOX", "A narrated explainer with pictures"], ["doodle", "Doodle story", "A whole story over hand-drawn pictures"]]],
   ];
   // how Step 1 picks each kind
-  const STEP1 = { conversation: "mode=classic", presenter: "mode=solo_explainer", vox: "mode=vox", conversation_short: "mode=classic", presenter_short: "mode=solo_explainer", vox_short: "mode=vox" };
+  const STEP1 = { conversation: "mode=classic", presenter: "mode=solo_explainer", vox: "mode=vox", doodle: "mode=doodle", conversation_short: "mode=classic", presenter_short: "mode=solo_explainer", vox_short: "mode=vox" };
   const topic = new URLSearchParams(location.search).get("topic") || "";  // from Home's "next video" box
   const href = (kind) => `/step1?${STEP1[kind] || `mode=shorts&template=${kind}`}${topic ? `&topic=${encodeURIComponent(topic)}` : ""}`;
   let samples = {};

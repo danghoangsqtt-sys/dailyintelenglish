@@ -5,7 +5,10 @@ const ExplainerEditor = (() => {
   // Phase 59 (ENH-041): the VOX kinds, and a ready outside-AI prompt for a segment's picture in the VOX collage style
   const VOX_KINDS = ["quote","text_card","diagram","chart","timeline","map","activity","photo"];
   const SOLO_KINDS = ["activity","photo","diagram","text_card"];
+  // Phase 98: the same look the local model draws, for a picture made with an outside AI
+  const DOODLE_LOOK = "Hand-drawn ink doodle illustration on aged warm parchment paper, wobbly black pen outlines, flat muted earth colours with small accents of fresh green and warm yellow. People are simple stick figures with round white heads and two dot eyes. Clear uncluttered composition, 16:9 landscape.";
   function voxPicturePrompt(segment, topic, sceneName, style = "vox") {
+    if (style === "doodle") return `${DOODLE_LOOK} ${segment.visual?.prompt || segment.intent}. Only words written in quotes may appear. No title, no caption, no signature, no logo, no watermark.`;
     // Phase 63 (ENH-045): a news Short wants a realistic vertical news photo; a blur Short a calm vertical backdrop
     if (style === "news") return `Realistic news photograph for an English news short about "${topic}": ${segment.intent}.`
       + `${sceneName ? ` Setting: ${sceneName}.` : ""} Natural light, documentary style, one clear subject, 9:16 vertical portrait.`
@@ -21,21 +24,24 @@ const ExplainerEditor = (() => {
     const SHORT_TITLES = {news:"English news Short",blur:"Text-on-blur Short",mistakes:"Don't say / Say Short",wordday:"Word of the day Short",top5:"Top 5 phrases Short",
       quiz:"Countdown quiz Short",listen:"Listening challenge Short"};
     const short = options.style in SHORT_TITLES;  // Phase 63/64: the Shorts are voice-only like VOX
-    const vox = short || options.style === "vox";
-    const title = short ? SHORT_TITLES[options.style] : vox ? "VOX explainer" : "Solo Explainer";
+    const doodle = options.style === "doodle";  // Phase 98: voice-only like VOX; every segment is one drawn picture
+    const vox = short || doodle || options.style === "vox";
+    const title = short ? SHORT_TITLES[options.style] : doodle ? "Doodle story" : vox ? "VOX explainer" : "Solo Explainer";
     const state = {view:null,segments:[],assets:[],selected:0,aspect:short?"9:16":"16:9",dirty:false,edit:0,saving:null,busy:false,
       conflict:false,disposed:false,preview:null,previewToken:0,geometry:null,job:null,timer:null,stage:{scenes:[],activities:[]}};
     container.innerHTML = `<div class="solo-editor${vox?" is-vox":""}"><h2>${title}</h2>
+      ${doodle?`<p class="section-hint">Propose the plan, draw the pictures, then look through them. Check the facts before you approve: history and specialised subjects can be wrong even when they sound right.</p>`:""}
       ${vox?`<p class="section-hint">Review the knowledge claims, the numbers on charts and the pictures. Nobody is on screen: the narrator's voice reads the script over the graphics.</p>
       <div class="vox-references"><strong>Reference pictures</strong><span class="section-hint">Upload pictures you made with an outside AI or took yourself; the next proposal uses them where they fit, and any segment can show one.</span>
         <label class="btn btn-ghost btn-sm">⬆ Upload pictures<input id="vox-references" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></label>
         <span id="vox-reference-count" class="section-hint"></span></div>`
       :`<p class="section-hint">Review knowledge claims, illustrations and both layouts. <a href="/characters">Create the 21 front presenter pictures in Character Library</a>.</p>`}
       <div class="solo-toolbar"><button type="button" data-action="propose" class="btn btn-primary">Propose plan</button>
+      ${doodle?`<button type="button" data-action="draw" class="btn btn-primary">Draw the pictures</button>${options.subject==="story"?"":'<button type="button" data-action="facts" class="btn btn-ghost">Check the facts</button>'}`:""}
       <button type="button" data-action="save" class="btn btn-ghost">Save changes</button>${vox?"":`<button type="button" data-action="arrange" class="btn btn-ghost">Arrange layouts</button>`}
       <button type="button" data-action="preview" class="btn btn-ghost">Refresh preview</button><button type="button" data-action="approve" class="btn btn-primary">Approve reviewed plan</button>
       <button type="button" data-action="reload" class="btn btn-ghost">Reload</button><button type="button" data-action="cancel" class="btn btn-ghost" hidden>Cancel proposal</button>
-      <label>Preview aspect <select id="solo-aspect">${short?"":"<option>16:9</option>"}<option>9:16</option></select></label></div>
+      <label>Preview aspect <select id="solo-aspect">${short?"":"<option>16:9</option>"}${doodle?"":"<option>9:16</option>"}</select></label></div>
       <p id="solo-status" role="status"></p><p id="solo-error" role="alert"></p><ul id="solo-issues"></ul>
       <div class="solo-editor-grid"><div><div id="solo-player" translate="no"></div><div id="solo-segments" class="solo-segments"></div></div>
       <div id="solo-fields" class="solo-fields"></div></div></div>`;
@@ -111,9 +117,11 @@ const ExplainerEditor = (() => {
     }
     function picturePanel(s){
       const scene=state.stage.scenes.find(item=>item.id===s.scene?.scene_id)?.name??"";
-      const prompt=s.visual.kind==="photo"&&s.visual.prompt?s.visual.prompt:voxPicturePrompt(s,options.topic??"",scene,options.style);
+      const prompt=!doodle&&s.visual.kind==="photo"&&s.visual.prompt?s.visual.prompt:voxPicturePrompt(s,options.topic??"",scene,options.style);
       return `<fieldset class="vox-picture"><legend>Picture for this segment</legend>
-        <p class="section-hint">Make it with an outside AI (ChatGPT, Gemini, Midjourney…) from this prompt, or use a picture of your own. The segment then shows it as a collage picture.</p>
+        ${doodle?`<div class="library-actions"><button type="button" data-action="redraw" class="btn btn-primary btn-sm">🎨 Draw this picture again</button></div>
+        ${s.visual.kind==="photo"?`<label>What the picture shows<textarea data-field="prompt" rows="3">${escape(s.visual.prompt??"")}</textarea></label>`:""}`:""}
+        <p class="section-hint">Make it with an outside AI (ChatGPT, Gemini, Midjourney…) from this prompt, or use a picture of your own.${doodle?"":" The segment then shows it as a collage picture."}</p>
         <textarea id="vox-picture-prompt" rows="5" readonly>${escape(prompt)}</textarea>
         <div class="library-actions"><button type="button" data-action="copy-picture-prompt" class="btn btn-ghost btn-sm">📋 Copy prompt</button>
         <label class="btn btn-primary btn-sm">⬆ Use my picture<input id="vox-picture-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden></label></div></fieldset>`;
@@ -150,6 +158,17 @@ const ExplainerEditor = (() => {
           state.geometry=result.geometry;state.segments=result.segments;changed();await save();await preview();}
         if(action==="preview")await preview();
         if(action==="approve") {const result=await Api.approveExplainerPlan(projectId,{expected_revision:state.view.plan.revision,source_fingerprint:state.view.current_source_fingerprint});state.view=result;state.segments=result.plan.segments;render();await preview();}
+        if(action==="redraw"){const s=state.segments[state.selected];s.visual={...s.visual,asset:null};changed();await save();}
+        if(action==="draw"||action==="redraw"){const job=await Api.illustrateExplainerPlan(projectId);
+          if(!job)message("Every picture is already drawn");
+          else{for(;!state.disposed;){const current=await Api.getImageJob(job.id);message(`Drawing: ${current.stage??current.status} · ${current.progress??0}%`);
+            if(["complete","completed","done","succeeded"].includes(current.status))break;
+            if(["error","failed","cancelled"].includes(current.status))throw new Error(current.error||current.error_message||`Drawing ${current.status}`);
+            await new Promise(resolve=>setTimeout(resolve,2000));}
+            await reload();await preview();}}
+        if(action==="facts"){const result=await Api.factCheckExplainerPlan(projectId);const doubtful=Object.fromEntries(result.doubtful.map(item=>[item.id,item.reason]));
+          for(const s of state.segments){if(s.locks.content&&s.locks.visual)continue;if(doubtful[s.id]){s.needs_fact_review=true;s.source_notes=`Doubtful: ${doubtful[s.id]}`.slice(0,1200);}else s.needs_fact_review=false;}
+          changed();await save();render();message(result.all_ok?"The AI found nothing doubtful. It only compares with what it knows: read history yourself.":`${result.doubtful.length} picture(s) need your review: they are listed above.`);}
         if(action==="propose") {const job=await Api.proposeExplainerPlan(projectId,{expected_revision:state.view?.plan?.revision??0});state.job=job;controls();
           for(let i=0;i<2400&&!state.disposed;i++){const current=await Api.getAiJob(projectId,job.id);message(`Proposal: ${current.stage} · ${current.progress}%`);
             if(["complete","error","cancelled","stale"].includes(current.status)){if(current.status!=="complete")throw new Error(current.error_message||`Proposal ${current.status}`);break;}

@@ -32,7 +32,7 @@ from backend.ai.tts.vocal_cues import caption_text
 from backend.core.config import settings
 from backend.core.constants import (
     MP3_BITRATE, SILENCE_DIFFERENT_SPEAKER_MS, SILENCE_SAME_SPEAKER_MS, TARGET_LOUDNESS_LUFS, WAV_BIT_DEPTH,
-    WAV_SAMPLE_RATE_HZ, EDGE_WORD_ONSET_BASE_SECONDS, EDGE_WORD_TIMING_RECIPE,
+    WAV_SAMPLE_RATE_HZ, DOODLE_MIN_NARRATION_TEMPO, EDGE_WORD_ONSET_BASE_SECONDS, EDGE_WORD_TIMING_RECIPE,
 )
 from backend.core.exceptions import AudioMixError
 from backend.media import music_bed
@@ -93,13 +93,17 @@ LOOP_TEMPOS = (1.0, 1.25, 1.5, 1.75, 2.0)
 
 
 def _at_tempo(clip: AudioSegment, tempo: float) -> AudioSegment:
-    """The clip faster at the same pitch (ffmpeg's atempo)."""
+    """Change the clip's tempo without changing its pitch."""
     if tempo == 1.0:
         return clip
     with tempfile.TemporaryDirectory() as folder:
         source, target = Path(folder) / "in.wav", Path(folder) / "out.wav"
         clip.export(source, format="wav")
-        subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", str(source), "-filter:a", f"atempo={tempo}", str(target)], check=True)
+        subprocess.run(
+            [settings.FFMPEG_PATH, "-nostdin", "-y", "-hide_banner", "-loglevel", "error", "-i", str(source),
+             "-filter:a", f"atempo={tempo}", str(target)],
+            check=True,
+        )
         return AudioSegment.from_wav(target)
 
 
@@ -199,6 +203,7 @@ def _mix_project_sync(
     background_music_path: Path | None,
     output_dir: Path,
     speaker_rates: dict[str, float] | None = None,
+    narration_target_seconds: float = 0.0,
 ) -> dict:
     """Pure, blocking pydub/pyloudnorm work — must run off the event loop (asyncio.to_thread)."""
     segments: list[AudioSegment] = []
@@ -244,6 +249,24 @@ def _mix_project_sync(
     mixed = segments[0]
     for segment in segments[1:]:
         mixed += segment
+
+    if narration_target_seconds > 0:
+        tempo = len(mixed) / (narration_target_seconds * 1000)
+        if DOODLE_MIN_NARRATION_TEMPO <= tempo < 1.0:
+            original_ms = len(mixed)
+            mixed = _at_tempo(mixed, tempo)
+            scale = len(mixed) / original_ms
+            # Calibrate Edge offsets in the original speech clock before stretching both clocks.
+            word_timestamps = calibrate_word_timestamps(
+                {"timestamps": timestamps, "word_timestamps": word_timestamps}, speaker_rates or {},
+            )["word_timestamps"]
+            for entry in timestamps:
+                entry["start_sec"] = round(entry["start_sec"] * scale, 6)
+                entry["end_sec"] = round(entry["end_sec"] * scale, 6)
+            for group in word_timestamps:
+                for word in group["words"]:
+                    word["start_sec"] = round(word["start_sec"] * scale, 6)
+                    word["end_sec"] = round(word["end_sec"] * scale, 6)
 
     # The voice-only stem, normalised exactly as a music-free mix is; with no music it IS the mix.
     voice, final_loudness = _normalize_to_target(mixed, TARGET_LOUDNESS_LUFS)
@@ -403,6 +426,7 @@ async def mix_project(
         return await asyncio.to_thread(
             _mix_project_sync, speaker_names_by_id, lines, background_music_path, output_dir,
             {speaker["id"]: speaker.get("speed", 1.0) for speaker in project["speakers"]},
+            narration_target_seconds=60 * (project.get("duration_minutes") or 0) if project.get("explainer_style") == "doodle" else 0.0,
         )
     except AudioMixError:
         raise

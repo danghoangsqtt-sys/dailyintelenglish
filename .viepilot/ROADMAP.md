@@ -2,7 +2,7 @@
 
 ## Phase 98 — Doodle story: history, myth, a specialised subject or a short story, in English (2026-11-05)
 
-Status: planned. [Plan](phases/98-doodle-story/PLAN.md). A whole story over hand-drawn pictures, 16:9, 3-12 minutes, with 5-8 target words woven into it.
+Status: in progress. [Plan](phases/98-doodle-story/PLAN.md). A whole story over hand-drawn pictures, 16:9, 3-12 minutes, with 5-8 target words woven into it. Task 98.8 verifies measured narration and targeted picture corrections.
 
 ## Phase 97 — The root with a story, and Load the word (2026-11-04)
 

@@ -41,7 +41,7 @@ from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
 from backend.content import grammar_lesson
-from backend.content import level_up, load_word, object_quiz, picture_story, word_repeat
+from backend.content import level_up, load_word, object_quiz, picture_story, read_along, word_repeat
 from backend.content.word_family import WordFamily, build_beats, roots_prompt, with_checked_facts
 from backend.ai.tts.vocal_cues import caption_text
 
@@ -77,6 +77,22 @@ class ScriptOutline(BaseModel):
 
     title: str = Field(min_length=1)
     sections: list[OutlineSectionSpec] = Field(min_length=1)
+
+
+class DoodleOutline(ScriptOutline):
+    """Phase 98 (D164, D166): a Doodle story's plan also chooses its target words before any line is written, and how its
+    main character looks in the pictures."""
+
+    target_terms: list[str] = Field(min_length=5, max_length=8)
+    hero: str = Field(default="", max_length=120)
+
+    @field_validator("target_terms")
+    @classmethod
+    def normalize_target_terms(cls, terms: list[str]) -> list[str]:
+        normalized = [" ".join(term.casefold().split()) for term in terms]
+        if not all(_vocabulary_pattern(term) for term in normalized) or len(set(normalized)) != len(normalized):
+            raise ValueError("Choose five to eight distinct English target words or phrases")
+        return normalized
 
 
 class SectionLineOut(BaseModel):
@@ -116,6 +132,8 @@ class SectionLineWire(BaseModel):
 
 
 _OUTLINE_ADAPTER = TypeAdapter(ScriptOutline)
+_DOODLE_OUTLINE_ADAPTER = TypeAdapter(DoodleOutline)
+DOODLE_TERM_USES = 3  # D164: each target word is said at least this often, spread through the story
 _SECTION_LINES_ADAPTER = TypeAdapter(list[SectionLineOut])
 # Task 15.1: the model-facing schema/parse target -- SectionLineOut/_SECTION_LINES_ADAPTER
 # above stay the checkpoint (resolved-shape) adapter, untouched.
@@ -596,6 +614,18 @@ def missing_vocabulary(vocabulary: list[str], texts: list[str]) -> list[str]:
     return [item for item in vocabulary if (pattern := _vocabulary_pattern(item)) and not pattern.search(spoken)]
 
 
+def term_uses(term: str, texts: list[str]) -> int:
+    """How many times a target word is said, with its simple inflections."""
+    pattern = _vocabulary_pattern(term)
+    spoken = " ".join(" ".join(re.findall(r"[a-z0-9']+", text.casefold())) for text in texts)
+    return len(pattern.findall(spoken)) if pattern else 0
+
+
+def doodle_short_terms(terms: list[str], texts: list[str]) -> list[str]:
+    """Phase 98 (D164): the target words said fewer than three times."""
+    return [term for term in terms if term_uses(term, texts) < DOODLE_TERM_USES]
+
+
 def _word_forms(word: str) -> str:
     """A regex for a word and its simple inflections: plural, -ed and -ing (with the e-drop, y→i and a doubled last
     consonant), e.g. "deliver" matches delivers/delivered/delivering, "study" studies/studied."""
@@ -753,15 +783,17 @@ def _source_context(project: dict) -> dict:
 
 async def _vocabulary_repair(
     router: "AIRouter", project: dict, outline: ScriptOutline, all_lines: list[SectionLineOut], target_words: int,
-    known_speaker_ids: set[str], num_speakers: int, db, job_id: str,
+    known_speaker_ids: set[str], num_speakers: int, db, job_id: str, words: list[str] | None = None,
+    missing_of=missing_vocabulary, ask: str = "",
 ) -> list[SectionLineOut]:
-    """Phase 57 (ENH-039): one repair round when the script misses words of the owner's vocabulary list.
+    """Phase 57 (ENH-039): one repair round when the script misses words of the owner's vocabulary list. Phase 98: also a
+    Doodle story's target words said too rarely (`words`, `missing_of`, `ask`).
 
     The section whose objective names the most missing items (else the last one) is rewritten once to use them; the
     result is kept only when it uses more of the list and the whole script still passes validation. Never fails the
     job: words still missing are shown on the Step 2 bar."""
-    words = _source_context(project)["source_words"]
-    missing = missing_vocabulary(words, [line.text for line in all_lines]) if words else []
+    words = _source_context(project)["source_words"] if words is None else words
+    missing = missing_of(words, [line.text for line in all_lines]) if words else []
     if not missing:
         return all_lines
     section_checkpoints = await _load_section_checkpoints(db, job_id)
@@ -771,14 +803,15 @@ async def _vocabulary_repair(
         return all_lines
 
     def mentions(spec: OutlineSectionSpec) -> int:
-        return len(missing) - len(missing_vocabulary(missing, [spec.objective]))
+        return len(missing) - len(missing_vocabulary(missing, [spec.objective]))  # how many the objective names
 
     target_spec, target_lines = max(reversed(ordered), key=lambda item: mentions(item[0]))
     measured = section_word_count(target_lines)
     spec = target_spec.model_copy(update={"target_words": measured})
     min_words = round(measured * (1 - SCRIPT_SECTION_WORD_TOLERANCE))
     max_words = round(measured * (1 + SCRIPT_SECTION_WORD_TOLERANCE))
-    errors = [f"the owner's vocabulary list is not fully used: use each of these words or phrases naturally at least "
+    errors = [ask.format(words=", ".join(missing)) if ask else
+              f"the owner's vocabulary list is not fully used: use each of these words or phrases naturally at least "
               f"once in this section: {', '.join(missing)}",
               f"keep this section's length between {min_words} and {max_words} words and keep its meaning and order"]
     try:
@@ -792,7 +825,7 @@ async def _vocabulary_repair(
         return all_lines
     candidate = [line for each_spec, lines in ordered
                  for line in (new_lines if each_spec.index == target_spec.index else lines)]
-    still_missing = missing_vocabulary(words, [line.text for line in candidate])
+    still_missing = missing_of(words, [line.text for line in candidate])
     hard_errors, _warnings = validate_global(candidate, target_words, known_speaker_ids, num_speakers, project["topic"],
                                           allow_repeats=_repeats_by_design(project), tolerance_share=word_tolerance(project))
     if hard_errors or len(still_missing) >= len(missing):
@@ -820,6 +853,7 @@ async def _vocabulary_repair(
 async def _generate_outline(
     router: "AIRouter", project: dict, target_words: int, num_sections: int, db, job_id: str
 ) -> ScriptOutline:
+    doodle = project.get("explainer_style") == "doodle"  # Phase 98
     solo = await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"), project.get("explainer_style"))
     genre_instructions = solo or await load_genre_block(project["genre"])
     cefr_constraints = await load_cefr_block(project["cefr_level"])
@@ -837,6 +871,7 @@ async def _generate_outline(
         genre_instructions=genre_instructions,
         voice_over=project.get("explainer_style") == "vox" and not is_short_video(project),  # Phase 86
         vox_blocks=vox_blocks(target_words),
+        doodle=doodle, doodle_subject=project.get("explainer_subject") or "",
         cefr_constraints=cefr_constraints,
         presentation_mode=project.get("presentation_mode", "classic"),
         **_source_context(project),
@@ -845,13 +880,13 @@ async def _generate_outline(
         db, job_id, router,
         GenerationRequest(
             prompt=prompt,
-            json_schema=ScriptOutline.model_json_schema(),
+            json_schema=(DoodleOutline if doodle else ScriptOutline).model_json_schema(),
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="script_outline",
         ),
-        section_index=None, is_repair=False, adapter=_OUTLINE_ADAPTER,
+        section_index=None, is_repair=False, adapter=_DOODLE_OUTLINE_ADAPTER if doodle else _OUTLINE_ADAPTER,
     )
-    return parse_and_validate(result.text, _OUTLINE_ADAPTER)
+    return parse_and_validate(result.text, _DOODLE_OUTLINE_ADAPTER if doodle else _OUTLINE_ADAPTER)
 
 
 async def _generate_section(
@@ -899,6 +934,7 @@ async def _generate_section(
         presentation_mode=project.get("presentation_mode", "classic"),
         voice_over=project.get("explainer_style") == "vox" and not is_short_video(project),  # Phase 86: a long VOX opens cold, ends on its recap
         vox_blocks=vox_blocks(section_spec.target_words), vox_block_words=VOX_BLOCK_WORDS,
+        doodle=project.get("explainer_style") == "doodle", target_terms=getattr(outline, "target_terms", []),
         solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"), project.get("explainer_style")),
         cefr_constraints=cefr_constraints,
         language_features=project["language_features"],
@@ -1434,7 +1470,7 @@ _CARD_SHORTS = {
     "levelup": (level_up.LevelUp, level_up.level_prompt, level_up.build_beats),
     "loadword": (load_word.LoadCard, load_word.load_prompt, load_word.build_beats),
     "picstory": (picture_story.PictureStory, picture_story.story_prompt, picture_story.build_beats),
-    "picstory": (picture_story.PictureStory, picture_story.story_prompt, picture_story.build_beats),
+    "readalong": (read_along.Passage, read_along.passage_prompt, read_along.build_beats),
 }
 
 
@@ -1632,7 +1668,8 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     await _update_progress(db, job_id, "outline", 5)
 
     if 0 in checkpoints_by_index:
-        outline = ScriptOutline.model_validate_json(checkpoints_by_index[0]["result_json"])
+        outline = (DoodleOutline if project.get("explainer_style") == "doodle" else ScriptOutline).model_validate_json(
+            checkpoints_by_index[0]["result_json"])
     else:
         try:
             outline = await _generate_outline(router, project, target_words, len(section_budgets), db, job_id)
@@ -1920,6 +1957,22 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
                                          num_speakers, db, job_id)
     if project.get("explainer_style") == "slowpod":
         all_lines = await fill_translations(router, all_lines)
+    if project.get("explainer_style") == "doodle":
+        terms = outline.target_terms
+        all_lines = await _vocabulary_repair(
+            router, project, outline, all_lines, target_words, known_speaker_ids, num_speakers, db, job_id, words=terms,
+            missing_of=doodle_short_terms, ask="this story must use these target words more often: say each of them at least three "
+            "times in this section, naturally, as part of what happens: {words}")
+        texts = [line.text for line in all_lines]
+        missing = doodle_short_terms(terms, texts)
+        if missing:
+            await _fail(db, job_id, "doodle_vocabulary_incomplete", [
+                f"Use each target term at least three times: {', '.join(missing)}"
+            ])
+            return
+        first = all_lines[0]
+        all_lines = [first.model_copy(update={"language_notes": first.language_notes.model_copy(
+            update={"doodle": {"words": terms, "hero": outline.hero}})}), *all_lines[1:]]
 
     server_lines = [
         {

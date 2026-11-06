@@ -23,6 +23,14 @@ For each segment answer "ok" or "doubtful":
 - "doubtful": a statement is false or misleading; a number, date, name, quote or study is not in the owner's material
   and is not common, stable knowledge; the screen shows a figure the narration does not say; a news claim goes beyond
   the material; or the advice could harm someone (health, money, law) without care.
+{% if style == 'doodle' and subject == 'myth' %}
+This video retells a MYTH. What gods and heroes do inside the story is not a false fact: judge only whether the telling
+matches the myth as its culture tells it, whether the culture is named correctly, and whether anything is presented as
+real history or science. Inventing an event the myth does not contain is "doubtful".
+{% elif style == 'doodle' and subject == 'history' %}
+This video tells HISTORY: people, places, dates and the order of events must be right, and invented dialogue or thoughts
+of real people must be clearly told as a possibility, or the segment is doubtful.
+{% endif %}
 Judge facts only: style, wording, structure or repetition never make a segment doubtful.
 "reason": for "doubtful", name the exact claim and why in one short sentence; for "ok", leave it empty.
 

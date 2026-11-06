@@ -378,6 +378,9 @@
           <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="vox">
             <span class="type-icon" aria-hidden="true">🎬</span><strong>VOX explainer</strong>
             <span>A voice-over with motion graphics: kinetic text, pictures, charts and maps. Nobody on screen.</span></button>
+          <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="doodle">
+            <span class="type-icon" aria-hidden="true">✏️</span><strong>Doodle story</strong>
+            <span>One whole story told over hand-drawn pictures, with target words woven in. 3 to 12 minutes.</span></button>
           <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="shorts">
             <span class="type-icon" aria-hidden="true">📱</span><strong>Shorts viral</strong>
             <span>A vertical 9:16 video under one minute for Shorts, TikTok and Reels.</span></button>
@@ -390,6 +393,7 @@
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="mistakes"><strong>❌✅ Don't say / Say</strong><span>Two to four common mistakes, each with the natural way to say it</span></button>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="wordday"><strong>📖 Word of the day</strong><span>One word said six times over its picture, then an example</span></button>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="levelup"><strong>🔴🔵 Basic vs Advanced</strong><span>A plain phrase, then the natural one twice, over its picture</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="readalong"><strong>Read Along</strong><span>Read a complete English passage with the narrator</span></button>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="loadword"><strong>🧠 Load the word</strong><span>One word said faster and faster until it stays in memory</span></button>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="top5"><strong>🔢 Top 5 phrases</strong><span>A countdown of five phrases native speakers use, each with its meaning</span></button>
           <!-- Phase 65 (ENH-047): the interactive Shorts -->
@@ -406,6 +410,13 @@
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="grammar"><strong>🧩 Easy grammar</strong><span>One grammar point explained by its essence, scene by scene, with colour-coded cards and a summary table, in Vietnamese with a Vietnamese voice; up to 3 minutes</span></button>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="chat"><strong>💬 Chat</strong><span>Two characters text each other; every message appears as a bubble with their voice</span></button>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="wyr"><strong>🤔 Would you rather</strong><span>One character asks, the other chooses and says why — the viewer plays along</span></button>
+        </div>
+        <!-- Phase 98: what a Doodle story tells -->
+        <div id="doodle-subjects" class="subject-cards" role="radiogroup" aria-label="Kind of story" hidden>
+          <button type="button" class="subject-card" role="radio" aria-checked="true" data-doodle-subject="history"><strong>🏛️ History</strong><span>A real event, from puzzle to answer</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-doodle-subject="myth"><strong>🐉 Myth</strong><span>A story a culture tells, and what it means</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-doodle-subject="field"><strong>🔬 Specialised subject</strong><span>A mystery solved by one key idea</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-doodle-subject="story"><strong>📖 Short story</strong><span>An invented story, or your own</span></button>
         </div>
         <div id="subject-cards" class="subject-cards" role="radiogroup" aria-label="What the presentation presents" hidden>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-subject="field"><strong>💼 A field or job</strong><span>What people do, skills, a working day</span></button>

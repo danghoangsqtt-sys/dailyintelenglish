@@ -96,7 +96,7 @@
         "title": "Would you rather 'travel by train' or by plane?",
         "brief": ""
       },
-      "from": 1.0
+      "from": 1
     },
     "whatis": {
       "idea": {
@@ -129,9 +129,23 @@
       },
       "from": 0.3,
       "seconds": 6
+    },
+    "readalong": {
+      "idea": {
+        "title": "One Task at a Time",
+        "brief": "A complete English passage with word highlighting"
+      },
+      "from": 0.4,
+      "seconds": 5,
+      "vi_only": true
     }
   },
   "sources": {
+    "doodle": {
+      "file": "../../data/video/f68cec76-ae64-435d-a342-8c0a29431d8a/27a1c51a63ad4a2b9fdb3344223618ce/video_remotion.mp4",
+      "from": 19,
+      "seconds": 7
+    },
     "conversation": {
       "file": "D:/Videos/Tự động 2026-10-28/Auto — Conversation 16 9/Ep 01 - Talking about weekend plans/video.mp4",
       "from": 20
