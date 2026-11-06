@@ -73,3 +73,7 @@ The illustration rows were pointed at copied asset folders inside each copy (sam
 Two Lantern frames (40 s, 100 s) were looked at: pictures with the red-scarf hero, no generated lettering, pill captions readable.
 Evidence: `data/tmp/phase98-99-close/{lantern,apollo}-export.txt`, `{lantern,apollo}-verify.json`, `lantern-40s.jpg`, `lantern-100s.jpg`
 (git-ignored, in the worktree that made them). The owner's own view of the corrected videos is still the acceptance gate (D165).
+
+## Install
+
+Installed 2026-11-06 (owner: "Yes, install"): Full 2.0.0 from 1062b3eb (source_dirty false), package dist/2.0-phase99-20261106 (Full ZIP SHA256 f0e35c7dccba3d6839af97adc4491e69720ab32ca818920f9ddd9600d337d794), backup data/backups/desktop-20261106-220717-780; the running app reports commit 1062b3eb, migration 042 applied, 121 projects kept, cloud mode active. Not pushed.

@@ -6,7 +6,7 @@ Status: implemented, committed with Phase 98 (f5be5647) on `claude/phase98-99-do
 
 ## Phase 99 — Doodle story in the Channel plan, the batch and automatic videos (2026-11-06)
 
-Status: implemented_verified (2026-11-06; full pytest 2434 passed; one automatic 3-minute story verified; not installed or pushed). [State](phases/99-doodle-automation/PHASE-STATE.md). [Plan](phases/99-doodle-automation/PLAN.md). D168-D174; three real automatic runs found and fixed D172-D174.
+Status: implemented_verified (2026-11-06; full pytest 2434 passed; one automatic 3-minute story verified; installed from 1062b3eb on 2026-11-06; not pushed). [State](phases/99-doodle-automation/PHASE-STATE.md). [Plan](phases/99-doodle-automation/PLAN.md). D168-D174; three real automatic runs found and fixed D172-D174.
 
 ## Phase 98 — Doodle story (2026-11-05)
 

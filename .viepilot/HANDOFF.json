@@ -273,7 +273,11 @@
     "studio_exports": "Lantern 179.973 s narration / 188.900 s MP4; Apollo 11 479.974 s / 488.433 s; 1080p H.264/AAC, no black or silent spans",
     "commit": "f5be5647 (workspace work) + 799fd44b (close-out docs)",
     "pushed": false,
-    "installed": false
+    "installed": true,
+    "installed_from_commit": "1062b3eb",
+    "package_directory": "dist/2.0-phase99-20261106",
+    "full_zip_sha256": "f0e35c7dccba3d6839af97adc4491e69720ab32ca818920f9ddd9600d337d794",
+    "installed_backup": "data/backups/desktop-20261106-220717-780"
   },
   "next_planned_phase": "75",
   "feature_plan": {
@@ -1224,13 +1228,21 @@
     "automatic_run": "3-minute short story: waiting_review in 1123.5 s, MP4 151.767 s 1080p verified",
     "known_limit": "Doodle narration shorter than chosen (143.3 s for 3 min); the Read Along script is served by the local model",
     "pushed": false,
-    "installed": false
+    "installed": true,
+    "installed_from_commit": "1062b3eb",
+    "package_directory": "dist/2.0-phase99-20261106",
+    "full_zip_sha256": "f0e35c7dccba3d6839af97adc4491e69720ab32ca818920f9ddd9600d337d794",
+    "installed_backup": "data/backups/desktop-20261106-220717-780"
   },
   "phase100_read_along": {
     "status": "implemented_verified",
     "state": ".viepilot/phases/100-read-along-short/PHASE-STATE.md",
     "automatic_run": "A2 'My Morning Walk' waiting_review, MP4 24.733 s 1080x1920 verified",
     "pushed": false,
-    "installed": false
+    "installed": true,
+    "installed_from_commit": "1062b3eb",
+    "package_directory": "dist/2.0-phase99-20261106",
+    "full_zip_sha256": "f0e35c7dccba3d6839af97adc4491e69720ab32ca818920f9ddd9600d337d794",
+    "installed_backup": "data/backups/desktop-20261106-220717-780"
   }
 }

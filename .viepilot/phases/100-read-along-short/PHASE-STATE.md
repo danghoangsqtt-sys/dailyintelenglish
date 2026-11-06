@@ -16,3 +16,7 @@ the current word highlighted.
 Open points: the script answer was written by the local model both times (the cloud answer did not pass the Passage schema and the
 one-shot local retry served it); the first run timed out while Qwen held the GPU for another video. The picture came from the library
 (three students), not drawn for the passage.
+
+## Install
+
+Installed 2026-11-06 (owner: "Yes, install"): Full 2.0.0 from 1062b3eb (source_dirty false), package dist/2.0-phase99-20261106 (Full ZIP SHA256 f0e35c7dccba3d6839af97adc4491e69720ab32ca818920f9ddd9600d337d794), backup data/backups/desktop-20261106-220717-780; the running app reports commit 1062b3eb, migration 042 applied, 121 projects kept, cloud mode active. Not pushed.

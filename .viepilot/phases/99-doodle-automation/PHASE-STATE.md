@@ -35,3 +35,6 @@ fell back to the local model; see Phase 100 state.
 
 Evidence (git-ignored, worktree of this branch): `data/tmp/phase98-99-close/auto-run*.txt`, `auto-verify.json`, `auto-20.jpg`, `auto-75.jpg`.
 
+## Install
+
+Installed 2026-11-06 (owner: "Yes, install"): Full 2.0.0 from 1062b3eb (source_dirty false), package dist/2.0-phase99-20261106 (Full ZIP SHA256 f0e35c7dccba3d6839af97adc4491e69720ab32ca818920f9ddd9600d337d794), backup data/backups/desktop-20261106-220717-780; the running app reports commit 1062b3eb, migration 042 applied, 121 projects kept, cloud mode active. Not pushed.
